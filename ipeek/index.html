@@ -1,0 +1,138 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+  <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="-1">
+  <LINK href="site.css" rel="stylesheet" type="text/css">
+  <title>iPeek</title>
+
+<?php
+$URL = "http://www.ncnr.nist.gov/ipeek/";
+$SANSURL = "http://www.ncnr.nist.gov/programs/sans/status/live-data/";
+$INSTRUMENTS = "BT1|BT4|BT5|BT7|BT8|CGD|NGD|NG2|NG3SANS|NG5|NSE|NG7|NG7SANS|NGBSANS";
+$NAMES = 'BT1|BT4:FANS|BT5:USANS|BT7|BT8|CGD:Magik|NGD:PBR|NG2:HFBS|NG3:SANS|NG5:SPINS|NSE:Spin Echo|NG7:Reflectometer|NG7:SANS|NGB:SANS';
+$LINKS = 'bt1|fans|usans|bt7_new|darts|magik|ng1refl|hfbs|ng3sans|spins|nse|ng7refl|ng7sans|nsoft';
+#Missing: NG2,NG2:HFBS,hfbs    NG4,NG4:DCS,dcs 
+$LOGFORMAT = 'CGD|NGD|NG7';
+
+# Copy some info into javascript
+echo <<<END
+<script type="text/javascript" language="javascript">
+<!-- 
+var URL='$URL';
+var SANSURL='$SANSURL';
+var INSTRUMENTS = '$INSTRUMENTS'.split('|');
+-->
+</script>
+END
+?>
+<script type="text/javascript" language="javascript">
+<!-- 
+var refreshtime = 60; // 1 minute refresh rate
+var refreshtimer = null;
+
+// Set the image file from instrument and imageformat
+function setFile(instrument) {
+  var imgfile;
+  if (instrument == "NG3SANS" || instrument == "NG7SANS" || instrument == "NBGSANS") {
+    imgfile = URL + instrument + '_livedata.png';
+  } else {
+    imgfile = URL + instrument+'thumb.png';
+  }
+  var imgtag = document.getElementById(instrument+'image');
+  // Force image reload by tagging the request with time
+  var now=new Date();
+  imgtag.src = imgfile+'?'+now.getTime();
+}
+
+function refresh() {
+  for(var i=0; i<INSTRUMENTS.length; i++) {
+    setFile(INSTRUMENTS[i]);
+  }
+}
+
+function onshow() {
+  if (refreshtimer == null) 
+    refreshtimer = setInterval("refresh()", refreshtime*1000);
+}
+function onhide() {
+  if (refreshtimer != null) {
+    clearInterval(refreshtimer);
+    refreshtimer = null;
+  }
+}
+
+window.onload = onshow;
+-->
+</script>
+
+ </head>
+
+<body> 
+
+<?php include("/var/www/include/navigation.inc"); ?>
+<?php include("/var/www/include/utility.inc"); ?>
+<div class="content">
+
+<h2>Live Data Snapshot</h2>
+<div class="peeks">
+<table><tr>
+<?php
+# Build table from list of instruments
+$instruments = explode('|',$INSTRUMENTS);
+$names = explode('|',$NAMES);
+$links = explode('|',$LINKS);
+$logformat = explode('|',$LOGFORMAT);
+$instrumenturl = "http://www.ncnr.nist.gov/instruments/";
+foreach ($instruments as $i => $code) {
+    $format = (in_array($code,$logformat))?'log':'linear';
+    $link = $instrumenturl.$links[$i];
+    if ($code=="NG3SANS" || $code=="NG7SANS" || $code=="NGBSANS") {
+        $href = $URL.$code."_livedata.html";
+        $image = $URL.$code."_livedata.png";
+    } else {
+        $href = $URL."ipeek.html?id=".$instruments[$i]."&format=".$format;
+        $image = $URL.$code."thumb.png";
+    }
+    if ($i>0 && $i%4==0) { echo '</tr><tr>'; }
+    $denied = $code=="BT1" ? 'BT1denied_thumb.png' : 'denied.png';
+    echo <<<EOD
+<td><div class="ipeek">
+ <a href="$href">
+  <img id="{$code}image" src="$image" title="$names[$i] plot" alt="$names[$i] plot" width="210" height="110" onerror="this.src='$denied'" />
+ </a>
+ <p><a href="$link">$names[$i]</a> </p>
+</div></td>
+
+EOD;
+    
+}
+
+// Fill out the remainder of the last row so borders can be drawn
+while ($i%4 != 0) { echo '<td></td>'; $i++; }
+
+?>
+</tr></table>
+</div>
+</p>
+
+<p>A status page is available for <a href="DCS.html">NG4:DCS</a> and 
+<a href="HFBS.html">NG2:HFBS</a>.</p>
+<!--
+<p>iPeek is also available as a 
+<a href="http://gmodules.com/ig/creator?synd=open&url=http://www.ncnr.nist.gov/ipeek/ipeek.xml">google gadget</a>,
+as an Apple dashboard widget <a href="iPeek.dmg">iPeek.dmg</a>, or as an 
+<a href="tools.html#embedding" type="application/x-recommend-download">embeddable</a> 
+image for your own page.</p>
+-->
+
+</div>
+<hr>
+<div class="footer">
+<div style="float:left;"><p>Paul Kienzle (<a href="mailto:paul.kienzle@nist.gov">paul.kienzle@nist.gov</a>)</p></div>
+<div style="float:right;"><p><? lastmod(); ?></p></div>
+</div>
+
+</body>
+</html>

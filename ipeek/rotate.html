@@ -1,0 +1,106 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+	"http://www.w3.org/TR/html4/loose.dtd">
+<html>
+ <head>
+  <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="-1">
+  <LINK href="site.css" rel="stylesheet" type="text/css">
+  <title>iPeek</title>
+
+<?php
+$URL = "http://www.ncnr.nist.gov/ipeek/";
+$SANSURL = "http://www.ncnr.nist.gov/programs/sans/status/live-data/";
+$INSTRUMENTS = "BT1|BT4|BT5|BT7|BT8|CGD|NGD|NG2|NG3SANS|NG5|NSE|NG7|NG7SANS|NGBSANS";
+$NAMES = 'BT1|BT4:FANS|BT5:USANS|BT7|BT8|CGD:Magik|NGD:PBR|NG2:HFBS|NG3:SANS|NG5:SPINS|NSE:Spin Echo|NG7:Reflectometer|NG7:SANS|NGB:SANS';
+$LINKS = 'bt1|fans|usans|bt7_new|darts|magik|ng1refl|hfbs|ng3sans|spins|nse|ng7refl|ng7sans|nsoft';
+#Missing: NG2,NG2:HFBS,hfbs    NG4,NG4:DCS,dcs 
+$LOGFORMAT = 'CGD|NGD|NG7';
+
+# Copy some info into javascript
+echo <<<END
+<script type="text/javascript" language="javascript">
+<!-- 
+var URL='$URL';
+var SANSURL='$SANSURL';
+var INSTRUMENTS = '$INSTRUMENTS'.split('|');
+var LOGFORMAT = '$LOGFORMAT'.split('|');
+-->
+</script>
+END
+?>
+<script type="text/javascript" language="javascript">
+<!-- 
+var refreshtime = 10; // refresh rate in seconds
+var refreshtimer = null;
+var refreshindex = 0;
+
+// Set the image file from instrument and imageformat
+function setFile(index) {
+  var imgfile;
+  var instrument = INSTRUMENTS[index];
+  var format = "linear";
+  for (var i=0; i < LOGFORMAT.length; i++) {
+    if (instrument == LOGFORMAT[i]) format = "log";
+  }
+  if (instrument == "NG3SANS" || instrument == "NG7SANS" || instrument == "NGBSANS") {
+    imgfile = URL + instrument + '_livedata.png';
+  } else {
+    imgfile = URL + instrument+format+'.png';
+  }
+  var imgtag = document.getElementById("instrumentplot");
+  imgtag.title = instrument+" live data";
+  // Force image reload by tagging the request with time
+  imgtag.src = imgfile+'?'+new Date().getTime();
+  document.getElementById("instrumentname").innerHTML = instrument+" live data";
+}
+
+function refresh() {
+  refreshindex = refreshindex+1;
+  if (refreshindex >= INSTRUMENTS.length) refreshindex = 0;
+  setFile(refreshindex);
+}
+
+function onshow() {
+  refresh();
+  if (refreshtimer == null) 
+    refreshtimer = setInterval("refresh()", refreshtime*1000);
+}
+function onhide() {
+  if (refreshtimer != null) {
+    clearInterval(refreshtimer);
+    refreshtimer = null;
+  }
+}
+
+window.onload = onshow;
+window.onclick = refresh;
+-->
+</script>
+
+ </head>
+
+<body> 
+
+<?php include("/var/www/include/navigation.inc"); ?>
+<?php include("/var/www/include/utility.inc"); ?>
+<div class="content">
+
+<div class="peeks">
+<h3><div id="instrumentname">Instrument plot</div></h3>
+<img id="instrumentplot"
+    alt="rotating image of current data"
+    title="plot space"
+    border="0"
+    onerror="refresh()" /> <!-- move to the next plot on error -->
+</div>
+</p>
+
+</div>
+<hr>
+<div class="footer">
+<div style="float:left;"><p>Paul Kienzle (<a href="mailto:paul.kienzle@nist.gov">paul.kienzle@nist.gov</a>)</p></div>
+<div style="float:right;"><p><? lastmod(); ?></p></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,91 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>XPeekWeb</title>
+    
+<!--    <link rel="stylesheet" type="text/css" href="/static/site.css" /> -->
+    <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/start/jquery-ui.css"
+    type="text/css" rel="Stylesheet" />
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js" type="text/javascript"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/jquery-ui.min.js" type="text/javascript"></script>
+<!--    <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.4.2/jquery.js"></script>-->
+    <!--<script type="text/javascript" src="/static/socket.io-client/dist/socket.io.min.js"></script> -->
+    <script type="text/javascript" src="/static/socket.io-0.9.6/socket.io.min.js"></script>
+    <!-- <script type="text/javascript" src="/static/socket.io-0.9.6/socket.io.js"></script> -->
+    <!-- <script type="text/javascript" src="/static/socket.io/socket.io.js"></script> -->
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+
+    <script type="text/javascript" src="plotting_api2.js"></script>
+    <script type="text/javascript" src="webdata_client.js"></script>
+    <script type="text/javascript" src="webdata_client_poisserr.js"></script>
+    <script type="text/javascript" src="webdata_BT1_client.js"></script>
+    <script type="text/javascript" src="webdata_NG7_client.js"></script>
+    <script type="text/javascript">
+        Instruments = ['NGD', 'CGD', 'BT1', 'NG7'];
+        dataHandlers = [];
+        dataChannels = [];
+        window.onload = function() {
+            
+            BaseURL = 'http://' + window.location.hostname + ':' + window.location.port;
+            for (var i in Instruments) {
+                var Instrument = Instruments[i];
+                var Root = BaseURL + '/' +Instrument;
+                //document.title = Instrument + ' status';
+                var w;
+                //var dataChannel = new io.connect(Root + '/data', {'force new connection': true});
+                //var dataChannel = io.connect(Root + '/data', {'force new connection': true});
+                var dataChannel = io.connect(Root + '/data');
+                dataChannels.push(dataChannel);
+                if (Instrument == "BT1") {
+                    w = new webData_BT1();
+                } else if (Instrument == "NG7") {
+                    w = new webData_NG7();
+                } else {
+                    w = new webData_poisserr();
+                }
+                w.init(dataChannel, {plotdiv: 'plot' + String(parseInt(i)+1)});
+                dataHandlers.push(w);
+            }
+        }
+    </script>
+    <script src="/static/geturlvars.js"></script>
+    <style type="text/css">
+        div { 
+		        user-select: none; 
+		        -webkit-user-select: none; 
+		        -moz-user-select: none;
+		    }
+		#leftSide {
+          float: left;
+          width: 50%;
+        }
+         
+        #rightSide {
+          float: left;
+          width: 50%;
+        }
+    </style>
+</head>
+<body>
+<div id="leftSide">
+<div id="plot1" style="display:block;width:700px;height:350px;"></div>
+<div id="plot2" style="display:block;width:700px;height:350px;"></div>
+</div>
+<div id="rightSide">
+<div id="plot3" style="display:block;width:700px;height:350px;"></div>
+<div id="plot4" style="display:block;width:700px;height:350px;"></div>
+</div>
+</body>
+</html>

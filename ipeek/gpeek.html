@@ -1,0 +1,104 @@
+<html>
+<head>
+<title>iPeek</title>
+<META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+<META HTTP-EQUIV="Expires" CONTENT="-1">
+<script type="text/javascript" language="javascript">
+<!-- // comment to protect old browsers which don't recognize script
+var refreshtime = 60; // 1 minute refresh rate
+var refreshtimer = null;
+var URL='http://www.ncnr.nist.gov/ipeek/';
+
+// Respond to instrument/format changes
+var instrument;
+function setInstrument() {
+  var el = document.getElementById('instrument');
+  instrument = el.value
+  setDocument();
+}
+
+// Set the image file 
+function setFile() {
+  // Force image reload by tagging the request with time
+  var img = URL+instrument+'thumb.png';
+  var now=new Date();
+  el = document.getElementById('instrumentplot');
+  el.src = img+'?'+now.getTime();
+}
+
+// Set the document path 
+function setDocument() {
+  // update document path
+  var newloc = window.location.href;
+  var idx = newloc.indexOf('?');
+  if (idx>=0) newloc=window.location.href.slice(0,idx);
+  newloc = newloc+'?id='+instrument;
+  window.location.href=newloc;
+}
+
+// Argument processing for ?name1=value1&name2=value2#anchor
+// getopt(name,default) returns the value given to name
+// if it exists, or returns default if it does not
+function getopt(name,def) {
+ var pattern = "[\\?&]"+name+"=([^&#]*)";
+ var re = new RegExp(pattern);
+ var results = re.exec(window.location.href);
+ if (results == null)
+   return def;
+ else
+   return results[1];
+}
+
+// Set initial image and refresh timer.
+function startup() {
+  instrument = getopt('id','NGD');
+  var el = document.getElementById('dataset');
+  el.instrument.value = instrument;
+  setFile();
+  document.bgColor='#FFFFFF';
+  onshow();
+}
+
+function onshow() {
+  if (refreshtimer == null) 
+    refreshtimer = setInterval("setFile()", refreshtime*1000);
+}
+function onhide() {
+  if (refreshtimer != null) {
+    clearInterval(refreshtimer);
+    refreshtimer = null;
+  }
+}
+
+// OS/X Dashboard support
+if (window.widget) {
+  widget.onhide = onhide;
+  widget.onshow = onshow;
+}
+-->
+</script>
+</head>
+
+
+<body onLoad="startup()">
+ <noscript><p>Enable JavaScript to view the instrument status</p></noscript>
+ <FORM id="dataset">
+ <select id="instrument" onChange="setInstrument()">
+  <option value='BT1'>BT1 Diffractometer</option>
+  <option value='BT4'>BT4 Filter Analyzer</option>
+  <option value='BT5'>BT5 USANS</option>
+  <option value='BT7'>BT7 Triple Axis</option>
+  <option value='BT8'>BT8 Residual Stress</option>
+  <option value='CGD'>Magik Reflectometer</option>  
+  <option value='NGD'>PBR Reflectometer</option>
+  <option value='NG2'>NG2 HFBS</option>
+  <option value='NG5'>NG5 SPINS</option>
+  <option value='NSE'>NSE Spin Echo</option>
+  <option value='NG7'>NG7 Reflectometer</option>
+ </select>
+</form>
+<img id="instrumentplot"
+     border="0" title="plot" alt="plot"
+     onerror="this.src='denied.png'" />
+</body>
+</html>

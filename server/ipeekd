@@ -1,0 +1,38 @@
+#!/usr/bin/env python
+
+import resource
+import os.path
+import sys
+import logging
+
+#import matplotlib
+#matplotlib.use('Agg')
+
+import daemon
+import livedata
+
+LOGDIR='/home/bbm/.livedata'
+LOGFILE = os.path.join(LOGDIR,'livedata.log')
+PIDFILE = os.path.join(LOGDIR,'livedata.pid')
+MAXMEM = 200000000
+
+def startup():
+    # Make sure the log/pid directory exists
+    if not os.path.exists(LOGDIR): os.makedirs(LOGDIR)
+    # daemonize the process
+    daemon.startstop(pidfile=PIDFILE,
+                     #stdout="/tmp/livedata.out",
+                     #stderr="/tmp/livedata.err",
+                     )
+    # limit memory to 100 Mb
+    resource.setrlimit(resource.RLIMIT_DATA, (MAXMEM,MAXMEM)) 
+    # do the actual ops
+    #livedata.main(logfile=LOGFILE, logmode='a', loglevel=logging.DEBUG)
+    livedata.main(logfile=LOGFILE, logmode='a')
+
+
+if __name__ == "__main__":
+    if len(sys.argv) > 1 and sys.argv[1] == 'debug':
+        livedata.debug(sys.argv[2:])
+    else:
+        startup()

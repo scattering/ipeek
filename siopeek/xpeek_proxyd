@@ -1,0 +1,18 @@
+#!/usr/bin/env python
+
+import sys
+
+import daemon
+import xpeek_proxy
+
+if len(sys.argv) < 2 or sys.argv[1] not in daemon.COMMANDS:
+    print """\
+xpeek_proxyd %s [args]
+
+where args those used in xpeek_proxy.py.
+
+"""%"|".join(daemon.COMMANDS)
+    xpeek_proxy.usage()
+    exit(1)
+
+daemon.Daemon('/tmp/xpeek_pusher_daemon.pid',stderr='/tmp/stderr.txt', stdout='/tmp/stdout.txt', cmd=xpeek_proxy.main).invoke()

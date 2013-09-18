@@ -1,0 +1,58 @@
+body {
+    background: #fff; 
+    color: #000;
+    border: 0; padding 0px; margin: 0; 
+}
+
+A:link, A:visited, A:active { 
+    color: #03f; 
+}
+
+/* .statustext { font-size: small; } */
+
+h2 { text-align: center; }
+div.content { margin: 0.75em; }
+div.footer { margin: 0.25em; font-size: smaller; }
+div.figure { padding: 0px; border: none; }
+div.peeks table { 
+    /* table-layout: fixed; */ /* Breaks on Blackberry */
+    align: center; 
+    border: hidden; 
+    border-collapse: collapse; 
+    empty-cells: show;
+    padding: 0px; margin: 0px; border: 0px solid gray;
+}
+div.peeks table td { padding: 0px; margin: 0px; border: 0px;
+                     text-align: center; border-top: 1px solid gray;
+                     width: auto; height: auto;
+                   }
+div.peeks table tr { 
+    margin: 15px;
+    border-top: 1px solid gray;
+
+}
+div.peeks table {border-top: hidden; }
+.ipeek {
+         width: auto; height: auto; 
+         border: 0; padding: 0px; margin: 0em; 
+         outline-style: none; }
+.ipeek img { max-width: 210px; max-height: 110px; }
+.ipeek a:link img, a:visited img { border: none; }   
+
+div.peeks {
+-webkit-touch-callout: none;
+-webkit-user-select: none;
+-khtml-user-select: none;
+-moz-user-select: none;
+-ms-user-select: none;
+user-select: none;
+}
+
+pre { 
+    padding: 0.5em;
+    margin-left: 2em;
+    margin-right: 10em;
+    margin-top: 1.5ex;
+    margin-bottom: 1.5ex;
+    background: lightgray; 
+}

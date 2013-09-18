@@ -1,0 +1,166 @@
+<html>
+<?php
+$INSTRUMENTS = explode("|", "BT1|BT4|BT5|BT7|BT8|CGD|NGD|NG2|NG5|NSE|NG7");
+$NAMES = explode("|", 'BT1|BT4:FANS|BT5:USANS|BT7|BT8|CGD:MAGIK|NGD:PBR|NG2:HFBS|NG5:SPINS|NSE:Spin Echo|NG7:Reflectometer');
+$LINKS = explode("|", 'bt1|fans|usans|bt7_new|darts|magik|ng1refl|hfbs|spins|nse|ng7refl');
+
+$ip = $_SERVER['REMOTE_ADDR'];
+$visitor = @getHostByAddr($ip);
+$fromNCNR = strtolower(substr($visitor, -14)) == ".ncnr.nist.gov";
+
+// Check inputs
+$id = (isset($_GET['id'])) ? strtoupper($_GET['id']) : 'NGD';
+if (!in_array($id, $INSTRUMENTS)) $id = 'NGD';
+$format = (isset($_GET['format'])) ? strtolower($_GET['format']) : 'linear';
+if ($format != 'linear' && $format != 'log') $format = 'linear';
+$status = (isset($_GET['status'])) ? strtolower($_GET['status']) : '';
+if ($status != 'on' && $status != 'off' && $status != '') $status = '';
+$embed = (isset($_GET['embed'])) ? $_GET['embed'] : '0';
+if ($embed != '0' && $embed != '1') $embed = 0;
+
+$URL = "http://www.ncnr.nist.gov/ipeek/";
+$image = $URL.$id.$format.'.png';
+
+// Instrument is displayed if status/$id.on exists, or hidden otherwise.
+$statusfile = "status/" . strtolower($id) . ".on";
+
+// Maybe update the instrument status if the query comes from within nist.
+if ($fromNCNR) {
+    if ($status == 'on') {
+        touch($statusfile);
+    } elseif ($status == 'off') {
+        unlink($statusfile);
+    }
+}
+
+$state = is_file($statusfile) ? 'on' : 'off';
+$notstate = $state == 'on' ? 'off' : 'on';
+?>
+<head>
+  <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="-1">
+  <LINK href="site.css" rel="stylesheet" type="text/css">
+  <title>iPeek - <?php echo $id; ?></title>
+<script type="text/javascript" language="javascript">
+<!-- // comment to protect old browsers which don't recognize script
+var refreshtime = 60; // 1 minute refresh rate
+var refreshtimer = null;
+var URL='<?php echo $URL;?>';
+
+// Set the image file from instrument and imageformat
+function refresh() {
+  // Force image reload by tagging the request with time
+  var instrument = document.getElementById('instrument').value;
+  var imageformat = document.getElementById('loglin').value;
+  var img = URL+instrument+imageformat+'.png';
+  var now=new Date();
+  el = document.getElementById('instrumentplot');
+  el.src = img+'?'+now.getTime();
+}
+
+// Set the document path from instrument and imageformat
+function change_view() {
+  // update document path
+  var instrument = document.getElementById('instrument').value;
+  var imageformat = document.getElementById('loglin').value;
+  var newloc = window.location.href;
+  var idx = newloc.indexOf('?');
+  if (idx>=0) newloc=window.location.href.slice(0,idx);
+  newloc = newloc+'?id='+instrument+'&format='+imageformat;
+  window.location.href=newloc;
+}
+
+// Set refresh timer.
+function onshow() {
+  if (refreshtimer == null) 
+    refreshtimer = setInterval("refresh()", refreshtime*1000);
+}
+function onhide() {
+  if (refreshtimer != null) {
+    clearInterval(refreshtimer);
+    refreshtimer = null;
+  }
+}
+
+window.onload = onshow;
+
+// OS/X Dashboard support
+if (window.widget) {
+  widget.onhide = onhide;
+  widget.onshow = onshow;
+}
+-->
+</script>
+</head>
+
+
+<body>
+
+<?php
+
+if ($embed == '0') {
+  include("/var/www/include/navigation.inc");
+  include("/var/www/include/utility.inc");
+
+echo <<<EOD
+<div class="content">
+ <FORM id="dataset" action="" method="get">
+ <select id="instrument" name="id" onChange="change_view()">
+EOD;
+  foreach ($INSTRUMENTS as $i => $code) {
+    echo "<option value='$code'"; 
+    if ($id==$code) echo ' selected="selected"';
+    echo ">".$NAMES[$i]."</option>";
+  }
+  $logselected = $format=='log'?' selected="selected"':'';
+  $linselected = $format=='linear'?' selected="selected"':'';
+  echo <<<EOD
+ </select>
+ Format: 
+ <select name="format" id="loglin" onChange="change_view()">
+  <option value='log'$logselected>Log</option>
+  <option value='linear'$linselected>Linear</option>
+ </select>
+ <noscript><INPUT type="submit" value="Display"></noscript>
+</form>
+EOD;
+}
+
+  $denied = $id=='BT1' ? 'BT1denied.png' : 'denied.png';
+echo <<<EOD
+<img id="instrumentplot"
+     src="$image" title="$id plot" alt="$id plot"
+     border="0" onerror="this.src='$denied'" />
+EOD;
+
+// Check whether the query comes from nist
+if ($embed == '0' && $fromNCNR) {
+    echo <<<EOD
+<p>iPeek-$id is $state.</p>  
+<p>By clicking this link you can 
+<a href="http://www.ncnr.nist.gov/ipeek/ipeek.html?id=$id&format=$format&status=$notstate">turn iPeek-$id $notstate</a>. 
+This will affect all users, both inside and outside NIST.</p>
+EOD;
+}
+if ($status == 'off') {
+   echo "<p><strong>View will not be cleared until the next data point arrives!</strong></p>";
+} elseif ($status == 'on') {
+   echo "<p><strong>View will not be shown until the next data point arrives!</strong></p>";
+}
+
+
+if ($embed == '0') {
+    echo <<<EOD
+</div>
+<hr>
+<div class="footer">
+  <div style="float:left;"><p>Paul Kienzle (<a href="mailto:paul.kienzle@nist.gov">paul.kienzle@nist.gov</a>)</p></div>
+  <div style="float:right;"><p>
+EOD;
+    lastmod();
+    echo "</p></div>\n</div>";
+}
+?>
+
+</body>
+</html>
