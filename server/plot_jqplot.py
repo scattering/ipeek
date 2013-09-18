@@ -304,7 +304,7 @@ def layout_figure(fig,stream,dataid,scale=None):
         for xx,yy in zip(x,y):
             fitdata.append([xx,yy])
         fig['data'].insert(0, fitdata)
-        fig['options']['series'].insert(0, {'label': 'fit'})
+        fig['options']['series'].insert(0, {'label': 'fit', 'showLine': True, 'showMarker': False})
         fig['options']['legend']['show'] = True
         if line.peak._vars and line.peak._vars.values:
             for key in line.peak._vars.values():
