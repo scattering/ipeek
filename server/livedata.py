@@ -48,7 +48,7 @@ STATUS_INSTRUMENTS = []
 #SANS_INSTRUMENTS = ['NG3SANS','NG7SANS','NGBSANS']
 SANS_INSTRUMENTS = []
 
-PLOT_INTERVAL=15
+PLOT_INTERVAL=60
 TEMPDIR = '/home/bbm/.livedata'
 KEYFILE = '/home/bbm/.ssh/datapushkey'
 #KEYFILE = '/home/pkienzle/.ssh/livedatakey'
