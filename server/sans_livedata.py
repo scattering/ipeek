@@ -23,6 +23,10 @@ sources = [
      "root_dir": "/var/ftp/pub/ncnrdata/ng3sans/",
      "live_datapath":"pub/sansdata/NG3Current/",
      "live_dataname": "live001.sa3_ice_a001"},
+    {"name": "NGBSANS", 
+     "root_dir": "/var/ftp/pub/ncnrdata/ngbsans/",
+     "live_datapath":"pub/sansdata/NGBCurrent/",
+     "live_dataname": "live001.sa3_ice_a001"},
 ]
 
 output = {}
