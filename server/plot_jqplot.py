@@ -99,6 +99,7 @@ plottable_data_2d = {
             'title': "",
             'metadata': {},
             'options': {
+                'series':[],
                 'axes': {'xaxis': {'label':'A4'}, 'yaxis': {'label':'Counts'}},
                 'fixedAspect': {
                     'fixAspect': False,
@@ -148,7 +149,7 @@ ERRORBARS = ['BT7','BT9']
 THUMBDIMS=210,110
 IMAGEDIMS=700,450
 
-def create_figure(dims=1):
+def create_figure(line):
     # Note: need to use fig/canvas directly rather than pylab since
     # pylab is not thread safe.
     
@@ -158,7 +159,7 @@ def create_figure(dims=1):
     #    w,h = IMAGEDIMS[0]/dpi, IMAGEDIMS[1]/dpi
     #fig = Figure(figsize=(w,h),dpi=dpi)
     #return fig
-    if (dims > 1):  return copy.deepcopy(plottable_data_2d) 
+    if (line.pixels > 1 and line.instrument != 'BT1'):  return copy.deepcopy(plottable_data_2d) 
     else: return copy.deepcopy(plottable_data) 
 
 
@@ -329,7 +330,7 @@ def layout_figure(fig,stream,dataid,scale=None):
 
 def bt1plot(fig, data, scale):
 
-
+    fitg
     # BT1 scale factors
     BT1_scl=[ 2.700,  2.479,  2.827,  2.483,  2.260,  2.347,  2.011,  1.749,
               1.630,  1.360,  1.339,  1.218,  1.058,  1.000,  1.054,  0.953,

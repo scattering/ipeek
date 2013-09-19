@@ -222,7 +222,7 @@ class XPeekWeb(xpeek.XPeek):
         try:
             #if os.path.exists(file): os.remove(file)
             line = self.data[lineid]
-            fig = plot.create_figure(dims=line.pixels)
+            fig = plot.create_figure(line)
             logging.debug("fig: %s\n attempting layout with self=%s, lineid=%s" % (str(fig),str(self),str(lineid)))
             plot.layout_figure(fig,self,lineid)
             logging.debug("fig layout: %s" % (str(fig),))
