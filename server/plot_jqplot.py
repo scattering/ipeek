@@ -330,7 +330,6 @@ def layout_figure(fig,stream,dataid,scale=None):
 
 def bt1plot(fig, data, scale):
 
-    fitg
     # BT1 scale factors
     BT1_scl=[ 2.700,  2.479,  2.827,  2.483,  2.260,  2.347,  2.011,  1.749,
               1.630,  1.360,  1.339,  1.218,  1.058,  1.000,  1.054,  0.953,
