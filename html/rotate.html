@@ -138,6 +138,10 @@
 		    
 		    function showData(datalist) {
 	            data = datalist[0];
+	            $.extend(true, data.options, {axes: {
+	                xaxis: {renderer: $.jqplot.GracefulAxisRenderer},
+	                yaxis: {renderer: $.jqplot.GracefulAxisRenderer}
+	            }}); 
 	            var i=0;
 	            if ($('#plot0').css('display') == 'none') {
 	                current_target = 'plot1';
