@@ -161,7 +161,18 @@
                     }
                 } else if (data.type == '2d') {
                     //plots[instr] = plottingAPI(datalist, next_target);
-                    plots[next_target] = plottingAPI(datalist, next_target);
+                    $('#' + next_target).empty();
+                    var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+                    $('#' + next_target).append(plotbox)
+                    plotbox.append($('<div />', {
+                        style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
+                        id:"plotgrid"}));
+                    plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:"colorbar"}));
+                    var plot = renderImageData2(data, transform, 'plotgrid');
+                    colorbar = renderImageColorbar2(plot.series[0], 'colorbar');
+                    plots[next_target] = plot;
+                    plot.redraw(); // for aspect ratio plugin!
+                    //plots[next_target] = plottingAPI(datalist, next_target);
                     if (data.metadata) {
                         $('#' + eta_target).html(make_metadata_table(data.metadata));
                     }
