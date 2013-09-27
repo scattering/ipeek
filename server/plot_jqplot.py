@@ -16,6 +16,8 @@ import simplejson
 import numpy
 import copy
 
+MAX_BT1_LINES = 4
+
 #from matplotlib.figure import Figure
 #from matplotlib.backends.backend_agg import FigureCanvasAgg as Canvas
 #from matplotlib import rcParams
@@ -328,7 +330,7 @@ def layout_figure(fig,stream,dataid,scale=None):
     fig['metadata']['numPoints'] = line.points
     fig['metadata']['measured'] = measured
 
-def bt1plot(fig, data, scale):
+def bt1plot(fig, data, scale, max_lines=MAX_BT1_LINES):
 
     # BT1 scale factors
     BT1_scl=[ 2.700,  2.479,  2.827,  2.483,  2.260,  2.347,  2.011,  1.749,
@@ -354,6 +356,10 @@ def bt1plot(fig, data, scale):
     linestyle = LINESTYLE.get('BT1','o-')
     fig['data'] = []
     
+    if max_lines is not None:
+        for i in range(max_lines):
+            fig['data'].append([])
+    
     for i in range(len(data.columns['DATA'][0])):
         x = a04 + 5*i - BT1_zeros[i]
         y = counts[:,i]
@@ -367,8 +373,14 @@ def bt1plot(fig, data, scale):
         else:
             for xx,yy in zip(x, y):
                 data.append([xx,yy])
-        fig['data'].append(data)
-        fig['options']['series'].append({'label': str(i+1)})
+        if max_lines is not None:
+            series = numpy.mod(i, max_lines)
+            fig['data'][series].extend(data)
+            fig['data'][series].extend([[xx, None]])
+        else:
+            fig['data'].append(data)
+            fig['options']['series'].append({'label': str(i+1)})    
+        
     fig['options']['legend'] = {"show": False}
     fig['options'].update({"seriesDefaults": {
             "markerOptions": {"size": 4 },
