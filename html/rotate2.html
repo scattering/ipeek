@@ -266,7 +266,9 @@
 		        var logselected = ev.target.checked;
                 var transform = logselected? 'log' : 'lin';
                 Y_TRANSFORM[current_instr] = transform;
-                localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+                if (localStorage && localStorage != null) {
+                    localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+                }
                 //if (plots[current_target] && plots[current_target].setTransform) {plots[current_target].setTransform(transform)};
                 if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
                 if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };

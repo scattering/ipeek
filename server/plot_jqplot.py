@@ -307,7 +307,7 @@ def layout_figure(fig,stream,dataid,scale=None):
         fig['data'].insert(0, fitdata)
         fig['options']['series'].insert(0, {'label': 'fit', 'showLine': True, 'showMarker': False})
         fig['options']['legend']['show'] = True
-        if line.peak._vars and line.peak._vars.values:
+        if hasattr(line.peak, '_vars') and hasattr(line.peak._vars, 'values'):
             for key in line.peak._vars.values():
                 fig['metadata']['peak.' +key] = getattr(line.peak, key) 
         #fig['metadata']['peak'] = str(line.peak)
