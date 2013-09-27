@@ -49,6 +49,7 @@
     		INSTRUMENTS = [];
     		INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'}
     		plots = {};
+    		colorbars = {};
     		
     		function onshow() {
               if (refreshtimer == null) 
@@ -114,7 +115,7 @@
 		        }
 		    }
 		    
-		    function updateTransform(ev) {
+		    /*function updateTransform(ev) {
 		        var plottarget = $(this).parent().parent().find('.jqplot-target')[0].id;
 		        for (var p in plots) {
 		            if (plots[p].targetId == ('#' + plottarget)) {
@@ -123,11 +124,29 @@
 		                break;
 		            }
 		        }
+		    }*/
+		    
+		    function updateTransform(ev) {
+		        var logselected = ev.target.checked;
+                var transform = logselected? 'log' : 'lin';
+                var next_target = 'plot1';
+                //Y_TRANSFORM[current_instr] = transform;
+                //if (localStorage && localStorage != null) {
+                //    localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+                //}
+                //if (plots[current_target] && plots[current_target].setTransform) {plots[current_target].setTransform(transform)};
+                if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
+                if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
 		    }
 		    
 		    function showData(instr) {
 		        function handler(datalist) {
 		            var data = datalist[0];
+		            $.extend(true, data.options, {axes: {
+	                    xaxis: {renderer: $.jqplot.GracefulAxisRenderer, rendererOptions: {numberTicks: 4}},
+	                    yaxis: {renderer: $.jqplot.GracefulAxisRenderer}
+	                    }
+	                });
                     //var instr = data.metadata.instrument;
                     var i = INSTRUMENTS.indexOf(instr);
                     if (i > -1) {
@@ -146,10 +165,35 @@
 	                        plots[instr] = render1dplot(null, data, transform, plot_target);
 	                        $('#' + eta_target).html(make_metadata_table(data.metadata));
 	                    } else if (data.type == '2d') {
+                            //plots[instr] = plottingAPI(datalist, plot_target);
+                            $('#' + plot_target).empty();
+                            var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+                            $('#' + plot_target).append(plotbox)
+                            plotbox.append($('<div />', {
+                                style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
+                                id: plot_target + "_plot"}));
+                            plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_target + "_colorbar"}));
+                            var plot = renderImageData2(data, transform, plot_target + "_plot");
+                            var cbar_options = {
+                                axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
+            	            }
+                            var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar');
+                            plots[plot_target] = plot;
+                            colorbars[plot_target] = colorbar;
+                            plot.replot(); // for aspect ratio plugin!
+                            colorbar.plugins._interactor.zoomMax(); // for scale!
+                            //plots[plot_target] = plottingAPI(datalist, plot_target);
+                            if (data.metadata) {
+                                $('#' + eta_target).html(make_metadata_table(data.metadata));
+                            }
+                        }
+                        /*
+	                    } else if (data.type == '2d') {
 	                        //plots[instr] = plottingAPI(datalist, plot_target);
 	                        plots[instr] = plottingAPI(datalist, plot_target);
 	                        $('#' + eta_target).html(make_metadata_table(data.metadata));
 	                    }
+	                    */
 	                    var instr_link = $('<a />', {'href': 'singleplotwindow.html?instrument=' + instr});
 	                    var instr_name = instr;
 	                    if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
@@ -215,6 +259,9 @@
             .jqplot-table-legend-swatch {
 			    width: 10;
 			    height: 10;
+			}
+			.jqplot-series-shadowCanvas {
+			    display: none;
 			}
 		</style>
 		 <style type="text/css">

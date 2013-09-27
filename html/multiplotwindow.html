@@ -73,11 +73,11 @@
                     table.append(row);
                     for (var c=0; c<cols && cells < numCells; c++) {
                         var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
+                        cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                         cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed()}));
                         var transform = $('<label />').text('log').append($('<input />', {'type': 'checkbox', 'class': 'transform'}));
                         cell.append(transform);
                         cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
-                        cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                         row.append(cell);
                         cells++;
                     }
@@ -131,6 +131,11 @@
 		    function showData(instr) {
 		        function handler(datalist) {
 		            var data = datalist[0];
+		            $.extend(true, data.options, {axes: {
+	                    xaxis: {renderer: $.jqplot.GracefulAxisRenderer, rendererOptions: {numberTicks: 4}},
+	                    yaxis: {renderer: $.jqplot.GracefulAxisRenderer}
+	                    }
+	                }); 
 		            datas[instr]= data;
                     //var instr = data.metadata.instrument;
                     var i = INSTRUMENTS.indexOf(instr);
@@ -204,12 +209,15 @@
 		        font-family: "Georgia", serif;
 		        font-weight: bold;
 		    }
-		                       
+		                 
 		    #instruments tr { margin-bottom: 30px; }
 		    div { 
 		        user-select: none; 
 		        -webkit-user-select: none; 
 		        -moz-user-select: none;
+		    }
+		    .plotcell {
+		        border: 2px solid gray;
 		    }
 		    .metadata-label {color: red}
 		    .slidingDiv {
