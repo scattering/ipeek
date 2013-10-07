@@ -1,10 +1,4 @@
-//import struct
-//import sys
-//import vaxutils
-//import numpy
-//import math
-//import os
-
+// requires jspack.js
 
 // readNCNRSensitivity: to be converted to JS another day...
 /*
@@ -54,23 +48,17 @@ def readNCNRSensitivity(inputfile):
 
 function readNCNRData(bytearray, filename){
     
-    metadata = {};
-    /*
-    if file_obj is not None and hasattr(file_obj, 'read'):
-        data = file_obj.read()
-    else:
-        data = open(inputfile, 'rb').read()
-    */
+    var metadata = {};
     metadata['run.filename'] = (filename == null) ? "" : filename;
     
     //filename
-    dat = exports.jspack.Unpack('<21s', data, 2) // [2:23]
+    var dat = exports.jspack.Unpack('<21s', data, 2) // [2:23]
     //filename = dat[0].replace(' ','')
     
     //metadata
-    reals = {}
+    var reals = {}
     
-    formatstring = '<4i4s4s4s4s20s3s11s1s8s' //run
+    var formatstring = '<4i4s4s4s4s20s3s11s1s8s' //run
     formatstring += '60s4s4s4s4s3i4s4s2i6s6s' //sample
     formatstring += '6s4s4s4s4s4s4s2i4s4s4s4s4s4s4s' //det
     formatstring += '4s4s4s4s4s4s' //resolution
@@ -82,8 +70,6 @@ function readNCNRData(bytearray, filename){
     formatstring += 'L4s4si' //voltage
     formatstring += '2L4s4s' //polarization
     formatstring += '4i4s4s4s4s4s' //analysis
-    
-    //print formatstring
     
     //print struct.calcsize(formatstring)
     var metadata_order = [
@@ -191,9 +177,7 @@ function readNCNRData(bytearray, filename){
 
     
     //Process reals into metadata
-    // for k,v in reals.items():
     for (k in reals) {
-        //print k,type(v)
         metadata[k] = R4toFloat(reals[k]);
     }
     
@@ -266,12 +250,3 @@ function R4toFloat(vaxasstring) {
     return exports.jspack.Unpack('<f',ieeeasbytes)[0]
 }
 
-/*
-if __name__ == '__main__':
-    sensitivity = readNCNRSensitivity("test.div")
-    //print sensitivity
-    detdata,metadata=readNCNRData("MAY06001.SA3_CM_D545")
-    //plt.figure()
-    //plt.imshow(detdata)
-    //plt.show()
-    */
