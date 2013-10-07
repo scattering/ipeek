@@ -1,0 +1,45 @@
+<!doctype html>
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SANS data reader</title>
+  <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
+  <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script>
+    exports = {}; // compatibility with node scripts
+  </script>
+  <script src="js/jspack.js"></script>
+  <script src="js/sansdata.js"></script>
+  <script>
+  $(function() {
+    
+    var EMPTY_TRAJ = "{'init': {}, 'loops': [{'vary': []}]}";
+    
+    set_data = function(raw) {
+        data = new Uint8Array(raw);
+        console.log(readNCNRData(data));
+    }
+    
+    var loadData = function() {
+        var file = document.getElementById('sansfile').files[0]; // only one file allowed
+        datafilename = file.name;
+        var result = null;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            set_data(this.result);
+        }
+        reader.readAsArrayBuffer(file);
+    }
+    
+    var fileinput = document.getElementById('sansfile');
+    fileinput.onchange = loadData;  
+  });
+  </script>
+</head>
+<body>
+Load trajectory (*.traj): <input type="file" multiple="false" id="sansfile" name="sansfile" />
+</body>
+</html>
