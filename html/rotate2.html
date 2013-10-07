@@ -6,7 +6,7 @@
 		<title>NCNR live data</title>
  
         <!-- Reference the theme's stylesheet on the Google CDN -->
-        <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/start/jquery-ui.css"
+        <link href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/themes/ui-darkness/jquery-ui.css"
             type="text/css" rel="Stylesheet" />
             
 <!--        <style>-->
@@ -73,7 +73,7 @@
     		plots = {};
     		colorbars = {};
     		data = null;
-    		current_instrument = null;
+    		current_instr = null;
     		current_target = 'plot1';
     		next_target = 'plot0';
     		
@@ -179,9 +179,9 @@
             
             window.onresize = function() {
                 //$('.plotgrid').width(($(window).innerWidth() / COLS - 75).toFixed() + 'px');
-                var new_width = (1.0/COLS * 100);
-                $('.plotcell').width(new_width.toFixed() + '%')
-                $('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
+                //var new_width = (1.0/COLS * 100);
+                //$('.plotcell').width(new_width.toFixed() + '%')
+                //$('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
                 $('.wrapper, .plotdiv').height(($(window).innerHeight() - 250).toFixed() + 'px');
                 for (var p in plots) {
                     plots[p].replot();
@@ -400,6 +400,7 @@
 		        display: block;
 		    }
 		    .plotdiv {
+		        width: 100%;
 		        position: absolute;
 		        top: 0;
 		        left: 0;
