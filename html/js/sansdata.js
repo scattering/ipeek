@@ -200,22 +200,21 @@ function readNCNRData(bytearray, filename){
     var dataformatstring = '<16401h';
     rawdata = exports.jspack.Unpack(dataformatstring, data, 514);
     
-    /*
-    detdata = numpy.empty(16384)
+    //detdata = numpy.empty(16384) // don't need to initialize javascript arrays
+    var detdata = [];
+    var ii=0;
+    var skip=0;
+    while(ii < 16384) {
+        if(((ii+skip) %1022)==0) {
+            skip+=1;
+        }
+        detdata[ii] = I2Decompress(rawdata[ii+skip]);
+        ii+=1;
+    }
     
-    ii=0
-    skip=0
-    while(ii < 16384):
-	if(((ii+skip) %1022)==0):
-		skip+=1
-	detdata[ii] = I2Decompress(rawdata[ii+skip])
-	ii+=1
+    // detdata.resize(128,128)
     
-    detdata.resize(128,128)
-    
-    return (detdata,metadata)
-    */
-    return [metadata, raw_metadata, rawdata]
+    return [detdata,metadata]
 }
 
 function I2Decompress(val) {
