@@ -46,7 +46,7 @@ def readNCNRSensitivity(inputfile):
     return detdata
 */
 
-function readNCNRData(bytearray, filename){
+function readNCNRData(data, filename){
     
     var metadata = {};
     metadata['run.filename'] = (filename == null) ? "" : filename;
@@ -192,13 +192,14 @@ function readNCNRData(bytearray, filename){
         if(((ii+skip) %1022)==0) {
             skip+=1;
         }
-        detdata[ii] = I2Decompress(rawdata[ii+skip]);
+        //detdata[ii] = I2Decompress(rawdata[ii+skip]);
+        detdata.push(I2Decompress(rawdata[ii+skip]));
         ii+=1;
     }
     
     // detdata.resize(128,128)
     
-    return [detdata,metadata]
+    return [detdata, metadata, rawdata]
 }
 
 function I2Decompress(val) {
@@ -248,5 +249,53 @@ function R4toFloat(vaxasstring) {
         ieeeasbytes = [vaxasstring.charCodeAt(2), vaxasstring.charCodeAt(3), vaxasstring.charCodeAt(0), vaxasstring.charCodeAt(1)-1];
     }
     return exports.jspack.Unpack('<f',ieeeasbytes)[0]
+}
+
+function get_plottable(data_metadata) { 
+    var data = data_metadata[0];
+    var zmin = Math.min.apply(Math, data);
+    var zmax = Math.max.apply(Math, data),
+    data = reshape(data, 128, 128);
+    var metadata = data_metadata[1];
+    
+    //zmin = self.data.x[self.data.x > 1e-10].min()
+    var plottable_data = {
+        'type': '2d',
+        'z':  [data],
+        'title': metadata['run.filename']+': ' + metadata['sample.labl'],
+        'metadata': metadata,
+        'options': {
+            'fixedAspect': {
+                'fixAspect': true,
+                'aspectRatio': 1.0
+            }
+        },
+        'dims': {
+            'xmax': 128,
+            'xmin': 0.0, 
+            'ymin': 0.0, 
+            'ymax': 128,
+            'xdim': 128,
+            'ydim': 128,
+            'zmin': zmin,
+            'zmax': zmax,
+            },
+        'xlabel': 'X',
+        'ylabel': 'Y',
+        'zlabel': 'Intensity (I)',
+        };
+    //out = simplejson.dumps(plottable_data,sort_keys=True)
+    return plottable_data;
+}
+
+function reshape(data, dim0, dim1) {
+    var l = data.length;
+    var m=0;
+    var row, out=[];
+    var d0, d1;
+    for (m=0; m < l; m+=dim1) {
+        out.push(data.slice(m, m+dim1));
+    }
+    return out;
 }
 
