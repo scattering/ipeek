@@ -107,7 +107,8 @@
         var logselected = $('#' + cell_target).find('input')[0].checked;
         var transform = logselected? 'log' : 'lin';
         
-        //if (plot && plot.destroy) { plot.destroy() }
+        if (plots && plots[next_target] && plots[next_target].destroy) { plots[next_target].destroy() }
+        if (colorbars && colorbars[next_target] && colorbars[next_target].destroy) { colorbars[next_target].destroy() }
         
         $('#' + next_target).show( "drop", { direction: "right" }, 1000);
         if (data.type == '1d') {

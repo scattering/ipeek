@@ -170,12 +170,12 @@ function renderImageColorbar2(parent_plot, plotid, cbar_options) {
     var cbar_options = cbar_options || {};
     jQuery.extend(true, options, cbar_options);
         
-    if (!plot2d_colorbar) {
-        plot2d_colorbar = $.jqplot(plotid, [[1,1]], options); 
-    }
-    else { // the colorbar already exists - just link it to the new plot
-        plot2d_colorbar.series[0].parent_plot = parent_plot;
-    }
+    //if (!plot2d_colorbar) {
+    var plot2d_colorbar = $.jqplot(plotid, [[1,1]], options); 
+    //}
+    //else { // the colorbar already exists - just link it to the new plot
+    //    plot2d_colorbar.series[0].parent_plot = parent_plot;
+    //}
     return plot2d_colorbar
 }
 
@@ -375,7 +375,7 @@ function renderImageData2(data, transform, plotid, plot_options) {
     
     jQuery.extend(true, options, data.options);
     jQuery.extend(true, options, plot_options);
-    plot2d = $.jqplot(plotid, data.z, options);
+    var plot2d = $.jqplot(plotid, data.z, options);
     plot2d.type = '2d';
     return plot2d
 };
