@@ -364,6 +364,20 @@ function ICPParser() {
             this.readiheader(contents);
             this.readmotors(contents);
         }
+        else if (['Q','T'].indexOf(this.scantype) > -1) {
+            this.readqheader(contents);
+        }
+        else if (this.scantype == 'B') {
+            this.readqheader(contents);
+            this.readmotors(contents);
+        }
+        else if (this.scantype == 'R') {
+            this.readrheader(contents);
+            this.readmotors(contents);
+        }
+        else {
+            throw "Unknown scan type: " + this.scantype;
+        }
         this.readcolumnheaders(contents);
     }
     
@@ -380,7 +394,7 @@ function ICPParser() {
         this.prefactor = parseFloat(tokens[3]);
         this.monitor = parseFloat(tokens[4]);
         this.count_type = tokens[5];
-        this.points = parseInt(tokens[6]);
+        this.points = parseInt(tokens[6], 10);
         this.data_type = tokens[7];
 
         //skip over names of fields
@@ -402,12 +416,12 @@ function ICPParser() {
     }
     
     this.readiheader = function(contents) {
-        //"""
-        //Read I-buffer structure, excluding motors.
-        //"""
+        /*
+        Read I-buffer structure, excluding motors.
+        */
 
         // Read in fields and field names
-        var tokenized = contents[this.linenumber++].split();
+        var tokenized = contents[this.linenumber++].split(/\s+/);
         var fieldnames = contents[this.linenumber++]; //file.readline()
         //print tokenized
         //print fieldnames
@@ -419,6 +433,72 @@ function ICPParser() {
         this.Tstart = parseFloat(tokenized[8]);
         this.Tstep = parseFloat(tokenized[9]);
         this.Hfield = parseFloat(tokenized[10]);
+    }
+    
+    this.readrheader = function(contents) {
+        /*
+        Read R-buffer structure, excluding motors.
+        */
+        
+        // Read in fields and field names
+        var tokenized = contents[this.linenumber++].split(/\s+/);
+        var fieldnames = contents[this.linenumber++]; //file.readline()
+        //print tokenized
+        //print fieldnames
+
+        //#Mon1    Exp   Dm      Wavel  T-Start  Incr. Hf(Tesla) #Det SclFac
+        this.Mon1 = parseFloat(tokenized[0]);
+        this.Exp = parseFloat(tokenized[1]);
+        this.Dm = parseFloat(tokenized[2]);
+        this.wavelength = parseFloat(tokenized[3]);
+        this.Tstart = parseFloat(tokenized[4]);
+        this.Tstep = parseFloat(tokenized[5]);
+        this.Hfield = parseFloat(tokenized[6]);
+        this.numDet = parseFloat(tokenized[7]);
+        this.SclFac = parseFloat(tokenized[8]);
+    }
+    
+    this.readqheader = function(contents) {
+        /*
+        Read Q-buffer structure (also works for T-buffer).
+        */
+        
+        //experiment info
+        var tokenized = contents[this.linenumber++].split(/\s+/);
+        this.collimations = tokenized.slice(0,4).map(parseFloat);
+        this.mosaic = tokenized.slice(4,7).map(parseFloat);
+        var orient1 = tokenized.slice(7,10).map(parseFloat); //[float(s) for s in tokenized[7:10]]
+        //ignore the "angle" field
+        var orient2 = tokenized.slice(11,14).map(parseFloat); //[float(s) for s in tokenized[11:14]]
+        //skip line with field names
+        this.linenumber++; //file.readline()
+        tokenized = contents[this.linenumber++].split(/\s+/);
+        var lattice = {}; // Lattice()
+        lattice.a = parseFloat(tokenized[0]);
+        lattice.b = parseFloat(tokenized[1]);
+        lattice.c = parseFloat(tokenized[2]);
+        lattice.alpha = parseFloat(tokenized[3]);
+        lattice.beta = parseFloat(tokenized[4]);
+        lattice.gamma = parseFloat(tokenized[5]);
+        this.lattice = lattice;
+        //skip line with field names
+        this.linenumber++;
+        tokenized = contents[this.linenumber++].split(/\s+/);
+        this.ecenter = parseFloat(tokenized[0]);
+        this.deltae = parseFloat(tokenized[1]);
+        this.ef = parseFloat(tokenized[2]);
+        this.monochromator_dspacing = parseFloat(tokenized[3]);
+        this.analyzer_dspacing = parseFloat(tokenized[4]);
+        this.tstart = parseFloat(tokenized[5]);
+        this.tstep = parseFloat(tokenized[6]);
+        tokenized = contents[this.linenumber++].split(/\s+/);
+        this.Efixed = tokenized[4];
+        tokenized = contents[this.linenumber++].split(/\s+/);
+        this.qcenter = tokenized.slice(0,3).map(parseFloat); // [parseFloat(s) for s in tokenized[0:3]]
+        this.qstep = tokenized.slice(3,6).map(parseFloat); //[parseFloat(s) for s in tokenized[3:6]]
+        this.hfield = parseFloat(tokenized[6]);
+        //skip line describing fields
+        this.linenumber++;
     }
     
     this.readmotors = function(contents) {
@@ -472,7 +552,7 @@ function ICPParser() {
             ns = replacements[i][1];
             line = line.replace(os, ns);
         }
-        this.columnnames = line.trim().split(/\s+/)
+        this.columnnames = line.trim().split(/\s+/);
     }
 
     this.readcolumns = function(contents) {
@@ -531,7 +611,6 @@ function ICPParser() {
 
             // If last line ended with a comma then the last number for the
             // the current block is on the current line.
-            console.log(b, (b !== []),  b.slice(-1));
             if ((b.length > 0) && (b.slice(-1)[0]).trimRight().slice(-1) == ",") {
                 b.push(line);
                 line = fh[this.linenumber++];
@@ -542,7 +621,7 @@ function ICPParser() {
                 // Have a detector block so add it
                 var s = b.join("");
                 var z;
-                if (blocks != []) {
+                if (blocks.length > 0) {
                     z = parsematrix(s, blocks[0].length, linenum);
                 }
                 else {
@@ -577,6 +656,30 @@ function ICPParser() {
         return {rows: rows, blocks: blocks, columns: columns}
     }
     
+    this.get_plottable = function(xcol, ycol) {
+        var xcol = (xcol == null) ? this.columnnames[0] : xcol;
+        var ycol = (ycol == null) ? 'counts' : ycol;
+        var data = [];
+        for (var i=0; i<this.column.counts.length; i++) {
+            data.push([this.column[xcol][i], this.column[ycol][i]]);
+        }
+        var plottable_data = {
+            'type': '1d',
+            'title': this.comment,
+            'metadata': {},
+            'options': {
+                'axes': {
+                    'xaxis': {'label': xcol},
+                    'yaxis': {'label': ycol},
+                }
+            },
+            'xlabel': 'X',
+            'ylabel': 'Y', 
+            'data': [data]
+        }; 
+        
+        return plottable_data 
+    }
 
     return this;
 }
@@ -587,7 +690,8 @@ function parsematrix(s, shape, linenum) {
     Parse a string into a matrix.  Provide a shape parameter if you
     know the expected matrix size.
     */
-    var z = s.split(/\s*[,]\s*/).map(parseInt);
+    var singleArgParseInt = function(x) { return parseInt(x, 10); }
+    var z = s.split(/\s*[,]\s*/).map(singleArgParseInt);
     if (shape != null && shape != z.length) {
         throw "Inconsistent dims at line " + linenum.toFixed();
     }

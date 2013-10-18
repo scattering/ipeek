@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>SANS data reader</title>
+  <title>ICP data reader</title>
   <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
@@ -21,7 +21,7 @@
     <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
     <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
 
-    <script type="text/javascript" src="js/plotting_api.js"></script>
+    <script type="text/javascript" src="plotting_api2.js"></script>
     <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
     <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
@@ -46,6 +46,7 @@
         //console.log(readNCNRData(data));
         ICP = new ICPParser();
         ICP.read(data);
+        showSANSData(ICP.get_plottable());
         //parseheader(data.split('\n'));
     }
     
@@ -224,8 +225,8 @@
   </script>
 </head>
 <style>
-html,body{margin:0;padding:0}
-body{font: 76% arial,sans-serif}
+html,body{height:100%;margin:0;padding:0}
+body{font: 76% arial,sans-serif; min-height:100%;}
 p{margin:0 10px 10px}
 a{display:block;color: #981793;padding:10px}
 div#header h1{height:80px;line-height:80px;margin:0;
@@ -236,9 +237,10 @@ div#extra{background:#FF8539}
 div#footer{background: #333;color: #FFF}
 div#footer p{margin:0;padding:5px 10px}
 
-div#outer{float:right;width:100%;margin-left:-200px;}
-div#content{margin-left:200px}
-div#navigation{float:left;width:200px}
+div#outer{float:right;width:100%;margin-left:-300px;}
+div#content{margin-left:300px}
+/*div#navigation{float:left;width:300px;overflow:auto;}*/
+div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:300px;overflow:auto;}
 li.subdiritem { 
     list-style-type: none; 
     cursor: pointer;
@@ -249,12 +251,13 @@ li.fileitem {
     color: blue;
     text-decoration: underline;
 }
-div#footer{clear:both;width:100%}
+/*div#footer{clear:both;width:100%}*/
+div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
 </style>
 <body>
 
 <div id="header" style="background-color:#FFA500;">
-<h1 style="margin-bottom:0;">SANS data browser</h1></div>
+<h1 style="margin-bottom:0;">ICP data browser</h1></div>
 <div id="outer">
     <div id = navigation></div>
     <div id="content">
