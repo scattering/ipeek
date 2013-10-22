@@ -386,7 +386,7 @@ function ICPParser() {
         //Read the tow line summary at the start of the ICP data files.
         //"""
         var line = contents[this.linenumber++];
-        var tokens = get_quoted_tokens(line)
+        var tokens = get_quoted_tokens(line);
         this.filename = tokens[0];
         //var stamp = datetime.datetime(2000, 1, 1) # need this to call strptime
         this.date = new Date(tokens[1]);
@@ -404,7 +404,7 @@ function ICPParser() {
         line = contents[this.linenumber++];
         var polarized_index = line.indexOf("F1: O", 52);
         if (polarized_index > 0) {
-            this.comment = line.slice(0, 52+polarized_index).trimRight();
+            this.comment = line.slice(0, polarized_index).trimRight();
             var F1 = (line.indexOf("F1: ON", 52) > 0) ? '+' : '-';
             var F2 = (line.indexOf("F2: ON", 52) > 0) ? '+' : '-';
             this.polarization = F1 + F2;

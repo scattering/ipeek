@@ -96,10 +96,21 @@
     
     window.onresize();
     
-    
+    function compactDateTime(date) {
+        var outstring = '';
+        outstring += date.getHours().toFixed(0) + ":";
+        outstring += date.getMinutes().toFixed(0) + ":";
+        outstring += date.getSeconds().toFixed(0) + " ";
+        outstring += date.getMonth().toFixed(0) + "/";
+        outstring += date.getDay().toFixed(0) + "/";
+        outstring += date.getFullYear().toFixed(0);
+        return outstring
+    }
         
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
+            var files = dirdata.files;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
             var filebrowser = document.createElement('ul');
             var subdiritem, dirlink, fileitem, new_pathlist;
@@ -107,12 +118,20 @@
                 // add parent dir link
                 subdiritem = document.createElement('li');
                 subdiritem.classList.add('subdiritem');
-                subdiritem.textContent = "Parent Directory";
+                //subdiritem.textContent = "Parent Directory";
                 var new_pathlist = $.extend(true, [], pathlist);
-                new_pathlist.pop();
-                subdiritem.onclick = function() { 
-                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
-                }
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/ ";
+                    dirlink.onclick = function() {
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                    }
+                    subdiritem.appendChild(dirlink);
+                });
+                //new_pathlist.pop();
+                //subdiritem.onclick = function() { 
+                //    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                //}
                 filebrowser.appendChild(subdiritem);
             }
             $.each(dirdata.subdirs, function(index, subdir) {
@@ -126,13 +145,14 @@
                 }
                 filebrowser.appendChild(subdiritem);
             });
-            $.each(dirdata.files, function(index, filename) {
+            $.each(files, function(index, filename) {
                 fileitem = document.createElement('li');
                 fileitem.classList.add('fileitem');
                 //dirlink = document.createElement('a');
                 //dirlink.href = "#";
                 //dirlink.textContent = filename;
-                fileitem.textContent = filename;
+                var filedate = new Date(dirdata.files_metadata[filename].mtime * 1000);
+                fileitem.textContent = filename + ' ' + compactDateTime(filedate);
                 fileitem.onclick = function() {
                     getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + filename); 
                 }
@@ -249,7 +269,11 @@ li.subdiritem {
 li.fileitem {
     cursor: pointer;
     color: blue;
-    text-decoration: underline;
+    text-decoration: none;
+}
+div.plotdiv { 
+    margin-right: 75px;
+    margin-left: 25px;
 }
 /*div#footer{clear:both;width:100%}*/
 div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
