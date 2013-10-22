@@ -16,7 +16,7 @@ import simplejson
 import numpy
 import copy
 
-MAX_BT1_LINES = 4
+MAX_BT1_LINES = 5
 
 #from matplotlib.figure import Figure
 #from matplotlib.backends.backend_agg import FigureCanvasAgg as Canvas
