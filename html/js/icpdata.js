@@ -359,6 +359,10 @@ function ICPParser() {
         */
         // Determine FileType
         this.linenumber = 0;
+        if ( this.checkfpheader(contents) == true ) {
+            // test for findpeak scan, and process as such
+            return;
+        }
         this.readheader1(contents);
         if (this.scantype == 'I') {
             this.readiheader(contents);
@@ -413,6 +417,23 @@ function ICPParser() {
             this.comment = line.trimRight();
             this.polarization = "";
         }
+    }
+    
+    this.checkfpheader = function(contents) {
+        // read findpeak header
+        var patt = /^\s*((?:Motor\s+no\.\s+\d+\s+)+)(Intensity)\s+(.*)/
+        var line = contents[this.linenumber];
+        var isFP = patt.test(line);
+        if (isFP) {
+            this.linenumber++; // we are going to process!
+            var parts = line.match(patt);
+            var motorstr = parts[1].replace(/Motor\s+no\.\s+/g, 'a'); // parts[0] is whole match
+            this.columnnames = motorstr.trim().split(/\s+/);
+            this.columnnames.push("counts"); // replacing Intensity
+            this.date = new Date(parts[3]);
+            this.scantype = "FP";
+        }
+        return isFP
     }
     
     this.readiheader = function(contents) {
@@ -671,7 +692,8 @@ function ICPParser() {
                 'axes': {
                     'xaxis': {'label': xcol},
                     'yaxis': {'label': ycol},
-                }
+                },
+                'series': [{'label': this.filename}]
             },
             'xlabel': 'X',
             'ylabel': 'Y', 

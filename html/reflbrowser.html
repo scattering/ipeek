@@ -79,10 +79,29 @@
         cell.append(wrapper);
         wrapper.append($('<div />', {'id': 'plot1', 'class': 'plotdiv'}));
         wrapper.append($('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"}));
-        var transform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
-        cell.append(transform);
+        var xtransform = $('<label />').text('logX').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform', 'axis': 'xaxis'}));
+        cell.append(xtransform);
+        var ytransform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform', 'axis': 'yaxis'}));
+        cell.append(ytransform);
         cell.append($('<span />', {'id': 'eta1'}));
         $('#'+target).append(cell);
+    }
+    
+    function updateTransform(ev) {
+        var logselected = ev.target.checked;
+        var axis = ev.target.getAttribute('axis');
+        var transform = logselected? 'log' : 'lin';
+        for (var p in plots); {                  
+            plots[p].setTransform(transform, axis);
+        }
+    }
+    
+    function updateXTransform(ev) {
+        var logselected = ev.target.checked;
+        var transform = logselected? 'log' : 'lin';
+        for (var p in plots); {  
+            plots[p].setTransform(transform, 'xaxis');
+        }
     }
     
     //createPlotRegion('plot_region');
@@ -112,13 +131,11 @@
             var files = dirdata.files;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
-            var filebrowser = document.createElement('ul');
+
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
             var subdiritem, dirlink, fileitem, new_pathlist;
-            if (pathlist.length > 0) {
-                // add parent dir link
-                subdiritem = document.createElement('li');
-                subdiritem.classList.add('subdiritem');
-                //subdiritem.textContent = "Parent Directory";
+            if (pathlist.length > 0) {               
                 var new_pathlist = $.extend(true, [], pathlist);
                 $.each(new_pathlist, function(index, pathitem) {
                     dirlink = document.createElement('span');
@@ -126,14 +143,12 @@
                     dirlink.onclick = function() {
                         $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
                     }
-                    subdiritem.appendChild(dirlink);
+                    patheditor.appendChild(dirlink);
                 });
-                //new_pathlist.pop();
-                //subdiritem.onclick = function() { 
-                //    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
-                //}
-                filebrowser.appendChild(subdiritem);
             }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
             $.each(dirdata.subdirs, function(index, subdir) {
                 subdiritem = document.createElement('li');
                 subdiritem.classList.add('subdiritem');
@@ -143,24 +158,45 @@
                 subdiritem.onclick = function() { 
                     $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
                 }
-                filebrowser.appendChild(subdiritem);
+                dirbrowser.appendChild(subdiritem);
             });
+            var filebrowser = document.createElement('ul');
+            filebrowser.id = "filebrowser";
             $.each(files, function(index, filename) {
                 fileitem = document.createElement('li');
+                fileitem.setAttribute('filename', filename);
                 fileitem.classList.add('fileitem');
+                fileitem.classList.add('ui-widget-content');
                 //dirlink = document.createElement('a');
                 //dirlink.href = "#";
                 //dirlink.textContent = filename;
                 var filedate = new Date(dirdata.files_metadata[filename].mtime * 1000);
                 fileitem.textContent = filename + ' ' + compactDateTime(filedate);
-                fileitem.onclick = function() {
-                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + filename); 
-                }
+                //fileitem.onclick = function() {
+                //    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + filename); 
+                //}
                 //fileitem.appendChild(dirlink);
                 filebrowser.appendChild(fileitem);
             });
             $('#' + target_id).empty();
-            $('#' + target_id).append(filebrowser);
+            $('#' + target_id).append(patheditor)
+            .append(dirbrowser)
+            .append(filebrowser);
+            $(filebrowser).selectable({
+                stop: function() {
+                  //var result = $( "#select-result" ).empty();
+                  $( ".ui-selected", this ).each(function(i, item) {
+                    //var index = $( "#selectable li" ).index( this );
+                    //result.append( " #" + ( index + 1 ) );
+                    console.log(i, item);
+                  });
+                  var selected = $(".ui-selected", this);
+                  if (selected.length > 0) {
+                    var last = selected.slice(-1)[0];
+                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                  } 
+                }
+            });
         }   
         return handler
     }
@@ -240,6 +276,7 @@
     }
     
     createPlotRegion('plot_region');
+    $('.transform').change(updateTransform);
    
   });
   </script>
@@ -261,6 +298,10 @@ div#outer{float:right;width:100%;margin-left:-300px;}
 div#content{margin-left:300px}
 /*div#navigation{float:left;width:300px;overflow:auto;}*/
 div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:300px;overflow:auto;}
+.patheditor { 
+    color: blue;
+    cursor: pointer;
+}
 li.subdiritem { 
     list-style-type: none; 
     cursor: pointer;
@@ -277,6 +318,13 @@ div.plotdiv {
 }
 /*div#footer{clear:both;width:100%}*/
 div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
+
+  #filebrowser .ui-selecting { background: #FECA40; }
+  #filebrowser .ui-selected { background: #F39814; color: white; }
+  #filebrowser { list-style-type: none; margin: 0; padding: 0; }
+  #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+  #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+  #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
 </style>
 <body>
 
