@@ -208,7 +208,7 @@
         current_target = 'plot0';
         var cell_target = 'cell' + (i+1).toFixed();
         var eta_target = 'eta' + (i+1).toFixed();
-        var logselected = $('#' + cell_target).find('input')[0].checked;
+        var logselected = $('#' + cell_target).find('#logytransform')[0].checked;
         var transform = logselected? 'log' : 'lin';
         
         if (plots && plots[next_target] && plots[next_target].destroy) { plots[next_target].destroy() }
