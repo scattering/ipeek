@@ -387,7 +387,7 @@ function ICPParser() {
     
     this.readheader1 = function(contents) {
         //"""
-        //Read the tow line summary at the start of the ICP data files.
+        //Read the two line summary at the start of the ICP data files.
         //"""
         var line = contents[this.linenumber++];
         var tokens = get_quoted_tokens(line);

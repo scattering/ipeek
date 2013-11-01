@@ -79,9 +79,9 @@
         cell.append(wrapper);
         wrapper.append($('<div />', {'id': 'plot1', 'class': 'plotdiv'}));
         wrapper.append($('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"}));
-        var xtransform = $('<label />').text('logX').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform', 'axis': 'xaxis'}));
+        var xtransform = $('<label />').text('logX').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logxtransform', 'axis': 'xaxis'}));
         cell.append(xtransform);
-        var ytransform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform', 'axis': 'yaxis'}));
+        var ytransform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logytransform', 'axis': 'yaxis'}));
         cell.append(ytransform);
         cell.append($('<span />', {'id': 'eta1'}));
         $('#'+target).append(cell);
@@ -93,14 +93,6 @@
         var transform = logselected? 'log' : 'lin';
         for (var p in plots); {                  
             plots[p].setTransform(transform, axis);
-        }
-    }
-    
-    function updateXTransform(ev) {
-        var logselected = ev.target.checked;
-        var transform = logselected? 'log' : 'lin';
-        for (var p in plots); {  
-            plots[p].setTransform(transform, 'xaxis');
         }
     }
     
@@ -118,8 +110,8 @@
     function compactDateTime(date) {
         var outstring = '';
         outstring += date.getHours().toFixed(0) + ":";
-        outstring += date.getMinutes().toFixed(0) + ":";
-        outstring += date.getSeconds().toFixed(0) + " ";
+        outstring += ("00" + date.getMinutes().toFixed(0)).slice(-2) + ":";
+        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + " ";
         outstring += date.getMonth().toFixed(0) + "/";
         outstring += date.getDay().toFixed(0) + "/";
         outstring += date.getFullYear().toFixed(0);
