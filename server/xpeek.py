@@ -121,7 +121,7 @@ class Data1D(object):
 
         BT1: T, M, MON
         BT4, BT9, NG5: QH, QK, QL, ENERGY, T
-        BT5: M
+        BT5: M, HF
         BT7: Temp, Mon, Det, Time, PSDC00..PSDC47
         NGD, CGD: M, A01, A02, A03, A04, A05, A06
         NG4: PSD
@@ -281,7 +281,7 @@ class Data1D(object):
                 self.environment['Temp.'] = v[-1]
             elif k.lower() == 'magfield':
                 self.environment['Field'] = v[-1]
-            elif k.lower() == 'h' and self.instrument not in ['BT7']:
+            elif k.lower() in ('h','hf') and self.instrument not in ['BT7']:
 		self.environment['Field'] = v[-1]
 
         # Make sure we have a plottable axis
