@@ -292,6 +292,8 @@ def layout_figure(fig,stream,dataid,scale=None):
             'zmin': v.min(),
             'zmax': v.max()
         }
+        fig['options']['fixedAspect'] = {'fixAspect': False, 'aspectRatio': 1.0}
+        fig['type'] = '2d'
         #ax.pcolorfast(x, y, v.T)
         #ax.set_ylabel('Pixel')
         #limits.add(x,y)
