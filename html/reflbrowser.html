@@ -208,9 +208,15 @@
         current_target = 'plot0';
         var cell_target = 'cell' + (i+1).toFixed();
         var eta_target = 'eta' + (i+1).toFixed();
-        var logselected = $('#' + cell_target).find('#logytransform')[0].checked;
-        var transform = logselected? 'log' : 'lin';
-        
+        //var logselected = $('#' + cell_target).find('#logytransform')[0].checked;
+        //var transform = logselected? 'log' : 'lin';
+        transform={};
+        for (j=0;j<$('#' + cell_target).find('input').length; j++){
+            var loginput = $('#' + cell_target).find('input')[j].checked;
+            var axis = $('#' + cell_target).find('input')[j].getAttribute('axis');
+            transform[axis] = loginput;
+        }
+
         if (plots && plots[next_target] && plots[next_target].destroy) { plots[next_target].destroy() }
         if (colorbars && colorbars[next_target] && colorbars[next_target].destroy) { colorbars[next_target].destroy() }
         

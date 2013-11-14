@@ -69,6 +69,14 @@ function renderImageColorbar2(parent_plot, plotid, cbar_options) {
 
 function render1dplot(plot_obj, data, transform, plotid, plot_options) {
     
+    var temptransform = transform;
+    if (typeof(transform) === 'string') {
+        transform = temptransform;
+    } else if(typeof(transform) === 'object') {
+        var xtransform = temptransform.xaxis;
+        var ytransform = temptransform.yaxis;        
+    }
+    
     var options = {
         title: data.title,
         seriesDefaults: {
@@ -78,7 +86,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
         },
         axes:{
           xaxis:{
-            renderer: $.jqplot.LinearAxisRenderer,  // renderer to use to draw the axis,
+            renderer: (xtransform == 'log') ? $.jqplot.LogAxisRenderer : $.jqplot.LinearAxisRenderer,
             label: data.xlabel,
             labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
             tickRenderer: $.jqplot.CanvasAxisTickRenderer,
@@ -87,7 +95,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
             }
           },
           yaxis:{
-            renderer: (transform == 'log') ? $.jqplot.LogAxisRenderer : $.jqplot.LinearAxisRenderer,
+            renderer: (ytransform == 'log') ? $.jqplot.LogAxisRenderer : $.jqplot.LinearAxisRenderer,
             label: data.ylabel,
             labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
             tickRenderer: $.jqplot.CanvasAxisTickRenderer,
@@ -168,9 +176,23 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
             this.replot();
         }
     }
+    
     plot_obj.setTransform = transformData;
-    plot_obj.setTransform(transform);
-    return plot_obj
+
+    if(typeof(transform) === 'object') {
+        if (transform.hasOwnProperty('xaxis')){
+            var xaxistransform = transform.xaxis ? "log" : false;
+            plot_obj.setTransform(xaxistransform, 'xaxis');
+        }
+        if (transform.hasOwnProperty('yaxis')){
+            var yaxistransform = transform.yaxis ? "log" : false;
+            plot_obj.setTransform(yaxistransform, 'yaxis');
+        }
+    } else {
+        plot_obj.setTransform(transform);        
+    }
+
+    return plot_obj;
 };
 
 function renderImageData2(data, transform, plotid, plot_options) {
