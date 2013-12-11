@@ -590,7 +590,7 @@ function ICPParser() {
         this.counts = (this.detector.length > 0) ? this.detector : this.column.counts;
         this.points = this.column.counts.length;
         if (!('point' in this.columnnames)) {
-            this.columnnames['point'] = range(this.points);
+            this.column.point = range(this.points);
         }
     }
     
