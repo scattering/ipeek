@@ -589,6 +589,9 @@ function ICPParser() {
         this.detector = data.blocks;
         this.counts = (this.detector.length > 0) ? this.detector : this.column.counts;
         this.points = this.column.counts.length;
+        if (!('point' in this.columnnames)) {
+            this.columnnames['point'] = range(this.points);
+        }
     }
     
     this.readdata = function(fh) {
@@ -678,7 +681,7 @@ function ICPParser() {
     }
     
     this.get_plottable = function(xcol, ycol) {
-        var xcol = (xcol == null) ? this.columnnames[0] : xcol;
+        var xcol = (xcol == null) ? 'point' : xcol;
         var ycol = (ycol == null) ? 'counts' : ycol;
         var data = [];
         for (var i=0; i<this.column.counts.length; i++) {
@@ -704,6 +707,23 @@ function ICPParser() {
     }
 
     return this;
+}
+
+function range(start, stop, step) {
+    var output = [];
+    if (arguments.length == 2) { 
+        // step defaults to one if not specified
+        var step = 1;
+    }
+    if (arguments.length == 1) {
+        var stop = arguments[0];
+        var start = 0;
+    }
+    
+    for (var i=start; i<stop; i+=step) {
+        output.push(i);
+    }
+    return output;
 }
 
 function parsematrix(s, shape, linenum) {
