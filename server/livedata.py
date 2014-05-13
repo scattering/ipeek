@@ -31,7 +31,6 @@ import xpeek
 #import plot
 import plot_jqplot as plot
 import hfbs
-import sans.livesans
 
 # Location of the on/off test
 URL='http://www.ncnr.nist.gov/ipeek/'
@@ -129,10 +128,7 @@ def update_status(instruments):
     while True:
         for i in instruments:
             try:
-                if i in SANS_INSTRUMENTS:
-                    sans.livesans.run_update(i)
-                else:
-                    fetch_status(i)
+                fetch_status(i)
             except KeyboardInterrupt:
                 raise
             except:

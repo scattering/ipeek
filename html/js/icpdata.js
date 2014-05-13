@@ -589,7 +589,8 @@ function ICPParser() {
         this.detector = data.blocks;
         this.counts = (this.detector.length > 0) ? this.detector : this.column.counts;
         this.points = this.column.counts.length;
-        if (!('point' in this.columnnames)) {
+        if (Array.prototype.indexOf.call(this.columnnames, 'point') == -1) {
+            this.columnnames.push('point');
             this.column.point = range(this.points);
         }
     }
@@ -711,7 +712,7 @@ function ICPParser() {
 
 function range(start, stop, step) {
     var output = [];
-    if (arguments.length == 2) { 
+    if (arguments.length < 3) { 
         // step defaults to one if not specified
         var step = 1;
     }
