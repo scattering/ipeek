@@ -167,6 +167,12 @@
             
             function createInstrumentList(targetid) {
                 var target = $('#' + targetid), button;
+                var multibutton = $( "<button />", { id:"gridview", text:"grid" });
+                target.append($(multibutton));
+                $(multibutton).button({
+                    icons: {primary: "ui-icon-calculator"}
+                })
+                .click(function() { window.location.href="multiplotwindow.html"; });
                 var playbutton = $( "<button />",  { id:"play", text:"play"});
                 target.append($(playbutton));
                 $( playbutton ).button({
