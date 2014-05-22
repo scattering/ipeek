@@ -238,7 +238,6 @@ def layout_figure(fig,stream,dataid,scale=None):
                 yerr = [getLogPoissonUncertainty(yy) for yy in y]
             else:
                 yerr = [getPoissonUncertainty(yy) for yy in y]
-            yerr['xlower'] = yerr['xupper'] = x
             if line.instrument in ERRORBARS:
                 for xx,yy,yyerr in zip(x, y, yerr):
                     data.append([xx,yy,yyerr])
