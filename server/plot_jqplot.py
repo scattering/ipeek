@@ -161,7 +161,7 @@ def create_figure(line):
     #    w,h = IMAGEDIMS[0]/dpi, IMAGEDIMS[1]/dpi
     #fig = Figure(figsize=(w,h),dpi=dpi)
     #return fig
-    if (line.pixels > 1 and line.instrument != 'BT1'):  return copy.deepcopy(plottable_data_2d) 
+    if (line.pixels > 1 and line.instrument not in ['BT1', 'NG2']):  return copy.deepcopy(plottable_data_2d) 
     else: return copy.deepcopy(plottable_data) 
 
 
