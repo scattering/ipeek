@@ -234,12 +234,13 @@ def layout_figure(fig,stream,dataid,scale=None):
             x = line_i.columns[line_i.primary]
             y = line_i.columns['DATA']
             data = []
-            if scale == 'log':
-                yerr = [getLogPoissonUncertainty(yy) for yy in y]
-            else:
-                yerr = [getPoissonUncertainty(yy) for yy in y]
             if line.instrument in ERRORBARS:
-                for xx,yy,yyerr in zip(x, y, yerr):
+                for xx,yy in zip(x, y):
+                    if scale == 'log': 
+                        yyerr = getLogPoissonUncertainty(yy)
+                    else:
+                        yyerr = getPoissonUncertainty(yy)
+                    yyerr['xupper'] = yyerr['xlower'] = x
                     data.append([xx,yy,yyerr])
             else:
                 for xx,yy in zip(x,y):
