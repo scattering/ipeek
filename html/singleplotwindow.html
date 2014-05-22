@@ -50,7 +50,8 @@
             var refreshtimer = null;
 		    COLS = 4;
     		INSTRUMENTS = [];
-    		INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'}
+    		INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
+    		ERRORBARS = ['BT7','BT9'];
     		current_instr = null;
     		plots = {};
     		colorbars = {};
@@ -167,7 +168,11 @@
 	                    }
 	                    //plots[instr] = plottingAPI(data, plot_target);
 	                    if (data.type == '1d') {
-	                        plots[instr] = render1dplot(null, data, transform, plot_target);
+	                        var plot_options = {};
+	                        if (ERRORBARS.indexOf(instr) > -1) {
+	                            plot_options.series = [{renderer: $.jqplot.errorbarRenderer, rendererOptions: {errorBar: true}, title: instr}];
+	                        }
+	                        plots[instr] = render1dplot(null, data, transform, plot_target, plot_options);
 	                        $('#' + eta_target).html(make_metadata_table(data.metadata));
 	                    } else if (data.type == '2d') {
                             //plots[instr] = plottingAPI(datalist, plot_target);
