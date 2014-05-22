@@ -240,7 +240,7 @@ def layout_figure(fig,stream,dataid,scale=None):
                 yerr = [getPoissonUncertainty(yy) for yy in y]
             if line.instrument in ERRORBARS:
                 for xx,yy,yyerr in zip(x, y, yerr):
-                    data.append([xx,yy,yerr])
+                    data.append([xx,yy,yyerr])
             else:
                 for xx,yy in zip(x,y):
                     data.append([xx,yy])
