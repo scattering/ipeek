@@ -5,7 +5,7 @@
 		<title>NCNR live data</title>
  
         <!-- Reference the theme's stylesheet on the Google CDN -->
-        <link href="http://code.jquery.com/ui/1.8.2/themes/eggplant/jquery-ui.css"
+        <link href="http://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"
             type="text/css" rel="Stylesheet" />
             
 <!--        <style>-->
@@ -183,8 +183,8 @@
                                 axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
             	            }
                             var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar');
-                            plots[plot_target] = plot;
-                            colorbars[plot_target] = colorbar;
+                            plots[instr] = plot;
+                            colorbars[instr] = colorbar;
                             plot.replot(); // for aspect ratio plugin!
                             colorbar.plugins._interactor.zoomMax(); // for scale!
                             //plots[plot_target] = plottingAPI(datalist, plot_target);
@@ -235,6 +235,9 @@
             }
 		</script>
 		<style>
+		    body {
+		        height: 100%;
+		    }
 		    #instruments { 
 		        width: 100%;
 		    }

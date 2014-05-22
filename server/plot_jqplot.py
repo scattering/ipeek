@@ -408,7 +408,7 @@ def dcs_hfbs_plot(fig, line, scale):
     else:
         for xx,yy in zip(x,y):
             data.append([xx,yy])
-    fig['data'].append(data)
+    fig['data'] = data
     fig['options']['series'].append({'label':line.instrument})
     fig['options']['axes']['xaxis']['label'] = 'bin'
 
