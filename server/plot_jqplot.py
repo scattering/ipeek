@@ -240,7 +240,7 @@ def layout_figure(fig,stream,dataid,scale=None):
                         yyerr = getLogPoissonUncertainty(yy)
                     else:
                         yyerr = getPoissonUncertainty(yy)
-                    yyerr['xupper'] = yyerr['xlower'] = x
+                    yyerr['xupper'] = yyerr['xlower'] = xx
                     data.append([xx,yy,yyerr])
             else:
                 for xx,yy in zip(x,y):
