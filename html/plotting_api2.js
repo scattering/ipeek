@@ -148,6 +148,8 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
         var axis_table = {'x': 0, 'y': 1};        
         if (!(axis[0] in axis_table)) { return }
         var ax = axis_table[axis[0]]; // based on first character of axis name
+        var axupper = axis[0] + 'upper';
+        var axlower = axis[0] + 'lower'; // for error bars
         this['_' + axis + '_transform'] = transform;
         if (transform == 'log') {
             for (var i=0; i<this.series.length; i++) {
@@ -156,6 +158,10 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
                 var d = this.data[i];
                 for (var j=0; j<pd.length; j++) {
                     pd[j][ax] = d[j][ax]>0 ? Math.log(d[j][ax]) / Math.LN10 : null;
+                    if (pd[j].length > 2) {
+                        pd[j][2][axupper] = d[j][2][axupper]>0 ? Math.log(d[j][2][axupper]) / Math.LN10 : null;
+                        pd[j][2][axlower] = d[j][2][axlower]>0 ? Math.log(d[j][2][axlower]) / Math.LN10 : null;
+                    }
                 }
             }
             this.axes[axis].resetScale();
@@ -169,6 +175,10 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
                 for (var j=0; j<pd.length; j++) {
                     pd[j][ax] = d[j][ax];
                     //sd[j][1] = d[j][1];
+                    if (pd[j].length > 2) {
+                        pd[j][2][axupper] = d[j][2][axupper];
+                        pd[j][2][axlower] = d[j][2][axlower];
+                    }
                 }
             }
             this.axes[axis].resetScale();
