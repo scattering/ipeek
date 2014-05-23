@@ -290,8 +290,7 @@ def listen(instruments, echo=False):
     thread.start_new_thread(process_queue,(XPeekWeb.queue,))
 
     # Leave status instruments in main thread since it spends most of its time asleep
-    update_status([i for i in instruments 
-                   if i in STATUS_INSTRUMENTS+SANS_INSTRUMENTS])
+    update_status(STATUS_INSTRUMENTS+SANS_INSTRUMENTS)
 
 def main(logfile=None, logmode="w", instruments=[], 
          echo=False, loglevel=logging.INFO):
