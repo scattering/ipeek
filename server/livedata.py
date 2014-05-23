@@ -95,7 +95,8 @@ def fetch_status(instrument):
     """
     Fetch status info for an individual instrument.
     """
-    if active(instrument):
+    #if active(instrument):
+    if True:
         url = STATUSURL+'status_'+instrument.lower()+'.txt'
         try:
             fid = urllib.urlopen(url)
@@ -109,15 +110,16 @@ def fetch_status(instrument):
     else:
         msg = instrument + 'remote status monitoring is off'
 
-    statusfile = TEMPDIR+instrument+'status.txt'
+    statusfile = os.path.join(TEMPDIR, instrument, 'status.txt')
     fid = open(statusfile,'w')
     fid.write(msg)
     fid.close()
 
     if WEBSPACE:
         logging.debug('web fetch_status: scp')
-        os.system('scp -i %s %s %s/%sstatus.txt'
-                  % (KEYFILE,statusfile,WEBSPACE,instrument) )
+        output_path = os.path.join(WEBSPACE, instrument)
+        os.system("scp -p -i %s %s %s/"
+                  % (KEYFILE, statusfile, output_path))
 
 def update_status(instruments):
     """
