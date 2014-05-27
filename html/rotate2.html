@@ -361,12 +361,13 @@
                         var pl = plots[current_target];
                         if (cb && cb.destroy) {
                             cb.destroy();
-                            cb = null;
                         }
+                        cb = null;
                         if (pl && pl.destroy) {
                             pl.destroy();
-                            pl = null;
                         }
+                        pl = null;
+                        $(this).empty();
                     });
                 
             }
