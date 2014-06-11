@@ -161,7 +161,7 @@ def create_figure(line):
     #    w,h = IMAGEDIMS[0]/dpi, IMAGEDIMS[1]/dpi
     #fig = Figure(figsize=(w,h),dpi=dpi)
     #return fig
-    if (line.pixels > 1 and line.instrument not in ['BT1', 'NG2']):  return copy.deepcopy(plottable_data_2d) 
+    if (line.pixels > 1 and line.instrument not in ['BT1', 'NG2', 'NG4']):  return copy.deepcopy(plottable_data_2d) 
     else: return copy.deepcopy(plottable_data) 
 
 
@@ -405,9 +405,13 @@ def dcs_hfbs_plot(fig, line, scale):
     yerr = [getPoissonUncertainty(yy) for yy in y]
     if line.instrument in ERRORBARS:
         for xx,yy,yyerr in zip(x, y, yerr):
-            data.append([xx,yy,yerr])
+            if numpy.isnan(yy):
+                yy = None
+                yyerr = None
+            data.append([xx,yy,yyerr])
     else:
         for xx,yy in zip(x,y):
+            yy = None if numpy.isnan(yy) else yy
             data.append([xx,yy])
     fig['data'] = [data]
     fig['options']['series'].append({'label':line.instrument})
