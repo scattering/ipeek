@@ -48,7 +48,7 @@
             SKIP_PAUSE = 2;
             
 		    COLS = 1;
-    		INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'NGD', 'NG2', 'NG3SANS', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
+    		INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'NGD', 'NG2', 'NG4', 'NG3SANS', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
     		LOGY_INSTRUMENTS = ['NG7']; // or override from plot options
     		LOGX_INSTRUMENTS = [];
     		Y_TRANSFORM = {};
@@ -67,7 +67,7 @@
     	        localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
     	    }
     	    	
-    		INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'}
+    		INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
     		plots = {};
     		colorbars = {};
     		data = null;
@@ -297,7 +297,7 @@
 		    }
 		    
 		    function showData(datalist) {
-	            data = datalist[0];
+	            var data = datalist[0];
 	            $.extend(true, data.options, {axes: {
 	                xaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}},
 	                yaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}
@@ -327,7 +327,10 @@
                 } else if (data.type == '2d') {
                     //plots[instr] = plottingAPI(datalist, next_target);
                     $('#' + next_target).empty();
-                    var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+                    var plotbox = $('<div />', {
+                        class:'ui-widget-content', 
+                        style:"display: block; width:"+($(window).width()-20).toFixed()+"px; height: 100%;",
+                        id:"plotbox"});
                     $('#' + next_target).append(plotbox)
                     plotbox.append($('<div />', {
                         style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
@@ -431,7 +434,7 @@
 		        display: block;
 		    }
 		    .plotdiv {
-		        width: 100%;
+		        width: 90%;
 		        position: absolute;
 		        top: 0;
 		        left: 0;
