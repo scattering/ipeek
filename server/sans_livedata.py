@@ -8,7 +8,7 @@ import urllib2, ftplib
 import time
 import StringIO
 
-USING_FTP = False
+RETRIEVE_METHOD = "ssh" # or "ftp" or "urllib"
 MAX_FTP_RETRIES = 5
 
 source_host = "charlotte.ncnr.nist.gov"                  #hard-coded
@@ -33,6 +33,15 @@ sources = [
 output = {}
 output_filelike = {}
 
+if RETRIEVE_METHOD == "ssh":
+    source_host = "charlotte.ncnr.nist.gov"
+    source_port = 22
+    source_transport = paramiko.Transport((source_host, source_port))
+    source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
+    source_username = "bbm"
+    source_transport.connect(username=source_username, pkey = source_pkey)
+    source_sftp = paramiko.SFTPClient.from_transport(source_transport)
+    
 for source in sources:
     live_dataname = source['live_dataname']
     live_datapath = source['live_datapath']
@@ -41,7 +50,7 @@ for source in sources:
     #print "live data modified:", source_sftp.file(live_dataname).stat().st_mtime
     
     live_data = StringIO.StringIO()
-    if not USING_FTP:       
+    if RETRIEVE_METHOD == "urllib":       
         req_addr = os.path.join("ftp://" + source_host, live_datapath, live_dataname)
         #req = urllib2.Request(req_addr)
         response = None
@@ -59,12 +68,21 @@ for source in sources:
         print "retrieved %s" % (req_addr)
         live_data.write(response.read())
     
-    if USING_FTP:
+    elif RETRIEVE_METHOD == "ftp":
         ftp = ftplib.FTP(source_host)
         ftp.login('anonymous')
         ftp.cwd(live_datapath)
         ftp.retrbinary("RETR " + live_dataname, live_data.write)
         ftp.close()
+        
+    elif RETRIEVE_METHOD == "ssh":
+        f = source_sftp.open(os.path.join('/var/ftp', live_datapath, live_dataname))
+        response = f.read()
+        f.close()
+        live_data.write(response)
+        
+    else:
+        print "no valid RETRIEVE_METHOD"
       
     live_data.seek(0) # move back to the beginning of file
     
@@ -111,4 +129,4 @@ for source in sources:
 
 dest_sftp.close()
 dest_transport.close()
-print 'Upload done.'
+#print 'Upload done.'

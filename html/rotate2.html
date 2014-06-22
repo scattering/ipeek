@@ -1,9 +1,9 @@
 <html>
-	<head>
-		<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-		<meta http-equiv="X-UA-Compatible" content="IE=9" >
-				<meta http-equiv="refresh" content="3600">
-		<title>NCNR live data</title>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=9" >
+                <meta http-equiv="refresh" content="3600">
+        <title>NCNR live data</title>
  
         <!-- Reference the theme's stylesheet on the Google CDN -->
         <link rel="stylesheet" href="//code.jquery.com/ui/1.10.4/themes/start/jquery-ui.css" />
@@ -18,7 +18,7 @@
                     document.write(unescape("%3Clink href='css/start/jquery-ui-1.10.4.custom.min.css' type='text/css' rel='stylesheet' /%3E"));    
                 }
         </script>
-<!--		<script type="text/javascript" src="jquery-1.5.1.min.js"></script>-->
+<!--        <script type="text/javascript" src="jquery-1.5.1.min.js"></script>-->
 <!--        <script type="text/javascript" src="jquery.jqplot.min.js"></script>-->
 
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
@@ -30,7 +30,7 @@
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
-        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
+<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>-->
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
         <script src="geturlvars.js"></script>
@@ -40,70 +40,70 @@
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
 
         <script type="text/javascript" src="plotting_api2.js"></script>
-		<!-- JQPLOT -->
-		<script type="text/javascript">
-		    var refreshtime = 10; // refresh rate
+        <!-- JQPLOT -->
+        <script type="text/javascript">
+            var refreshtime = 10; // refresh rate
             var refreshtimer = null;
             var refreshindex = 0;
             SKIP_PAUSE = 2;
             
-		    COLS = 1;
-    		INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'NGD', 'NG2', 'NG4', 'NG3SANS', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
-    		LOGY_INSTRUMENTS = ['NG7']; // or override from plot options
-    		LOGX_INSTRUMENTS = [];
-    		Y_TRANSFORM = {};
-    	    X_TRANSFORM = {};
-    	    $.each(INSTRUMENTS, function(index, instr) {
-    	       Y_TRANSFORM[instr] = (LOGY_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
-    	       X_TRANSFORM[instr] = (LOGX_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
-    	    });
-    	    
-    	    if (localStorage && localStorage.Y_TRANSFORM) {
-    	        var stored_y_transform = {};
-    	        try { 
-    	            stored_y_transform = JSON.parse(localStorage['Y_TRANSFORM']);
-    	        } catch (e) {}
-    	        $.extend(true, Y_TRANSFORM, stored_y_transform);
-    	        localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
-    	    }
-    	    	
-    		INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
-    		plots = {};
-    		colorbars = {};
-    		data = null;
-    		current_instr = null;
-    		current_target = 'plot1';
-    		next_target = 'plot0';
-    		
-    		function modulo(x,y) {
-    		    // this always returns a positive number for positive y, x
-    		    return ((x % y) + y) % y
-    		}
-    		
-    		function refresh() {
-    		    refreshindex += 1;
-    		    refreshindex = modulo(refreshindex, INSTRUMENTS.length);
-    		    loadSingle(refreshindex);
-    		    //var instr = INSTRUMENTS[refreshindex];
-    		    //current_instr = instr;
-    		    //var noCache = new Date().getTime();
-		        //$.getJSON("test_jqpeek/" + instr + "/live_data.json", { "noCache": noCache }, showData);
-    		     // modulo
-    		}
-    		
-    		function loadSingle(index) {
-    		    var index = index == null? refreshindex : index;
-    		    var instr = INSTRUMENTS[index];
-    		    current_instr = instr;
-    		    $('.instrument-button').removeClass('ui-state-active');
-    		    $('#' + instr + '_button').addClass('ui-state-active');
-    		    var yislog = (Y_TRANSFORM[instr] == 'log');
-    		    $('#logtransform').prop('checked', yislog);
-    		    var noCache = new Date().getTime();
-		        $.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, showData);
-    		}
-    		
-    		function play() {
+            COLS = 1;
+            INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'NGD', 'NG2', 'NG4', 'NG3SANS', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
+            LOGY_INSTRUMENTS = ['NG7']; // or override from plot options
+            LOGX_INSTRUMENTS = [];
+            Y_TRANSFORM = {};
+            X_TRANSFORM = {};
+            $.each(INSTRUMENTS, function(index, instr) {
+               Y_TRANSFORM[instr] = (LOGY_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
+               X_TRANSFORM[instr] = (LOGX_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
+            });
+            
+            if (localStorage && localStorage.Y_TRANSFORM) {
+                var stored_y_transform = {};
+                try { 
+                    stored_y_transform = JSON.parse(localStorage['Y_TRANSFORM']);
+                } catch (e) {}
+                $.extend(true, Y_TRANSFORM, stored_y_transform);
+                localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+            }
+                
+            INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
+            plots = {};
+            colorbars = {};
+            data = null;
+            current_instr = null;
+            current_target = 'plot1';
+            next_target = 'plot0';
+            
+            function modulo(x,y) {
+                // this always returns a positive number for positive y, x
+                return ((x % y) + y) % y
+            }
+            
+            function refresh() {
+                refreshindex += 1;
+                refreshindex = modulo(refreshindex, INSTRUMENTS.length);
+                loadSingle(refreshindex);
+                //var instr = INSTRUMENTS[refreshindex];
+                //current_instr = instr;
+                //var noCache = new Date().getTime();
+                //$.getJSON("test_jqpeek/" + instr + "/live_data.json", { "noCache": noCache }, showData);
+                 // modulo
+            }
+            
+            function loadSingle(index) {
+                var index = index == null? refreshindex : index;
+                var instr = INSTRUMENTS[index];
+                current_instr = instr;
+                $('.instrument-button').removeClass('ui-state-active');
+                $('#' + instr + '_button').addClass('ui-state-active');
+                var yislog = (Y_TRANSFORM[instr] == 'log');
+                $('#logtransform').prop('checked', yislog);
+                var noCache = new Date().getTime();
+                $.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, showData);
+            }
+            
+            function play() {
               if (refreshtimer == null)
                 refreshtimer = setInterval("refresh();", refreshtime*1000);
                 refresh();
@@ -209,7 +209,7 @@
                 });
             }
             
-            window.onresize = function() {
+            fitPlots = function() {
                 //$('.plotgrid').width(($(window).innerWidth() / COLS - 75).toFixed() + 'px');
                 //var new_width = (1.0/COLS * 100);
                 //$('.plotcell').width(new_width.toFixed() + '%')
@@ -219,7 +219,7 @@
                     plots[p].replot();
                 }
             }
-		    
+            
             window.onload = function() {
                 debug=false;
                 createInstrumentList('instrument_list');
@@ -230,10 +230,10 @@
                 //loadSingle(0);
                 refreshindex = -1;
                 $('#play').click();
-                window.onresize();
+                fitPlots();
             }
-		    
-		    function initializeToolbar() {
+            
+            function initializeToolbar() {
                 $( "#beginning" ).button({
                   //text: false,
                   //label: "",
@@ -282,10 +282,10 @@
                     primary: "ui-icon-seek-end"
                   }
                 }).click( end );
-		    }
-		    
-		    function updateTransform(ev) {
-		        var logselected = ev.target.checked;
+            }
+            
+            function updateTransform(ev) {
+                var logselected = ev.target.checked;
                 var transform = logselected? 'log' : 'lin';
                 Y_TRANSFORM[current_instr] = transform;
                 if (localStorage && localStorage != null) {
@@ -294,23 +294,23 @@
                 //if (plots[current_target] && plots[current_target].setTransform) {plots[current_target].setTransform(transform)};
                 if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
                 if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
-		    }
-		    
-		    function showData(datalist) {
-	            var data = datalist[0];
-	            $.extend(true, data.options, {axes: {
-	                xaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}},
-	                yaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}
-	                }
-	            }); 
-	            var i=0;
-	            if ($('#plot0').css('display') == 'none') {
-	                current_target = 'plot1';
-	                next_target = 'plot0';
-	            } else {
-	                current_target = 'plot0';
-	                next_target = 'plot1';
-	            }
+            }
+            
+            function showData(datalist) {
+                var data = datalist[0];
+                $.extend(true, data.options, {axes: {
+                    xaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}},
+                    yaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}
+                    }
+                }); 
+                var i=0;
+                if ($('#plot0').css('display') == 'none') {
+                    current_target = 'plot1';
+                    next_target = 'plot0';
+                } else {
+                    current_target = 'plot0';
+                    next_target = 'plot1';
+                }
                 var cell_target = 'cell' + (i+1).toFixed();
                 var eta_target = 'eta' + (i+1).toFixed();
                 var logselected = $('#' + cell_target).find('input')[0].checked;
@@ -339,7 +339,7 @@
                     var plot = renderImageData2(data, transform, next_target + "_plot");
                     var cbar_options = {
                         axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
-    	            }
+                    }
                     var colorbar = renderImageColorbar2(plot.series[0], next_target + '_colorbar');
                     plots[next_target] = plot;
                     colorbars[next_target] = colorbar;
@@ -375,7 +375,7 @@
                 
             }
 
-		    function make_metadata_table(metadata, numcols) {
+            function make_metadata_table(metadata, numcols) {
                 var numcols = numcols || 4;
                 var new_table = document.createElement('table');
                 var keys = Object.keys(metadata);
@@ -398,49 +398,49 @@
                 }
                 return new_table;
             }
-		</script>
-		<style>
-		    body {
-		        height: 100%;
-		    }
-		    #toolbar {
-		        text-align: center;
-		    }
-		    #instrument_list { 
-		        text-align: center;
-		        font-size: 15px;
-		    }
-		    .active-instrument {
-		        background-color: "red";
-		    }
-		    .instrument-name { 
-		        text-align: center;
-		        font-family: "Georgia", serif;
-		        font-weight: bold;
-		    }
-		                       
-		    #instruments tr { margin-bottom: 30px; }
-		    div { 
-		        user-select: none; 
-		        -webkit-user-select: none; 
-		        -moz-user-select: none;
-		    }
-		    #content_table{
-		        position: relative;
-		        display: block;
-		    }
-		    .wrapper { 
-		        position: relative;
-		        display: block;
-		    }
-		    .plotdiv {
-		        width: 90%;
-		        position: absolute;
-		        top: 0;
-		        left: 0;
-		    }
-		    .metadata-label {color: red}
-		    .slidingDiv {
+        </script>
+        <style>
+            body {
+                height: 100%;
+            }
+            #toolbar {
+                text-align: center;
+            }
+            #instrument_list { 
+                text-align: center;
+                font-size: 15px;
+            }
+            .active-instrument {
+                background-color: "red";
+            }
+            .instrument-name { 
+                text-align: center;
+                font-family: "Georgia", serif;
+                font-weight: bold;
+            }
+                               
+            #instruments tr { margin-bottom: 30px; }
+            div { 
+                user-select: none; 
+                -webkit-user-select: none; 
+                -moz-user-select: none;
+            }
+            #content_table{
+                position: relative;
+                display: block;
+            }
+            .wrapper { 
+                position: relative;
+                display: block;
+            }
+            .plotdiv {
+                width: 90%;
+                position: absolute;
+                top: 0;
+                left: 0;
+            }
+            .metadata-label {color: red}
+            .slidingDiv {
                 background-color: #99CCFF;
                 padding:20px;
                 margin-top:10px;
@@ -451,15 +451,15 @@
                 display:none;
             }
             .jqplot-table-legend-swatch {
-			    width: 10;
-			    height: 10;
-			}
-			.jqplot-series-shadowCanvas {
-			    display: none;
-			}
-		</style>
-		 <style type="text/css">
-		#leftSide {
+                width: 10;
+                height: 10;
+            }
+            .jqplot-series-shadowCanvas {
+                display: none;
+            }
+        </style>
+         <style type="text/css">
+        #leftSide {
           float: left;
           width: 50%;
         }
@@ -469,9 +469,9 @@
           width: 50%;
         }
     </style>
-	</head>
-	<body id="woot">
-	<?php include("/var/www/include/navigation.inc"); ?>
+    </head>
+    <body id="woot">
+    <?php include("/var/www/include/navigation.inc"); ?>
     <?php include("/var/www/include/utility.inc"); ?>
 <!--    <div id="toolbar" class="ui-widget-header ui-corner-all">-->
 <!--      <button id="beginning">beginning</button>-->
@@ -481,12 +481,12 @@
 <!--      <button id="end">end</button>-->
 <!--    </div>-->
     <div id="instrument_list"></div>
-	<div id="content_table"></div>
-	    
-	<div class="footer">
+    <div id="content_table"></div>
+        
+    <div class="footer">
     <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
     <div style="float:right;"><p><? lastmod(); ?></p></div>
     </div>
 
-	</body>
+    </body>
 </html>
