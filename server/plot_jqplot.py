@@ -147,7 +147,7 @@ plottable_data = {
 
 LINESTYLE = dict(NGD='o-',CGD='o-',BT1='o-',NG2='o-')
 POINTSIZE = dict(BT1=-2, NG2=-2, BT4=-2, BT9=-2)
-ERRORBARS = ['BT7','BT9', 'BT4', 'NGD']
+ERRORBARS = ['BT7','BT9', 'BT4', 'NGD', 'CGD']
 THUMBDIMS=210,110
 IMAGEDIMS=700,450
 
