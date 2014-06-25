@@ -98,15 +98,16 @@ def fetch_status(instrument):
     #if active(instrument):
     if True:
         url = STATUSURL+'status_'+instrument.lower()+'.txt'
+        msg = "status could not be retrieved"
         try:
             fid = urllib.urlopen(url)
+            msg = fid.read()
+            fid.close()
+            msg = msg.replace('\x1b[0;32m','<font style="color: green;">')
+            msg = msg.replace('\x1b[0m','</font>')
+            msg = '<pre>\n'+msg+'</pre>'
         except Exception,e:
-            raise IOError("received '"+str(e)+"' while retrieving "+url);
-        msg = fid.read()
-        fid.close()
-        msg = msg.replace('\x1b[0;32m','<font style="color: green;">')
-        msg = msg.replace('\x1b[0m','</font>')
-        msg = '<pre>\n'+msg+'</pre>'
+            raise IOError("received '"+str(e)+"' while retrieving "+url);       
     else:
         msg = instrument + 'remote status monitoring is off'
 
