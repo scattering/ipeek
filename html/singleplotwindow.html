@@ -79,8 +79,12 @@
                     for (var c=0; c<cols && cells < numCells; c++) {
                         var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
                         cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
-                        var transform = $('<label />').text('log').append($('<input />', {'type': 'checkbox', 'class': 'transform'}));
+                        var transform = $('<label />', {'class': 'transform'}).text('log').append($('<input />', {'type': 'checkbox'}));
                         cell.append(transform);
+                        var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showline);
+                        var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showmarker);
                         cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
                         cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                         row.append(cell);
@@ -107,7 +111,18 @@
                 current_instr = jQuery.getUrlVar('instrument');
                 INSTRUMENTS = [current_instr];
                 createTable('content_table', 1, 1);
-                $('.transform').change(updateTransform);        
+                var transform = 'lin';
+                var yislog = false;
+                var showline = true;
+                var showmarker = true;
+                if (localStorage && localStorage != null) {
+                    if (localStorage['Y_TRANSFORM'] != null) { yislog = ( localStorage['Y_TRANSFORM'] == "log" ) }
+                    if (localStorage['SHOW_LINE'] != null) { showline = ( localStorage['SHOW_LINE'] == "true" ); }
+                    if (localStorage['SHOW_MARKER'] != null) { showmarker = ( localStorage['SHOW_MARKER'] == "true" ) }
+                }
+                $('.transform input').prop('checked', yislog).change(updateTransform);
+                $('.showline input').prop('checked', showline).change(updateShowLine);
+                $('.showmarker input').prop('checked', showmarker).change(updateShowMarker);   
                 loadData();
                 onshow();
                 
@@ -143,13 +158,34 @@
                 var logselected = ev.target.checked;
                 var transform = logselected? 'log' : 'lin';
                 var next_target = current_instr;
-                //Y_TRANSFORM[current_instr] = transform;
-                //if (localStorage && localStorage != null) {
-                //    localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
-                //}
+                if (localStorage && localStorage != null) {
+                    localStorage['Y_TRANSFORM'] = transform;
+                }
                 //if (plots[current_target] && plots[current_target].setTransform) {plots[current_target].setTransform(transform)};
                 if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
                 if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
+            }
+            
+            function updateShowLine(ev) {
+                var showline = ev.target.checked;
+                var next_target = current_instr;
+                if (localStorage && localStorage != null) {
+                    localStorage['SHOW_LINE'] = JSON.stringify(showline);
+                }
+                var showLineOpts = {seriesDefaults: {showLine: showline}};
+                $.extend(true, plots[next_target].options, showLineOpts);
+                plots[next_target].replot(plots[next_target].options);
+            }
+            
+            function updateShowMarker(ev) {
+                var showmarker = ev.target.checked;
+                var next_target = current_instr;
+                if (localStorage && localStorage != null) {
+                    localStorage['SHOW_MARKER'] = JSON.stringify(showmarker);
+                }
+                var showMarkerOpts = {seriesDefaults: {showMarker: showmarker}};
+                $.extend(true, plots[next_target].options, showMarkerOpts);
+                plots[next_target].replot(plots[next_target].options);
             }
             
             function showData(datalist, instr) {
@@ -165,7 +201,9 @@
                     var cell_target = 'cell' + (i+1).toFixed();
                     var plot_target = 'plot' + (i+1).toFixed();
                     var eta_target = 'eta' + (i+1).toFixed();
-                    var logselected = $('#' + cell_target).find('input')[0].checked;
+                    var logselected = $('#' + cell_target).find('.transform input')[0].checked;
+                    var showLine = $('#' + cell_target).find('.showline input')[0].checked;
+                    var showMarker = $('#' + cell_target).find('.showmarker input')[0].checked;
                     var transform = logselected? 'log' : 'lin';
                     
                     //var data = liveData[instr][0];
@@ -175,13 +213,21 @@
                     plots[instr] = null;
                     //plots[instr] = plottingAPI(data, plot_target);
                     if (data.type == '1d') {
-                        var plot_options = {};
+                        $('.showline').show();
+                        $('.showmarker').show();
+                        var plot_options = {'seriesDefaults': {
+                            showLine: showLine,
+                            showMarker: showMarker
+                        }};
                         if (ERRORBARS.indexOf(instr) > -1) {
-                            plot_options.seriesDefaults = {renderer: $.jqplot.errorbarRenderer, rendererOptions: {errorBar: true}}
+                            plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
+                            plot_options.seriesDefaults.rendererOptions = {errorBar: true};
                         }
                         plots[instr] = render1dplot(null, data, transform, plot_target, plot_options);
                         $('#' + eta_target).html(make_metadata_table(data.metadata));
                     } else if (data.type == '2d') {
+                        $('.showline').hide();
+                        $('.showmarker').hide();
                         //plots[instr] = plottingAPI(datalist, plot_target);
                         $('#' + plot_target).empty();
                         var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
