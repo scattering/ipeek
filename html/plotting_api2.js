@@ -31,7 +31,9 @@ function renderImageColorbar2(parent_plot, plotid, cbar_options) {
         //cursor: {show: true, zoom: true},
         paddingLeft: 0,
         sortData: false,
-        interactors: [{ type:'standard', name: 'standard'}],
+        //interactors: [{ type:'standard', name: 'standard'}],
+        interactors: [{type: 'master', scrollZoom: true, dragPan: true, forceload: true}],
+        cursor: {show: false, zoom: false, dblClickReset: false},
         series: [ {shadow: false, padding: 0} ],
         grid: {shadow: false},
         seriesDefaults:{
