@@ -50,7 +50,7 @@ function renderImageColorbar2(parent_plot, plotid, cbar_options) {
                 tickRenderer: $.jqplot.CanvasAxisTickRenderer,
                 tickOptions: {
                     formatString: "%.3g",
-                    _styles: {left: 5},
+                    _styles: {left: 5}
                 }
             }
         }
@@ -104,7 +104,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
             tickOptions: {
                 formatString: "%.2g",
                 // fix for ticks drifting to the left in accordionview!
-                _styles: {right: 0},
+                _styles: {right: 0}
             }
           }
         },
@@ -114,7 +114,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
             clickReset: true,
             tooltipLocation:'se',
             tooltipOffset: -60,
-            useAxesFormatters: false,
+            useAxesFormatters: false
         },
         legend: {
             show: true,
@@ -250,7 +250,7 @@ function renderImageData2(data, transform, plotid, plot_options) {
             tickOptions: {
                 formatString: "%.2g",
                 // fix for ticks drifting to the left in accordionview!
-                _styles: {right: 0},
+                _styles: {right: 0}
             }
           }
         },
@@ -260,7 +260,7 @@ function renderImageData2(data, transform, plotid, plot_options) {
             clickReset: true,
             tooltipLocation:'se',
             tooltipOffset: -60,
-            useAxesFormatters: false,
+            useAxesFormatters: false
         },
         grid: {shadow: false},
         sortData: false,
@@ -317,10 +317,10 @@ function update1dPlot(plot, toPlots, target_id, plotnum) {
         jQuery(plotdiv).append(jQuery('<div />', {'class':'ui-widget-content plotbox', style:"display: block; width: 700px; height: 350px;", id:"plotbox"}));
         jQuery('.plotbox', jQuery(plotdiv)).append(jQuery('<div />', {'class': 'plotgrid', style:"float: left; width:625px; height: 350px; ", id:target_id+"_plotgrid"}));
         jQuery(plotdiv).append(jQuery('<div />', {style:"display: block; width: 410px; height: 100px;", id:"plotbuttons"}));
-        jQuery(plotdiv).append(jQuery('<div />', {id:"metadata", class:"slidingDiv"}));
+        jQuery(plotdiv).append(jQuery('<div />', {id:"metadata", "class":"slidingDiv"}));
         jQuery(document.getElementById('plotbuttons')).append(jQuery('<select />', {id:"plot_selectz"}));
         jQuery(document.getElementById('plotbuttons')).append(jQuery('<select />', {id:"plot_selectnum"}));
-        jQuery(document.getElementById('plotbuttons')).append(jQuery('<span />', {class:"show_hide ui-state-default"})
+        jQuery(document.getElementById('plotbuttons')).append(jQuery('<span />', {"class":"show_hide ui-state-default"})
             .text("Show/hide metadata"))
             .click(function() { $('.slidingDiv').slideToggle(); });
         jQuery(document.getElementById('plot_selectz')).append(jQuery('<option />', { value: 'lin', text: 'lin' }));
@@ -397,7 +397,7 @@ function update2dPlot(plot, toPlots, target_id, plotnum) {
     if (!plot || !plot.hasOwnProperty("type") || plot.type!='2d'){
         var plotdiv = document.getElementById(target_id);
         plotdiv.innerHTML = "";
-        jQuery(plotdiv).append(jQuery('<div />', {class:'ui-widget-content', style:"display: block; width: 700px; height: 350px;", id:"plotbox"}));
+        jQuery(plotdiv).append(jQuery('<div />', {"class":'ui-widget-content', style:"display: block; width: 700px; height: 350px;", id:"plotbox"}));
         //jQuery(document.getElementById('plotbox')).append(jQuery('<div />', {style:"float: left; width:550px; height: 350px; ", id:"plotgrid"}));
         jQuery(document.getElementById('plotbox')).append(jQuery('<div />', {style:"display: inline-block; left: 0; top: 0; width:550px; height: 350px; ", id:"plotgrid"}));
         jQuery(document.getElementById('plotbox')).append(jQuery('<div />', {style:"display: inline-block; width: 100px; height: 100%; ", id:"colorbar"}));
@@ -698,7 +698,7 @@ function updateNdPlot(plot, toPlot, plotid, plotid_prefix, create) {
             tickOptions: {
                 formatString: "%.2g",
                 // fix for ticks drifting to the left in accordionview!
-                _styles: {right: 0},
+                _styles: {right: 0}
             }
           }
         }

@@ -42,6 +42,7 @@
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
 
         <script type="text/javascript" src="plotting_api2.js"></script>
+        <script src="jqplot.set_transform.js"></script>
         <script src="geturlvars.js"></script>
         
 
@@ -79,8 +80,12 @@
                     for (var c=0; c<cols && cells < numCells; c++) {
                         var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
                         cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
-                        var transform = $('<label />', {'class': 'transform'}).text('log').append($('<input />', {'type': 'checkbox'}));
-                        cell.append(transform);
+                        var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(xtransform);
+                        var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ytransform);
+                        var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ztransform);
                         var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
                         cell.append(showline);
                         var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
@@ -112,15 +117,21 @@
                 INSTRUMENTS = [current_instr];
                 createTable('content_table', 1, 1);
                 var transform = 'lin';
+                var xislog = false;
                 var yislog = false;
+                var zislog = false;
                 var showline = true;
                 var showmarker = true;
                 if (localStorage && localStorage != null) {
+                    if (localStorage['X_TRANSFORM'] != null) { xislog = ( localStorage['X_TRANSFORM'] == "log" ) }
                     if (localStorage['Y_TRANSFORM'] != null) { yislog = ( localStorage['Y_TRANSFORM'] == "log" ) }
+                    if (localStorage['Z_TRANSFORM'] != null) { zislog = ( localStorage['Z_TRANSFORM'] == "log" ) }
                     if (localStorage['SHOW_LINE'] != null) { showline = ( localStorage['SHOW_LINE'] == "true" ); }
                     if (localStorage['SHOW_MARKER'] != null) { showmarker = ( localStorage['SHOW_MARKER'] == "true" ) }
                 }
-                $('.transform input').prop('checked', yislog).change(updateTransform);
+                $('.transform[axis=xaxis] input').prop('checked', xislog).change(updateTransform);
+                $('.transform[axis=yaxis] input').prop('checked', yislog).change(updateTransform);
+                $('.transform[axis=zaxis] input').prop('checked', zislog).change(updateTransform);
                 $('.showline input').prop('checked', showline).change(updateShowLine);
                 $('.showmarker input').prop('checked', showmarker).change(updateShowMarker);   
                 loadData();
@@ -156,14 +167,26 @@
             
             function updateTransform(ev) {
                 var logselected = ev.target.checked;
+                var axis = ev.target.parentElement.getAttribute('axis');
+                var storage_keys = {
+                    'xaxis': 'X_TRANSFORM',
+                    'yaxis': 'Y_TRANSFORM',
+                    'zaxis': 'Z_TRANSFORM'
+                }
                 var transform = logselected? 'log' : 'lin';
                 var next_target = current_instr;
                 if (localStorage && localStorage != null) {
-                    localStorage['Y_TRANSFORM'] = transform;
+                    localStorage[storage_keys[axis]] = transform;
                 }
-                //if (plots[current_target] && plots[current_target].setTransform) {plots[current_target].setTransform(transform)};
-                if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
-                if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
+                var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
+                transformOpts.transform[axis] = transform;
+                transformOpts.seriesDefaults.rendererOptions.transform = transform;
+                $.extend(true, plots[next_target].options, transformOpts);
+                plots[next_target].replot(plots[next_target].options);
+                if (colorbars[next_target]) { 
+                    colorbars[next_target].series[0].parent_plot = plots[next_target].series[0];
+                    colorbars[next_target].series[0].set_transform(transform);
+                    colorbars[next_target].plugins._interactor.zoomMax() };
             }
             
             function updateShowLine(ev) {
@@ -190,9 +213,15 @@
             
             function showData(datalist, instr) {
                 data = datalist[0];
-                $.extend(true, data.options, {axes: {
-                    xaxis: {renderer: $.jqplot.GracefulAxisRenderer},
-                    yaxis: {renderer: $.jqplot.GracefulAxisRenderer}
+                $.extend(true, data.options, {
+                    axesDefaults: {
+                        renderer: $.jqplot.GracefulAxisRenderer,
+                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            formatString: "%.2g",
+                            _styles: {right:2}
+                        }                    
                     }
                 });
                 //var instr = data.metadata.instrument;
@@ -201,10 +230,14 @@
                     var cell_target = 'cell' + (i+1).toFixed();
                     var plot_target = 'plot' + (i+1).toFixed();
                     var eta_target = 'eta' + (i+1).toFixed();
-                    var logselected = $('#' + cell_target).find('.transform input')[0].checked;
+                    var xlogselected = $('#' + cell_target).find('.transform[axis=xaxis] input')[0].checked;
+                    var ylogselected = $('#' + cell_target).find('.transform[axis=yaxis] input')[0].checked;
+                    var zlogselected = $('#' + cell_target).find('.transform[axis=zaxis] input')[0].checked;
                     var showLine = $('#' + cell_target).find('.showline input')[0].checked;
                     var showMarker = $('#' + cell_target).find('.showmarker input')[0].checked;
-                    var transform = logselected? 'log' : 'lin';
+                    var xtransform = xlogselected? 'log' : 'lin';
+                    var ytransform = ylogselected? 'log' : 'lin';
+                    var ztransform = zlogselected? 'log' : 'lin';
                     
                     //var data = liveData[instr][0];
                     if (instr in plots && plots[instr].destroy) {
@@ -215,19 +248,50 @@
                     if (data.type == '1d') {
                         $('.showline').show();
                         $('.showmarker').show();
-                        var plot_options = {'seriesDefaults': {
-                            showLine: showLine,
-                            showMarker: showMarker
-                        }};
+                        $('.transform[axis=xaxis]').show();
+                        $('.transform[axis=yaxis]').show();
+                        $('.transform[axis=zaxis]').hide();
+                        var plot_options = {
+                            title: data.title,
+                            transform: {
+                                xaxis: xtransform,
+                                yaxis: ytransform
+                            },
+                            seriesDefaults: {
+                                // update options with values from checkboxes:
+                                showLine: showLine,
+                                showMarker: showMarker,
+                                // 
+                                shadow: false, 
+                                markerOptions: {shadow: false, size: 8},
+                                breakOnNull: true, 
+                                label: "series"
+                            },
+                            cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
+                            legend: {
+                                show: true,
+                                parent: this,
+                                placement: 'ne',
+                                renderer: $.jqplot.InteractiveLegendRenderer
+                            },
+                            grid: {shadow: false},
+                            sortData: false
+                        };
+                        
                         if (ERRORBARS.indexOf(instr) > -1) {
                             plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
                             plot_options.seriesDefaults.rendererOptions = {errorBar: true};
                         }
-                        plots[instr] = render1dplot(null, data, transform, plot_target, plot_options);
+                        $.extend(true, data.options, plot_options);
+                        plots[instr] = $.jqplot(plot_target, data.data, data.options);
                         $('#' + eta_target).html(make_metadata_table(data.metadata));
                     } else if (data.type == '2d') {
                         $('.showline').hide();
                         $('.showmarker').hide();
+                        $('.transform[axis=xaxis]').hide();
+                        $('.transform[axis=yaxis]').hide();
+                        $('.transform[axis=zaxis]').show();
+                        data.options.seriesDefaults =  {rendererOptions: {transform: ztransform}}
                         //plots[instr] = plottingAPI(datalist, plot_target);
                         $('#' + plot_target).empty();
                         var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
@@ -236,7 +300,7 @@
                             style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
                             id: plot_target + "_plot"}));
                         plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_target + "_colorbar"}));
-                        var plot = renderImageData2(data, transform, plot_target + "_plot");
+                        var plot = renderImageData2(data, ztransform, plot_target + "_plot");
                         var cbar_options = {
                             axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
                         }
