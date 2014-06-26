@@ -31,7 +31,6 @@ import xpeek
 #import plot
 import plot_jqplot as plot
 import hfbs
-import sans.livesans
 
 # Location of the on/off test
 URL='http://www.ncnr.nist.gov/ipeek/'
@@ -39,12 +38,12 @@ ACTIVEURL = URL+'ipeekon.php'
 STATUSURL='ftp://ftp-i.ncnr.nist.gov/pub/ncnrstatus/'
 # Data directory of the service
 #WEBSPACE = 'pkienzle@webster.ncnr.nist.gov:/var/www/html/ipeek'
-WEBSPACE = 'bbm@webster.ncnr.nist.gov:magik/test_jqpeek'
+WEBSPACE = 'bbm@webster.ncnr.nist.gov:ipeek/data'
 #INSTRUMENTS = ['BT1','BT4','BT5','BT7','BT8','BT9','CGD','NGD','NG2','NG5','NSE','NG7']
-INSTRUMENTS = ['CGD', 'NGD','NG7', 'NG2', 'BT4', 'BT5', 'BT7', 'BT1', 'NG5', 'BT8']
+INSTRUMENTS = ['CGD', 'NGD','NG7', 'NG2', 'NG4', 'BT4', 'BT5', 'BT7', 'BT1', 'NG5', 'BT8']
 LOGFORMAT_INSTRUMENTS =  set(['CGD','NGD','NG7'])
-#STATUS_INSTRUMENTS = ['DCS','HFBS'] # 'BT7'
-STATUS_INSTRUMENTS = []
+STATUS_INSTRUMENTS = ['DCS','HFBS'] # 'BT7'
+#STATUS_INSTRUMENTS = []
 #SANS_INSTRUMENTS = ['NG3SANS','NG7SANS','NGBSANS']
 SANS_INSTRUMENTS = []
 
@@ -96,29 +95,32 @@ def fetch_status(instrument):
     """
     Fetch status info for an individual instrument.
     """
-    if active(instrument):
+    #if active(instrument):
+    if True:
         url = STATUSURL+'status_'+instrument.lower()+'.txt'
+        msg = "status could not be retrieved"
         try:
             fid = urllib.urlopen(url)
+            msg = fid.read()
+            fid.close()
+            msg = msg.replace('\x1b[0;32m','<font style="color: green;">')
+            msg = msg.replace('\x1b[0m','</font>')
+            msg = '<pre>\n'+msg+'</pre>'
         except Exception,e:
-            raise IOError("received '"+str(e)+"' while retrieving "+url);
-        msg = fid.read()
-        fid.close()
-        msg = msg.replace('\x1b[0;32m','<font style="color: green;">')
-        msg = msg.replace('\x1b[0m','</font>')
-        msg = '<pre>\n'+msg+'</pre>'
+            raise IOError("received '"+str(e)+"' while retrieving "+url);       
     else:
         msg = instrument + 'remote status monitoring is off'
 
-    statusfile = TEMPDIR+instrument+'status.txt'
+    statusfile = os.path.join(TEMPDIR, instrument, 'status.txt')
     fid = open(statusfile,'w')
     fid.write(msg)
     fid.close()
 
     if WEBSPACE:
         logging.debug('web fetch_status: scp')
-        os.system('scp -i %s %s %s/%sstatus.txt'
-                  % (KEYFILE,statusfile,WEBSPACE,instrument) )
+        output_path = os.path.join(WEBSPACE, instrument)
+        os.system("scp -p -i %s %s %s/"
+                  % (KEYFILE, statusfile, output_path))
 
 def update_status(instruments):
     """
@@ -129,10 +131,7 @@ def update_status(instruments):
     while True:
         for i in instruments:
             try:
-                if i in SANS_INSTRUMENTS:
-                    sans.livesans.run_update(i)
-                else:
-                    fetch_status(i)
+                fetch_status(i)
             except KeyboardInterrupt:
                 raise
             except:
@@ -294,8 +293,7 @@ def listen(instruments, echo=False):
     thread.start_new_thread(process_queue,(XPeekWeb.queue,))
 
     # Leave status instruments in main thread since it spends most of its time asleep
-    update_status([i for i in instruments 
-                   if i in STATUS_INSTRUMENTS+SANS_INSTRUMENTS])
+    update_status(STATUS_INSTRUMENTS+SANS_INSTRUMENTS)
 
 def main(logfile=None, logmode="w", instruments=[], 
          echo=False, loglevel=logging.INFO):

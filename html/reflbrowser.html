@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>SANS data reader</title>
+  <title>ICP data reader</title>
   <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
@@ -21,7 +21,7 @@
     <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
     <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
 
-    <script type="text/javascript" src="js/plotting_api.js"></script>
+    <script type="text/javascript" src="plotting_api2.js"></script>
     <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
     <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
@@ -37,6 +37,8 @@
     
     INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'NGD', 'NG2', 'NG3SANS', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
     INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
+    BLACKLIST_EXTENSIONS = ['.nxs', '.nxz', '.log'];
+    
     current_instr = null;
     plots = {};
     colorbars = {};
@@ -46,6 +48,7 @@
         //console.log(readNCNRData(data));
         ICP = new ICPParser();
         ICP.read(data);
+        showSANSData(ICP.get_plottable());
         //parseheader(data.split('\n'));
     }
     
@@ -78,10 +81,21 @@
         cell.append(wrapper);
         wrapper.append($('<div />', {'id': 'plot1', 'class': 'plotdiv'}));
         wrapper.append($('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"}));
-        var transform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
-        cell.append(transform);
+        var xtransform = $('<label />').text('logX').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logxtransform', 'axis': 'xaxis'}));
+        cell.append(xtransform);
+        var ytransform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logytransform', 'axis': 'yaxis'}));
+        cell.append(ytransform);
         cell.append($('<span />', {'id': 'eta1'}));
         $('#'+target).append(cell);
+    }
+    
+    function updateTransform(ev) {
+        var logselected = ev.target.checked;
+        var axis = ev.target.getAttribute('axis');
+        var transform = logselected? 'log' : 'lin';
+        for (var p in plots); {                  
+            plots[p].setTransform(transform, axis);
+        }
     }
     
     //createPlotRegion('plot_region');
@@ -95,25 +109,47 @@
     
     window.onresize();
     
+    function compactDateTime(date) {
+        var outstring = '';
+        outstring += date.getHours().toFixed(0) + ":";
+        outstring += ("00" + date.getMinutes().toFixed(0)).slice(-2) + ":";
+        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + " ";
+        outstring += date.getMonth().toFixed(0) + "/";
+        outstring += date.getDay().toFixed(0) + "/";
+        outstring += date.getFullYear().toFixed(0);
+        return outstring
+    }
     
+    function isBlacklisted(filename, blacklist) {
+        for (var i=0; i<blacklist.length; i++) {
+            if (filename.indexOf(blacklist[i]) > -1) { return true; }
+        }
+        return false;
+    }
         
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
+            var files = dirdata.files;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
-            var filebrowser = document.createElement('ul');
+
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
             var subdiritem, dirlink, fileitem, new_pathlist;
-            if (pathlist.length > 0) {
-                // add parent dir link
-                subdiritem = document.createElement('li');
-                subdiritem.classList.add('subdiritem');
-                subdiritem.textContent = "Parent Directory";
+            if (pathlist.length > 0) {               
                 var new_pathlist = $.extend(true, [], pathlist);
-                new_pathlist.pop();
-                subdiritem.onclick = function() { 
-                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
-                }
-                filebrowser.appendChild(subdiritem);
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/ ";
+                    dirlink.onclick = function() {
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                    }
+                    patheditor.appendChild(dirlink);
+                });
             }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
             $.each(dirdata.subdirs, function(index, subdir) {
                 subdiritem = document.createElement('li');
                 subdiritem.classList.add('subdiritem');
@@ -123,23 +159,41 @@
                 subdiritem.onclick = function() { 
                     $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
                 }
-                filebrowser.appendChild(subdiritem);
+                dirbrowser.appendChild(subdiritem);
             });
-            $.each(dirdata.files, function(index, filename) {
-                fileitem = document.createElement('li');
-                fileitem.classList.add('fileitem');
-                //dirlink = document.createElement('a');
-                //dirlink.href = "#";
-                //dirlink.textContent = filename;
-                fileitem.textContent = filename;
-                fileitem.onclick = function() {
-                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + filename); 
+            var filebrowser = document.createElement('ul');
+            filebrowser.id = "filebrowser";
+            $.each(files, function(index, filename) {
+                if (!(isBlacklisted(filename, BLACKLIST_EXTENSIONS))) {
+                    fileitem = document.createElement('li');
+                    fileitem.setAttribute('filename', filename);
+                    fileitem.classList.add('fileitem');
+                    fileitem.classList.add('ui-widget-content');
+                
+                    var filedate = new Date(dirdata.files_metadata[filename].mtime * 1000);
+                    fileitem.textContent = filename + ' ' + compactDateTime(filedate);
+                    filebrowser.appendChild(fileitem);
                 }
-                //fileitem.appendChild(dirlink);
-                filebrowser.appendChild(fileitem);
             });
             $('#' + target_id).empty();
-            $('#' + target_id).append(filebrowser);
+            $('#' + target_id).append(patheditor)
+            .append(dirbrowser)
+            .append(filebrowser);
+            $(filebrowser).selectable({
+                stop: function() {
+                  //var result = $( "#select-result" ).empty();
+                  $( ".ui-selected", this ).each(function(i, item) {
+                    //var index = $( "#selectable li" ).index( this );
+                    //result.append( " #" + ( index + 1 ) );
+                    console.log(i, item);
+                  });
+                  var selected = $(".ui-selected", this);
+                  if (selected.length > 0) {
+                    var last = selected.slice(-1)[0];
+                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                  } 
+                }
+            });
         }   
         return handler
     }
@@ -159,9 +213,15 @@
         current_target = 'plot0';
         var cell_target = 'cell' + (i+1).toFixed();
         var eta_target = 'eta' + (i+1).toFixed();
-        var logselected = $('#' + cell_target).find('input')[0].checked;
-        var transform = logselected? 'log' : 'lin';
-        
+        //var logselected = $('#' + cell_target).find('#logytransform')[0].checked;
+        //var transform = logselected? 'log' : 'lin';
+        transform={};
+        for (j=0;j<$('#' + cell_target).find('input').length; j++){
+            var loginput = $('#' + cell_target).find('input')[j].checked;
+            var axis = $('#' + cell_target).find('input')[j].getAttribute('axis');
+            transform[axis] = loginput;
+        }
+
         if (plots && plots[next_target] && plots[next_target].destroy) { plots[next_target].destroy() }
         if (colorbars && colorbars[next_target] && colorbars[next_target].destroy) { colorbars[next_target].destroy() }
         
@@ -219,13 +279,14 @@
     }
     
     createPlotRegion('plot_region');
+    $('.transform').change(updateTransform);
    
   });
   </script>
 </head>
 <style>
-html,body{margin:0;padding:0}
-body{font: 76% arial,sans-serif}
+html,body{height:100%;margin:0;padding:0}
+body{font: 76% arial,sans-serif; min-height:100%;}
 p{margin:0 10px 10px}
 a{display:block;color: #981793;padding:10px}
 div#header h1{height:80px;line-height:80px;margin:0;
@@ -236,9 +297,14 @@ div#extra{background:#FF8539}
 div#footer{background: #333;color: #FFF}
 div#footer p{margin:0;padding:5px 10px}
 
-div#outer{float:right;width:100%;margin-left:-200px;}
-div#content{margin-left:200px}
-div#navigation{float:left;width:200px}
+div#outer{float:right;width:100%;margin-left:-300px;}
+div#content{margin-left:300px}
+/*div#navigation{float:left;width:300px;overflow:auto;}*/
+div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:300px;overflow:auto;}
+.patheditor { 
+    color: blue;
+    cursor: pointer;
+}
 li.subdiritem { 
     list-style-type: none; 
     cursor: pointer;
@@ -247,9 +313,21 @@ li.subdiritem {
 li.fileitem {
     cursor: pointer;
     color: blue;
-    text-decoration: underline;
+    text-decoration: none;
 }
-div#footer{clear:both;width:100%}
+div.plotdiv { 
+    margin-right: 75px;
+    margin-left: 25px;
+}
+/*div#footer{clear:both;width:100%}*/
+div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
+
+  #filebrowser .ui-selecting { background: #FECA40; }
+  #filebrowser .ui-selected { background: #F39814; color: white; }
+  #filebrowser { list-style-type: none; margin: 0; padding: 0; }
+  #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+  #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+  #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
 </style>
 <body>
 

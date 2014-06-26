@@ -1,0 +1,86 @@
+<html>
+ <head>
+  <META HTTP-EQUIV="Pragma" CONTENT="no-cache">
+  <META HTTP-EQUIV="Expires" CONTENT="-1">
+  <LINK href="site.css" rel="stylesheet" type="text/css">
+  <title>HFBS status</title>
+  
+<script type="text/javascript" language="javascript">
+<!-- 
+var refreshtime = 300; // 5 minute refresh rate
+var refreshtimer = null;
+var URL="http://www.ncnr.nist.gov/ipeek/";
+
+  // A cleaner way to update the text: xmlhttprequest
+  // Based on http://linuxgazette.net/123/smith.html
+
+  // GetDCS sends a request to read the fifo.
+  var DCS_fifo; // This needs to be made generic
+  function GetDCS() {
+    // alert('refreshing DCS');
+    var url = URL+'data/HFBS/status.txt';
+    // branch for native XMLHttpRequest object
+    if (window.XMLHttpRequest) {
+      DCS_fifo = new XMLHttpRequest();
+      DCS_fifo.abort();
+      DCS_fifo.onreadystatechange = GotDCS;
+      DCS_fifo.open("POST", url, true);
+      DCS_fifo.send(null);
+    // branch for IE/Windows ActiveX version
+    } else if (window.ActiveXObject) {
+      DCS_fifo = new ActiveXObject("Microsoft.XMLHTTP");
+      if (req_fifo) {
+        DCS_fifo.abort();
+        DCS_fifo.onreadystatechange = GotDCS;
+        DCS_fifo.open("POST", url, true);
+        DCS_fifo.send();
+      }
+    }
+  }
+
+  // GotDCS is the read callback for the above XMLHttpRequest() call.
+  // This routine is not executed until data arrives from the request.
+  // We update the "fifo_data" area on the page when data does arrive.
+  function GotDCS() {
+    // only if req_fifo shows "loaded"
+    // alert('DCS ready: '+DCS_fifo.readyState+' status: '+DCS_fifo.status);
+    if (DCS_fifo.readyState != 4) return; // 3 is loading
+    // Not sure if we need to test DCS_fifo.status != 200
+    document.getElementById("HFBSstatus").innerHTML= DCS_fifo.responseText;
+  }
+
+function onshow() {
+  GetDCS();
+  if (refreshtimer == null) 
+    refreshtimer = setInterval("GetDCS()", refreshtime*1000);
+}
+function onhide() {
+  if (refreshtimer != null) {
+    clearInterval(refreshtimer);
+    refreshtimer = null;
+  }
+}
+-->
+</script>
+</head>
+<body>
+<?php include("/var/www/include/navigation.inc"); ?>
+<?php include("/var/www/include/utility.inc"); ?>
+<div class="content">
+
+
+<h4>HFBS Status</h4>
+<div class="statustext" id="HFBSstatus">
+<?php readfile("data/HFBS/status.txt"); ?>
+</div>
+
+
+</div>
+<hr>
+<div class="footer">
+<div style="float:left;"><p>Brian Maranville (<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
+<div style="float:right;"><p><? lastmod(); ?></p></div>
+</div>
+
+</body>
+</html>

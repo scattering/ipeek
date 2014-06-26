@@ -16,7 +16,7 @@ import simplejson
 import numpy
 import copy
 
-MAX_BT1_LINES = 4
+MAX_BT1_LINES = 3
 
 #from matplotlib.figure import Figure
 #from matplotlib.backends.backend_agg import FigureCanvasAgg as Canvas
@@ -147,7 +147,7 @@ plottable_data = {
 
 LINESTYLE = dict(NGD='o-',CGD='o-',BT1='o-',NG2='o-')
 POINTSIZE = dict(BT1=-2, NG2=-2, BT4=-2, BT9=-2)
-ERRORBARS = ['BT7','BT9']
+ERRORBARS = ['BT7','BT9', 'BT4', 'NGD', 'CGD']
 THUMBDIMS=210,110
 IMAGEDIMS=700,450
 
@@ -161,7 +161,7 @@ def create_figure(line):
     #    w,h = IMAGEDIMS[0]/dpi, IMAGEDIMS[1]/dpi
     #fig = Figure(figsize=(w,h),dpi=dpi)
     #return fig
-    if (line.pixels > 1 and line.instrument != 'BT1'):  return copy.deepcopy(plottable_data_2d) 
+    if (line.pixels > 1 and line.instrument not in ['BT1', 'NG2', 'NG4']):  return copy.deepcopy(plottable_data_2d) 
     else: return copy.deepcopy(plottable_data) 
 
 
@@ -234,13 +234,14 @@ def layout_figure(fig,stream,dataid,scale=None):
             x = line_i.columns[line_i.primary]
             y = line_i.columns['DATA']
             data = []
-            if scale == 'log':
-                yerr = [getLogPoissonUncertainty(yy) for yy in y]
-            else:
-                yerr = [getPoissonUncertainty(yy) for yy in y]
             if line.instrument in ERRORBARS:
-                for xx,yy,yyerr in zip(x, y, yerr):
-                    data.append([xx,yy,yerr])
+                for xx,yy in zip(x, y):
+                    if scale == 'log': 
+                        yyerr = getLogPoissonUncertainty(yy)
+                    else:
+                        yyerr = getPoissonUncertainty(yy)
+                    yyerr['xupper'] = yyerr['xlower'] = xx
+                    data.append([xx,yy,yyerr])
             else:
                 for xx,yy in zip(x,y):
                     data.append([xx,yy])
@@ -292,6 +293,8 @@ def layout_figure(fig,stream,dataid,scale=None):
             'zmin': v.min(),
             'zmax': v.max()
         }
+        fig['options']['fixedAspect'] = {'fixAspect': False, 'aspectRatio': 1.0}
+        fig['type'] = '2d'
         #ax.pcolorfast(x, y, v.T)
         #ax.set_ylabel('Pixel')
         #limits.add(x,y)
@@ -307,7 +310,7 @@ def layout_figure(fig,stream,dataid,scale=None):
         for xx,yy in zip(x,y):
             fitdata.append([xx,yy])
         fig['data'].insert(0, fitdata)
-        fig['options']['series'].insert(0, {'label': 'fit', 'showLine': True, 'showMarker': False})
+        fig['options']['series'].insert(0, {'label': 'fit', 'showLine': True, 'showMarker': False, 'rendererOptions': {'errorBar': False}})
         fig['options']['legend']['show'] = True
         if hasattr(line.peak, '_vars') and hasattr(line.peak._vars, 'values'):
             for key in line.peak._vars.values():
@@ -402,11 +405,15 @@ def dcs_hfbs_plot(fig, line, scale):
     yerr = [getPoissonUncertainty(yy) for yy in y]
     if line.instrument in ERRORBARS:
         for xx,yy,yyerr in zip(x, y, yerr):
-            data.append([xx,yy,yerr])
+            if numpy.isnan(yy):
+                yy = None
+                yyerr = None
+            data.append([xx,yy,yyerr])
     else:
         for xx,yy in zip(x,y):
+            yy = None if numpy.isnan(yy) else yy
             data.append([xx,yy])
-    fig['data'].append(data)
+    fig['data'] = [data]
     fig['options']['series'].append({'label':line.instrument})
     fig['options']['axes']['xaxis']['label'] = 'bin'
 
