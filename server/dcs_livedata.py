@@ -17,7 +17,7 @@ source_port = 22
 
 sources = [
     {"name": "DCS", 
-     "root_dir": "/home/ncnr/",
+     "root_dir": "/home/NIST/ncnr/",
      "live_datapath":"livedata",
      "live_dataname": "livedata.dcs.gz"},
 ]
@@ -25,7 +25,7 @@ sources = [
 output = {}
 output_filelike = {}
 
-local_path = "~/.livedata/DCS/'
+local_path = "~/.livedata/DCS/"
 
 dest_host = "webster.ncnr.nist.gov"                    #hard-coded
 dest_port = 22

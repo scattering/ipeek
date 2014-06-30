@@ -291,6 +291,7 @@
                         $('.transform[axis=xaxis]').hide();
                         $('.transform[axis=yaxis]').hide();
                         $('.transform[axis=zaxis]').show();
+                        data.options = data.options? data.options : {};
                         data.options.seriesDefaults =  {rendererOptions: {transform: ztransform}}
                         //plots[instr] = plottingAPI(datalist, plot_target);
                         $('#' + plot_target).empty();

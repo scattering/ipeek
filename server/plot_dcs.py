@@ -82,11 +82,11 @@ def process_raw_dcs(data_path):
     output = {
         "title": "DCS snapshot",
         "dims": {
-            "ymin": 0-Ei,
-            "ymax": EQ_data.shape[0]*0+Ei,
+            "ymin": -Ei,
+            "ymax": Ei,
             "ydim": EQ_data.shape[0],
             "xmin": 0,
-            "xmax": EQ_data.shape[1]*0+np.max(Q_bins),
+            "xmax": Q_max,
             "xdim": EQ_data.shape[1],
             "zmin": EQ_data.min(),
             "zmax": EQ_data.max()
@@ -94,7 +94,7 @@ def process_raw_dcs(data_path):
         "type": "2d",
         "xlabel": "Ei-Ef [meV]",
         "ylabel": "|Q| [/AA^-1]",
-        "z": [EQ_data.tolist()],
+        "z": [EQ_data.T.tolist()],
         "metadata": {
             "stop_date": stop_date,
             "start_date": start_date
