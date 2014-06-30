@@ -25,7 +25,7 @@ sources = [
 output = {}
 output_filelike = {}
 
-local_path = "~/.livedata/DCS/"
+local_path = "/home/bbm/.livedata/DCS/"
 
 dest_host = "webster.ncnr.nist.gov"                    #hard-coded
 dest_port = 22
