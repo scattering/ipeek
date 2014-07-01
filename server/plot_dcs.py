@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import h5py
 import simplejson
 import os
@@ -84,16 +85,16 @@ def process_raw_dcs(data_path):
         "dims": {
             "ymin": -Ei,
             "ymax": Ei,
-            "ydim": EQ_data.shape[0],
+            "ydim": EQ_data.shape[1],
             "xmin": 0,
             "xmax": Q_max,
-            "xdim": EQ_data.shape[1],
+            "xdim": EQ_data.shape[0],
             "zmin": EQ_data.min(),
             "zmax": EQ_data.max()
         },
         "type": "2d",
-        "xlabel": "Ei-Ef [meV]",
-        "ylabel": "|Q| [/AA^-1]",
+        "ylabel": "Ei-Ef [meV]",
+        "xlabel": "|Q| [Å⁻¹]",
         "z": [EQ_data.T.tolist()],
         "metadata": {
             "stop_date": stop_date,
