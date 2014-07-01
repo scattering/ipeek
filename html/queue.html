@@ -1,0 +1,525 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=9" >
+        <meta http-equiv="refresh" content="3600">
+        <title>NCNR instrument queue state</title>
+ 
+        <!-- Reference the theme's stylesheet on the Google CDN -->
+        <link href="http://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"
+            type="text/css" rel="Stylesheet" />
+            
+<!--        <style>-->
+<!--         body {width:100%; height:100%; overflow:hidden, margin:0}-->
+<!--         html {width:100%; height:100%; overflow:hidden}-->
+<!--        </style>-->
+ 
+        <!-- Reference jQuery and jQuery UI from the CDN. Remember
+           that the order of these two elements is important -->
+        <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
+<!--        <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js"></script>-->
+<!--        <script src="http://ajax.googleapis.com/ajax/libs/jqueryui/1.7.2/jquery-ui.min.js"></script>-->
+        <script src="//code.jquery.com/ui/1.8.2/jquery-ui.min.js" type="text/javascript"></script>
+<!--        <script type="text/javascript" src="jquery-1.5.1.min.js"></script>-->
+<!--        <script type="text/javascript" src="jquery.jqplot.min.js"></script>-->
+
+        <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+        <link rel="stylesheet" href="http://ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jstree/dist/jstree.min.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>-->
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
+        
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
+
+        <script type="text/javascript" src="plotting_api2.js"></script>
+        <script src="geturlvars.js"></script>
+        
+
+        <!-- JQPLOT -->
+        <script type="text/javascript">
+            var refreshtime = 60; // 1 minute refresh rate
+            var refreshtimer = null;
+            COLS = 1;
+            INSTRUMENTS = [];
+            INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
+            ERRORBARS = ['BT7','BT9', 'BT4', 'NGD', 'CGD'];
+            current_instr = null;
+            plots = {};
+            colorbars = {};
+            SORT_KEYS = true;
+            CommandStatusEnum = [ 'QUEUED', 'RUNNING', 'CHILDREN', 'FINISHED', 'SKIPPED' ];
+            
+            function onshow() {
+              if (refreshtimer == null) 
+                refreshtimer = setInterval("loadQueue(INSTRUMENTS);", refreshtime*1000);
+            }
+            function onhide() {
+              if (refreshtimer != null) {
+                clearInterval(refreshtimer);
+                refreshtimer = null;
+              }
+            }
+            
+            function createTable(target, cols, numCells) {
+                // create a table with numCells in the target
+                var table = $('<table />', {'id': 'instruments'});
+                $('#'+target).append(table);
+                var cells = 0;
+                for (var r=0; cells < numCells; r++) {
+                    var row = $('<tr />');
+                    table.append(row);
+                    for (var c=0; c<cols && cells < numCells; c++) {
+                        var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
+                        cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
+                        var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(xtransform);
+                        var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ytransform);
+                        var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(ztransform);
+                        var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showline);
+                        var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
+                        cell.append(showmarker);
+                        cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
+                        cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+                        row.append(cell);
+                        cells++;
+                    }
+                }
+            }
+            
+            
+            fitPlots = function() {
+                //$('.plotgrid').width(($(window).innerWidth() / COLS - 75).toFixed() + 'px');
+                //var new_width = (1.0/COLS * 100);
+                //$('.plotcell').width(new_width.toFixed() + '%')
+                //$('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
+                $('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
+                for (var p in plots) {
+                    plots[p].replot();
+                }
+            }
+            
+            window.onload = function() {
+                //$.ajaxSetup({ cache: false });
+                //$('#content_table').on("ready.jstree", function (e, data) { $('#content_table').jstree(true).open_node('root'); });
+                debug=false;
+                current_instr = jQuery.getUrlVar('instrument');
+                INSTRUMENTS = [current_instr];
+                loadQueue();
+                onshow();
+                
+                //loadData(INSTRUMENTS);
+                fitPlots();
+            }
+            
+            function loadData(instruments) {
+                var instruments = instruments || INSTRUMENTS;
+                for (var i=0; i<instruments.length; i++) {
+                    var instr = instruments[i];
+                    var noCache = new Date().getTime();
+                    $.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                }
+            }
+            
+            function loadQueue(instruments) {
+                var instruments = instruments || INSTRUMENTS;
+                for (var i=0; i<instruments.length; i++) {
+                    var instr = instruments[i];
+                    var noCache = new Date().getTime();
+                    $.getJSON("data/" + instr + "/live_queue.json", { "noCache": noCache }, function(datalist, status, xhr) {showQueue(datalist);});
+                }
+            }
+            
+            /*function updateTransform(ev) {
+                var plottarget = $(this).parent().parent().find('.jqplot-target')[0].id;
+                for (var p in plots) {
+                    if (plots[p].targetId == ('#' + plottarget)) {
+                        var noCache = new Date().getTime();
+                        $.ajax({
+                            dataType: "json", 
+                            url: 
+                        });
+                        //$.getJSON("test_jqpeek/" + p + "/live_data.json", { "noCache": noCache }, showData(p));
+                        break;
+                    }
+                }
+            }*/
+            
+            function updateTransform(ev) {
+                var logselected = ev.target.checked;
+                var axis = ev.target.parentElement.getAttribute('axis');
+                var storage_keys = {
+                    'xaxis': 'X_TRANSFORM',
+                    'yaxis': 'Y_TRANSFORM',
+                    'zaxis': 'Z_TRANSFORM'
+                }
+                var transform = logselected? 'log' : 'lin';
+                var next_target = current_instr;
+                if (localStorage && localStorage != null) {
+                    localStorage[storage_keys[axis]] = transform;
+                }
+                var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
+                transformOpts.transform[axis] = transform;
+                transformOpts.seriesDefaults.rendererOptions.transform = transform;
+                $.extend(true, plots[next_target].options, transformOpts);
+                plots[next_target].replot(plots[next_target].options);
+                if (colorbars[next_target]) { 
+                    colorbars[next_target].series[0].parent_plot = plots[next_target].series[0];
+                    colorbars[next_target].series[0].set_transform(transform);
+                    colorbars[next_target].plugins._interactor.zoomMax() };
+            }
+            
+            function updateShowLine(ev) {
+                var showline = ev.target.checked;
+                var next_target = current_instr;
+                if (localStorage && localStorage != null) {
+                    localStorage['SHOW_LINE'] = JSON.stringify(showline);
+                }
+                var showLineOpts = {seriesDefaults: {showLine: showline}};
+                $.extend(true, plots[next_target].options, showLineOpts);
+                plots[next_target].replot(plots[next_target].options);
+            }
+            
+            function updateShowMarker(ev) {
+                var showmarker = ev.target.checked;
+                var next_target = current_instr;
+                if (localStorage && localStorage != null) {
+                    localStorage['SHOW_MARKER'] = JSON.stringify(showmarker);
+                }
+                var showMarkerOpts = {seriesDefaults: {showMarker: showmarker}};
+                $.extend(true, plots[next_target].options, showMarkerOpts);
+                plots[next_target].replot(plots[next_target].options);
+            }
+            
+            function showQueue(queue) {
+                myqueue = queue;
+                treequeue = json_to_jstree(queue, true);
+                newqueue = queue_to_jstree(queue, true);
+                $('#content_table').jstree(newqueue);
+            }
+            
+            function type (object) {
+                if (object === null) {
+                    return 'null';
+                }
+                if (object === undefined) {
+                    return 'undefined';
+                }
+                if ((object instanceof Number) || (typeof object === 'number')) {
+                    return 'number';
+                }
+                if ((object instanceof String) || (typeof object === 'string')) {
+                    return 'string';
+                }
+                if ((object instanceof Boolean) || (typeof object === 'boolean')) {
+                    return 'boolean';
+                }
+                if ((object instanceof RegExp) || (typeof object === 'regexp')) {
+                    return 'regexp';
+                }
+                if (Array.isArray(object)) {
+                    return 'array';
+                }
+
+                return 'object';
+            };
+            
+            function json_to_jstree(obj, root) {
+                var simplenodes = {'string': true, 'boolean': true, 'number': true, 'null': true}
+                if (root == true) {
+                    return {'core': {'data': json_to_jstree(obj, false)}}
+                }
+                
+                var out;
+                if (type(obj) === 'object') {
+                    var keys = Object.keys(obj);
+                    var val, text;
+                    if (SORT_KEYS) { keys.sort() }
+                    out = [];
+                    for (var i=0; i<keys.length; i++) {
+                        val = obj[keys[i]];
+                        if (type(val) in simplenodes) {
+                            out.push({'text': '<b>'+ keys[i] + ':</b> ' + String(val), 'icon': "glyphicon glyphicon-chevron-right"});
+                        } else {
+                            out.push({'text': keys[i], 'children': json_to_jstree(obj[keys[i]]) });
+                        }
+                    }        
+                }
+                else if( type(obj) === 'array' ) {
+                    out = [];
+                    for (var i=0; i<obj.length; i++) {
+                        out.push(json_to_jstree(obj[i]));
+                    }
+                }
+                else if( type(obj) === 'string') {
+                    out = {'text': obj, 'icon': "glyphicon glyphicon-chevron-right"};
+                }
+                else if( type(obj) === 'number') {
+                    out = {'text': obj.toString(), 'icon': "glyphicon glyphicon-chevron-right" };
+                }
+                else { 
+                    out = {'text': 'unknown'};
+                    //alert( 'not a known type: ', String(obj) );
+                }
+                return out;
+            }
+            
+            function queue_to_jstree(queue, root) {
+                if (root == true) {
+                    var data = queue_to_jstree(queue, false);
+                    data.id = "root";
+                    data.state = {opened: true};
+                    return {'core': {'id': 'root', 'data': data}}
+                }
+                var out = {};
+                if ('status' in queue) {
+                    var status = queue.status;
+                    if ('commandStr' in status) {
+                        out.text = status.commandStr;
+                    }
+                    if ('state' in status) {
+                        if ('value' in status.state) {
+                            out.text += ": " + CommandStatusEnum[parseInt(status.state.value)];
+                        } 
+                        else if ('_value' in status.state) {
+                            out.text += ": " + CommandStatusEnum[parseInt(status.state._value)];
+                        }
+                    }
+                }
+                out.children = [];
+                var child;
+                for (var i=0; i<queue.children.length; i++) {
+                    child = queue.children[i];
+                    out.children.push(queue_to_jstree(child, false));
+                }
+                return out;
+            }
+
+            function loadData(instruments) {
+                var instruments = instruments || INSTRUMENTS;
+                for (var i=0; i<instruments.length; i++) {
+                    var instr = instruments[i];
+                    var noCache = new Date().getTime();
+                    $.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                }
+            }
+            
+            function showData(datalist, instr) {
+                data = datalist[0];
+                $.extend(true, data.options, {
+                    axesDefaults: {
+                        renderer: $.jqplot.GracefulAxisRenderer,
+                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
+                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
+                        tickOptions: {
+                            formatString: "%.2g",
+                            _styles: {right:2}
+                        }                    
+                    }
+                });
+                //var instr = data.metadata.instrument;
+                var i = INSTRUMENTS.indexOf(instr);
+                if (i > -1) {
+                    var cell_target = 'cell' + (i+1).toFixed();
+                    var plot_target = 'plot' + (i+1).toFixed();
+                    var eta_target = 'eta' + (i+1).toFixed();
+                    var xlogselected = $('#' + cell_target).find('.transform[axis=xaxis] input')[0].checked;
+                    var ylogselected = $('#' + cell_target).find('.transform[axis=yaxis] input')[0].checked;
+                    var zlogselected = $('#' + cell_target).find('.transform[axis=zaxis] input')[0].checked;
+                    var showLine = $('#' + cell_target).find('.showline input')[0].checked;
+                    var showMarker = $('#' + cell_target).find('.showmarker input')[0].checked;
+                    var xtransform = xlogselected? 'log' : 'lin';
+                    var ytransform = ylogselected? 'log' : 'lin';
+                    var ztransform = zlogselected? 'log' : 'lin';
+                    
+                    //var data = liveData[instr][0];
+                    if (instr in plots && plots[instr].destroy) {
+                        plots[instr].destroy();
+                    }
+                    plots[instr] = null;
+                    //plots[instr] = plottingAPI(data, plot_target);
+                    if (data.type == '1d') {
+                        $('.showline').show();
+                        $('.showmarker').show();
+                        $('.transform[axis=xaxis]').show();
+                        $('.transform[axis=yaxis]').show();
+                        $('.transform[axis=zaxis]').hide();
+                        var plot_options = {
+                            title: data.title,
+                            transform: {
+                                xaxis: xtransform,
+                                yaxis: ytransform
+                            },
+                            seriesDefaults: {
+                                // update options with values from checkboxes:
+                                showLine: showLine,
+                                showMarker: showMarker,
+                                // 
+                                shadow: false, 
+                                markerOptions: {shadow: false, size: 8},
+                                breakOnNull: true, 
+                                label: "series"
+                            },
+                            cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
+                            legend: {
+                                show: true,
+                                parent: this,
+                                placement: 'ne',
+                                renderer: $.jqplot.InteractiveLegendRenderer
+                            },
+                            grid: {shadow: false},
+                            sortData: false
+                        };
+                        
+                        if (ERRORBARS.indexOf(instr) > -1) {
+                            plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
+                            plot_options.seriesDefaults.rendererOptions = {errorBar: true};
+                        }
+                        $.extend(true, data.options, plot_options);
+                        plots[instr] = $.jqplot(plot_target, data.data, data.options);
+                        $('#' + eta_target).html(make_metadata_table(data.metadata));
+                    } else if (data.type == '2d') {
+                        $('.showline').hide();
+                        $('.showmarker').hide();
+                        $('.transform[axis=xaxis]').hide();
+                        $('.transform[axis=yaxis]').hide();
+                        $('.transform[axis=zaxis]').show();
+                        data.options = data.options? data.options : {};
+                        data.options.seriesDefaults =  {rendererOptions: {transform: ztransform}}
+                        //plots[instr] = plottingAPI(datalist, plot_target);
+                        $('#' + plot_target).empty();
+                        var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+                        $('#' + plot_target).append(plotbox)
+                        plotbox.append($('<div />', {
+                            style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
+                            id: plot_target + "_plot"}));
+                        plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_target + "_colorbar"}));
+                        var plot = renderImageData2(data, ztransform, plot_target + "_plot");
+                        var cbar_options = {
+                            axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
+                        }
+                        var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar');
+                        plots[instr] = plot;
+                        colorbars[instr] = colorbar;
+                        plot.replot(); // for aspect ratio plugin!
+                        colorbar.plugins._interactor.zoomMax(); // for scale!
+                        //plots[plot_target] = plottingAPI(datalist, plot_target);
+                        if (data.metadata) {
+                            $('#' + eta_target).html(make_metadata_table(data.metadata));
+                        }
+                    }
+                    
+                    var instr_link = $('<a />', {'href': 'singleplotwindow.html?instrument=' + instr});
+                    var instr_name = instr;
+                    if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
+                    instr_link.html(instr_name);
+                    $('.instrument-name', '#' + cell_target).empty()
+                    $('.instrument-name', '#' + cell_target).append(instr_link)
+                }
+            }  
+
+            function make_metadata_table(metadata, numcols) {
+                var numcols = numcols || 4;
+                var new_table = document.createElement('table');
+                var keys = Object.keys(metadata);
+                var num_items = keys.length;
+                for (var i=0; i<num_items; i+=numcols) {
+                    var row = new_table.insertRow(-1);
+                    for (var j=0; j<numcols; j++) {
+                        var index = i + j;
+                        if (index >= num_items) { break; }
+                        var key = keys[index];
+                        
+                        var value = metadata[key];
+                        var label = row.insertCell(-1);
+                        label.setAttribute('class', 'metadata-label');
+                        label.innerHTML=key;
+                        var entry = row.insertCell(-1);
+                        entry.setAttribute('class', 'metadata-value');
+                        entry.innerHTML=value;
+                    }
+                }
+                return new_table;
+            }
+        </script>
+        <style>
+            body {
+                height: 100%;
+            }
+            #instruments { 
+                width: 100%;
+            }
+            .instrument-name { 
+                text-align: center;
+                font-family: "Georgia", serif;
+                font-weight: bold;
+            }
+                               
+            #instruments tr { margin-bottom: 30px; }
+            div { 
+                user-select: none; 
+                -webkit-user-select: none; 
+                -moz-user-select: none;
+            }
+            .metadata-label {color: red}
+            .slidingDiv {
+                background-color: #99CCFF;
+                padding:20px;
+                margin-top:10px;
+                border-bottom:5px solid #3399FF;
+            }
+             
+            .show_hide {
+                display:none;
+            }
+            .jqplot-table-legend-swatch {
+                width: 10;
+                height: 10;
+            }
+            .jqplot-series-shadowCanvas {
+                display: none;
+            }
+        </style>
+         <style type="text/css">
+        #leftSide {
+          float: left;
+          width: 50%;
+        }
+         
+        #rightSide {
+          float: left;
+          width: 50%;
+        }
+    </style>
+    </head>
+    <body id="singleplot">
+    <?php include("/var/www/include/navigation.inc"); ?>
+    <?php include("/var/www/include/utility.inc"); ?>
+
+        <div id="content_table"></div>
+        
+    <div class="footer">
+    <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
+    <div style="float:right;"><p><? lastmod(); ?></p></div>
+    </div>
+
+    </body>
+</html>
