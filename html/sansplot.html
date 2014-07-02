@@ -36,6 +36,7 @@
 <!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>-->
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
         
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
@@ -143,18 +144,23 @@
             }*/
             
             function updateTransform(ev) {
-		        var plottargets = [];
-		        $(this).parent().parent().find('.jqplot-target').each(function(i, e) { plottargets.push('#' + e.id) });
+                var plottarget = $(this).parent().find('.jqplot-target')[0].id;
+                var logselected = ev.target.checked; 
+                var transform = logselected? 'log' : 'lin';
+                var axis = ev.target.parentElement.getAttribute('axis');
+		        //$(this).parent().parent().find('.jqplot-target').each(function(i, e) { plottargets.push('#' + e.id) });
 		        for (var p in plots) {
-		            if (plottargets.indexOf(plots[p].targetId) > -1) {
-		                // var noCache = new Date().getTime();
-		                // $.getJSON("test_jqpeek/" + p + "/live_data.json", { "noCache": noCache }, showData(p));
-		                var logselected = ev.target.checked;
-                        var transform = logselected? 'log' : 'lin';
-		                plots[p].setTransform(transform);
-		                if (colorbars[p]) {
-		                    colorbars[p].plugins._interactor.zoomMax();
-		                }
+		            if (plots[p].targetId == ('#' + plottarget)) {
+		                var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
+                        transformOpts.transform[axis] = transform;
+                        transformOpts.seriesDefaults.rendererOptions.transform = transform;
+                        $.extend(true, plots[p].options, transformOpts);
+                        plots[p].replot(plots[p].options);
+                        if (colorbars[p]) { 
+                            colorbars[p].series[0].parent_plot = plots[p].series[0];
+                            colorbars[p].series[0].set_transform(transform);
+                            colorbars[p].plugins._interactor.zoomMax() 
+                        };
 		                break;
 		            }
 		        }
@@ -178,11 +184,15 @@
                 var plot_1d_target = 'plot2';
                 var eta_target = 'metadata';
                 
-                $('#cell1.transform[axis=xaxis]').hide();
-                $('#cell1.transform[axis=yaxis]').hide();
-                $('#cell1.transform[axis=zaxis]').show();
-                var logselected = $('#cell1.transform[axis=zaxis]').find('input')[0].checked;
+                $('#cell1 .transform[axis=xaxis]').hide();
+                $('#cell1 .transform[axis=yaxis]').hide();
+                $('#cell1 .transform[axis=zaxis]').show();
+                var logselected = $('#cell1 .transform[axis=zaxis]').find('input')[0].checked;
                 var transform = logselected? 'log' : 'lin';
+                
+                $('#cell2 .transform[axis=xaxis]').show();
+                $('#cell2 .transform[axis=yaxis]').show();
+                $('#cell2 .transform[axis=zaxis]').hide();
 
                 if ('sum' in plots && plots['sum'].destroy) {
                     plots['sum'].destroy();
