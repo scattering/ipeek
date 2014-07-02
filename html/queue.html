@@ -296,12 +296,24 @@
                         out.text = status.commandStr;
                     }
                     if ('state' in status) {
-                        if ('value' in status.state) {
-                            out.text += ": " + CommandStatusEnum[parseInt(status.state.value)];
+                        var v;
+                        if ('value' in status.state) {                            
+                            v = parseInt(status.state.value);
                         } 
                         else if ('_value' in status.state) {
-                            out.text += ": " + CommandStatusEnum[parseInt(status.state._value)];
+                            v = parseInt(status.state._value);
                         }
+                        if (v != null) {
+                            out.text += ": " + CommandStatusEnum[v];
+                        }
+                        if (v == 3) {
+                            var t = new Date(status.endCommandTimestamp);
+                            out.text += " " + t.toISOString();
+                        }
+                            
+                    }
+                    if ('endCommandTimestamp' in status) {
+                        
                     }
                 }
                 out.children = [];

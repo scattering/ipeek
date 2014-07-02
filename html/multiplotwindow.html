@@ -36,6 +36,7 @@
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
         
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
@@ -50,7 +51,7 @@
             var refreshtime = 60; // 1 minute refresh rate
             var refreshtimer = null;
             COLS = 4;
-            INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'DCS', 'NGD', 'NG2', 'NG3SANS', 'NG4', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
+            INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'DCS', 'NGD', 'NG4', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS', 'NGB30SANS'];
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'};
             plots = {};
             datas = {};
@@ -126,13 +127,17 @@
             
             function updateTransform(ev) {
                 var plottarget = $(this).parent().parent().find('.jqplot-target')[0].id;
+                var logselected = ev.target.checked;                
                 for (var p in plots) {
                     if (plots[p].targetId == ('#' + plottarget)) {
-                        // var noCache = new Date().getTime();
-                        // $.getJSON("test_jqpeek/" + p + "/live_data.json", { "noCache": noCache }, showData(p));
-                        var logselected = ev.target.checked;
+                        var axis = (plots[p].type == '2d') ? "zaxis" : "yaxis";
+                        //var axis = ev.target.parentElement.getAttribute('axis');
                         var transform = logselected? 'log' : 'lin';
-                        plots[p].setTransform(transform);
+                        var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
+                        transformOpts.transform[axis] = transform;
+                        transformOpts.seriesDefaults.rendererOptions.transform = transform;
+                        $.extend(true, plots[p].options, transformOpts);
+                        plots[p].replot(plots[p].options);
                         break;
                     }
                 }
