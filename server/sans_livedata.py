@@ -20,9 +20,9 @@ sources = [
      "root_dir": "/var/ftp/pub/ncnrdata/ng7sans/",
      "live_datapath":"pub/sansdata/NG7Current/",
      "live_dataname": "live001.sa3_ice_a001"},
-    {"name": "NG3SANS", 
+    {"name": "NGB30SANS", 
      "root_dir": "/var/ftp/pub/ncnrdata/ng3sans/",
-     "live_datapath":"pub/sansdata/NG3Current/",
+     "live_datapath":"pub/sansdata/NGB30Current/",
      "live_dataname": "live001.sa3_ice_a001"},
     {"name": "NGBSANS", 
      "root_dir": "/var/ftp/pub/ncnrdata/ngbsans/",
@@ -93,6 +93,7 @@ for source in sources:
     plottables =  []
     sansdata = filters.read_sample(live_dataname, file_obj=live_data)
     plottables.append(sansdata.get_plottable())
+    if sansdata.metadata['resolution.lmda'] == 0: sansdata.metadata['resolution.lmda'] = 1.0;
     sans_q = filters.convert_q(sansdata)
     annular_data = filters.annular_av(sans_q)
     plottables.append(annular_data.get_plottable())

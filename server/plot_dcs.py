@@ -96,6 +96,7 @@ def process_raw_dcs(data_path):
         "ylabel": "Ei-Ef [meV]",
         "xlabel": "|Q| [Å⁻¹]",
         "z": [EQ_data.T.tolist()],
+        "options": {},
         "metadata": {
             "stop_date": stop_date,
             "start_date": start_date
