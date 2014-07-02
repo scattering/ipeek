@@ -93,6 +93,7 @@ for source in sources:
     plottables =  []
     sansdata = filters.read_sample(live_dataname, file_obj=live_data)
     plottables.append(sansdata.get_plottable())
+    if sansdata.metadata['resolution.lmda'] == 0: sansdata.metadata['resolution.lmda'] = 1.0;
     sans_q = filters.convert_q(sansdata)
     annular_data = filters.annular_av(sans_q)
     plottables.append(annular_data.get_plottable())
