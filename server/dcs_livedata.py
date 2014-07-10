@@ -19,7 +19,8 @@ sources = [
     {"name": "DCS", 
      "root_dir": "/home/NIST/ncnr/",
      "live_datapath":"livedata",
-     "live_dataname": "livedata.dcs.gz"},
+     #"live_dataname": "livedata.dcs.gz"},
+     "live_dataname": "live_data.json"},
 ]
 
 output = {}
@@ -52,8 +53,8 @@ for source in sources:
     name = source['name']
     #print "live data modified:", source_sftp.file(live_dataname).stat().st_mtime
     
-    #live_data = StringIO.StringIO()
-    live_data = open(os.path.join(local_path, live_dataname), 'wb')
+    live_data = StringIO.StringIO()
+    #live_data = open(os.path.join(local_path, live_dataname), 'wb')
     if RETRIEVE_METHOD == "urllib":       
         req_addr = os.path.join("ftp://" + source_host, live_datapath, live_dataname)
         #req = urllib2.Request(req_addr)
@@ -88,16 +89,17 @@ for source in sources:
     else:
         print "no valid RETRIEVE_METHOD"
       
-    #live_data.seek(0) # move back to the beginning of file
-    live_data.close()
+    live_data.seek(0) # move back to the beginning of file
+    #live_data.close()
     
     files = [live_dataname,]
 
     # here I import the library that reads in SANS files:
-    from plot_dcs import process_raw_dcs
-    json_data = process_raw_dcs(local_path)
-    
-    output[name] = json_data
+    #from plot_dcs import process_raw_dcs
+    #json_data = process_raw_dcs(local_path)
+    json_data = live_data    
+
+    output[name] = json_data.read()
     
     dest_transport = paramiko.Transport((dest_host, dest_port))
     dest_transport.connect(username = dest_username, pkey = dest_pkey)
