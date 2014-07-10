@@ -329,6 +329,7 @@
                 var numcols = numcols || 4;
                 var new_table = document.createElement('table');
                 var keys = Object.keys(metadata);
+                keys.sort();
                 var num_items = keys.length;
                 for (var i=0; i<num_items; i+=numcols) {
                     var row = new_table.insertRow(-1);
