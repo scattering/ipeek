@@ -273,7 +273,7 @@
                             legend: {
                                 show: true,
                                 parent: this,
-                                placement: 'ne',
+                                //placement: 'ne',
                                 renderer: $.jqplot.InteractiveLegendRenderer
                             },
                             grid: {shadow: false},
@@ -294,7 +294,7 @@
                         }
                         
                         plots[instr].legend.handleClick = function(e) {
-                            var series_num = parseInt(e.target.getAttribute("series_num"));
+                            var series_num = e.data.series_num || 0;
                             plots[instr].series[series_num].show = (!(plots[instr].series[series_num].show));
                             plots[instr].redraw();
                         }

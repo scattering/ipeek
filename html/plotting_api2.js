@@ -134,7 +134,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
     plot_obj = $.jqplot(plotid, data.data, options);
     plot_obj.type = '1d';
     function handleLegendClick(ev) {
-        var series_num = ev.target.getAttribute('series_num') || 0;
+        var series_num = ev.data.series_num || 0;
         //var mplot = ev.data.plot;
         var mplot = plot_obj;
         mplot.series[series_num].show = !mplot.series[series_num].show;
