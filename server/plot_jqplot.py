@@ -129,7 +129,7 @@ plottable_data = {
             'options': {
                 'axes': {'xaxis': {'label':'A4'}, 'yaxis': {'label':'Counts'}},
                 'series': [],
-                'legend': {'show': False, 'placement': 'se'},
+                'legend': {'show': False},
                 'cursor': {'show': True, 'tooltipLocation':'se', 'tooltipOffset': 0},
                 },
             'clear_existing': True,

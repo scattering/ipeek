@@ -118,7 +118,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
         },
         legend: {
             show: true,
-            parent: this,
+            //parent: this,
             //placement: 'outside',
             renderer: $.jqplot.InteractiveLegendRenderer
         },
