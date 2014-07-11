@@ -91,6 +91,7 @@
                         var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
                         cell.append(showmarker);
                         cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
+                        cell.append($('<div />', {'id': 'status' + (cells+1).toFixed()}));
                         cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                         row.append(cell);
                         cells++;
@@ -230,6 +231,7 @@
                     var cell_target = 'cell' + (i+1).toFixed();
                     var plot_target = 'plot' + (i+1).toFixed();
                     var eta_target = 'eta' + (i+1).toFixed();
+                    var status_target = 'status' + (i+1).toFixed();
                     var xlogselected = $('#' + cell_target).find('.transform[axis=xaxis] input')[0].checked;
                     var ylogselected = $('#' + cell_target).find('.transform[axis=yaxis] input')[0].checked;
                     var zlogselected = $('#' + cell_target).find('.transform[axis=zaxis] input')[0].checked;
@@ -284,7 +286,18 @@
                         }
                         $.extend(true, data.options, plot_options);
                         plots[instr] = $.jqplot(plot_target, data.data, data.options);
-                        $('#' + eta_target).html(make_metadata_table(data.metadata));
+                        if (data.metadata) {
+                            $('#' + eta_target).html(make_metadata_table(data.metadata));
+                        }
+                        if (data.status) {
+                            $('#' + status_target).html(data.status);
+                        }
+                        
+                        plots[instr].legend.handleClick = function(e) {
+                            var series_num = parseInt(e.target.getAttribute("series_num"));
+                            plots[instr].series[series_num].show = (!(plots[instr].series[series_num].show));
+                            plots[instr].redraw();
+                        }
                     } else if (data.type == '2d') {
                         $('.showline').hide();
                         $('.showmarker').hide();
@@ -313,6 +326,9 @@
                         //plots[plot_target] = plottingAPI(datalist, plot_target);
                         if (data.metadata) {
                             $('#' + eta_target).html(make_metadata_table(data.metadata));
+                        }
+                        if (data.status) {
+                            $('#' + status_target).html(data.status);
                         }
                     }
                     

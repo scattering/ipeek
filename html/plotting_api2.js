@@ -119,7 +119,7 @@ function render1dplot(plot_obj, data, transform, plotid, plot_options) {
         legend: {
             show: true,
             parent: this,
-            placement: 'outside',
+            //placement: 'outside',
             renderer: $.jqplot.InteractiveLegendRenderer
         },
         grid: {shadow: false},
