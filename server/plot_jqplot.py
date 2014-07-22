@@ -55,7 +55,8 @@ def getPoissonUncertainty(y):
     """
     hi =  0.5+numpy.sqrt(y+0.25);
     lo = -0.5+numpy.sqrt(y+0.25);
-    return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
+    #return {"yupper": y+hi, "ylower": y-lo, "hi": hi, "lo": lo}
+    return {"yupper": y+hi, "ylower": y-lo}
 
 def getLogPoissonUncertainty(y):
     """ apply small offset to keep log(zero) from being -infinity
