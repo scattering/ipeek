@@ -321,6 +321,9 @@ def layout_figure(fig,stream,dataid,scale=None):
     else:
         # Annotate plot with environment variables
         keys = line.environment.keys()
+        for k,v in line.environment.items():
+            if not numpy.isfinite(v):
+                line.environment[k] = None
         fig['metadata'].update(line.environment)
 
     measured = len(line.columns['DATA'])
