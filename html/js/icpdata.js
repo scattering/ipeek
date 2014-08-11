@@ -428,7 +428,7 @@ function ICPParser() {
             this.linenumber++; // we are going to process!
             var parts = line.match(patt);
             var motorstr = parts[1].replace(/Motor\s+no\.\s+/g, 'a'); // parts[0] is whole match
-            this.columnnames = motorstr.trim().split(/\s+/);
+            this.columnnames = motorstr.trim().match(/\S+/g);
             this.columnnames.push("counts"); // replacing Intensity
             this.date = new Date(parts[3]);
             this.scantype = "FP";
@@ -442,7 +442,7 @@ function ICPParser() {
         */
 
         // Read in fields and field names
-        var tokenized = contents[this.linenumber++].split(/\s+/);
+        var tokenized = contents[this.linenumber++].match(/\S+/g);
         var fieldnames = contents[this.linenumber++]; //file.readline()
         //print tokenized
         //print fieldnames
