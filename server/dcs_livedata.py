@@ -8,6 +8,7 @@ import urllib2, ftplib
 import time
 import StringIO
 
+DEBUG = True
 RETRIEVE_METHOD = "ssh" # or "ftp" or "urllib"
 MAX_FTP_RETRIES = 5
 
@@ -112,11 +113,16 @@ for source in sources:
             source_username = "ncnr"
             source_transport.connect(username=source_username, pkey = source_pkey)
             source_sftp = paramiko.SFTPClient.from_transport(source_transport)
-            
+            if DEBUG:
+                print "starting read:", name,  live_dataname
             f = source_sftp.open(os.path.join(root_dir, live_datapath, live_dataname))
             response = f.read()
             f.close()
+            if DEBUG:
+                print "ending read:", name,  live_dataname
             live_data.write(response)
+            if DEBUG:
+                print "ending stringIO:", name,  live_dataname
             
         else:
             print "no valid retrieve_method"
@@ -144,10 +150,13 @@ for source in sources:
     for json_filename in output[name].keys():    
         # now I push that file outside the firewall to webster:
         remotepath = os.path.join('ipeek', 'data', name, json_filename)
-
+        if DEBUG:
+                print "starting write:", name,  json_filename
         f = dest_sftp.open(remotepath, 'w')
         f.write(output[name][json_filename])
         f.close()
+        if DEBUG:
+                print "ending write:", name,  json_filename
 
 dest_sftp.close()
 dest_transport.close()
