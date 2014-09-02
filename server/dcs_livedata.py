@@ -42,7 +42,6 @@ sources = [
      "live_datafiles": ["live_data.json"]},
 ]
 
-/home/NIST/ncnr/live_data/live_data.json
 output = {}
 output_filelike = {}
 
