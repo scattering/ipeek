@@ -109,6 +109,7 @@ for source in sources:
             
         elif retrieve_method == "ssh":
             source_transport = paramiko.Transport((source_host, source_port))
+            source_transport.window_size = 2147483647
             source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
             source_username = "ncnr"
             source_transport.connect(username=source_username, pkey = source_pkey)
