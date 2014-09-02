@@ -8,7 +8,7 @@ import urllib2, ftplib
 import time
 import StringIO
 
-DEBUG = True
+DEBUG = False
 RETRIEVE_METHOD = "ssh" # or "ftp" or "urllib"
 MAX_FTP_RETRIES = 5
 
