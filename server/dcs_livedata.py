@@ -32,8 +32,17 @@ sources = [
      "live_datapath":"live_data",
      #"live_dataname": "livedata.dcs.gz"},
      "live_datafiles": ["live_data.json"]},
+     {"name": "BT7",
+     "host_name": "bt7console.ncnr.nist.gov",
+     "host_port": 22,
+     "retrieve_method": "ssh",
+     "root_dir": "/home/NIST/ncnr/",
+     "live_datapath":"live_data",
+     #"live_dataname": "livedata.dcs.gz"},
+     "live_datafiles": ["live_data.json"]},
 ]
 
+/home/NIST/ncnr/live_data/live_data.json
 output = {}
 output_filelike = {}
 
@@ -54,7 +63,7 @@ json_filename = 'live_data.json'
     
 for source in sources:
     retrieve_method = source['retrieve_method']
-    live_dataname = source['live_dataname']
+    #live_dataname = source['live_dataname']
     live_datapath = source['live_datapath']
     root_dir = source['root_dir']
     name = source['name']
