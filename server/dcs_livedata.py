@@ -49,6 +49,14 @@ sources = [
      "live_datapath":"live_data",
      #"live_dataname": "livedata.dcs.gz"},
      "live_datafiles": ["live_data.json", "live_queue.json"]},
+     {"name": "NGD",
+     "host_name": "pbr.ncnr.nist.gov",
+     "host_port": 22,
+     "retrieve_method": "ssh",
+     "root_dir": "/usr/local/nice/server_data/experiments/",
+     "live_datapath":"live_data",
+     #"live_dataname": "livedata.dcs.gz"},
+     "live_datafiles": ["live_data.json", "live_queue.json"]},
 ]
 
 output = {}
