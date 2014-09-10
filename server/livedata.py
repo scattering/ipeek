@@ -40,8 +40,10 @@ STATUSURL='ftp://ftp-i.ncnr.nist.gov/pub/ncnrstatus/'
 #WEBSPACE = 'pkienzle@webster.ncnr.nist.gov:/var/www/html/ipeek'
 WEBSPACE = 'bbm@webster.ncnr.nist.gov:ipeek/data'
 #INSTRUMENTS = ['BT1','BT4','BT5','BT7','BT8','BT9','CGD','NGD','NG2','NG5','NSE','NG7']
-INSTRUMENTS = ['CGD', 'NGD','NG7', 'NG2', 'NG4', 'BT4', 'BT5', 'BT7', 'BT1', 'NG5', 'BT8']
-LOGFORMAT_INSTRUMENTS =  set(['CGD','NGD','NG7'])
+## Taking NG4(DCS), BT7, Magik and PBR out of the rotation (they are generating their own jqplot files now)
+#INSTRUMENTS = ['CGD', 'NGD','NG7', 'NG2', 'NG4', 'BT4', 'BT5', 'BT7', 'BT1', 'NG5', 'BT8']
+INSTRUMENTS = ['NG7', 'NG2', 'BT4', 'BT5', 'BT1', 'NG5', 'BT8']
+#LOGFORMAT_INSTRUMENTS =  set(['CGD','NGD','NG7'])
 STATUS_INSTRUMENTS = ['DCS','HFBS'] # 'BT7'
 #STATUS_INSTRUMENTS = []
 #SANS_INSTRUMENTS = ['NG3SANS','NG7SANS','NGBSANS']

@@ -63,8 +63,8 @@
             plots = {};
             colorbars = {};
             SORT_KEYS = true;
-            CommandStatusEnum = [ 'QUEUED', 'RUNNING', 'CHILDREN', 'FINISHED', 'SKIPPED' ];
-            
+            CommandStatusEnum =  [ 'QUEUED', 'RUNNING', 'CHILDREN', 'FINISHED', 'SKIPPED' ];
+                        
             function onshow() {
               if (refreshtimer == null) 
                 refreshtimer = setInterval("loadQueue(INSTRUMENTS);", refreshtime*1000);
@@ -124,7 +124,7 @@
                 current_instr = jQuery.getUrlVar('instrument');
                 INSTRUMENTS = [current_instr];
                 loadQueue();
-                //onshow();
+                onshow();
                 
                 //loadData(INSTRUMENTS);
                 fitPlots();
@@ -213,7 +213,9 @@
                 myqueue = queue;
                 treequeue = json_to_jstree(queue, true);
                 newqueue = queue_to_jstree(queue, true);
+                $('#content_table').on('ready.jstree', function(e, data) { window.scrollTo(0,document.body.scrollHeight) });
                 $('#content_table').jstree(newqueue);
+                
             }
             
             function type (object) {
@@ -305,10 +307,22 @@
                         }
                         if (v != null) {
                             out.text += ": " + CommandStatusEnum[v];
+                            //out.data = {"attributes": {"class": "queue-" + CommandStatusEnum[v]}};
+                            out.attributes =  {"class": "queue-" + CommandStatusEnum[v]};
+                        }
+                        if (v == 1 || v == 2) {
+                            out.icon = "css/running.gif"; // running!
                         }
                         if (v == 3) {
                             var t = new Date(status.endCommandTimestamp);
-                            out.text += " " + t.toISOString();
+                            out.text += " " + t.toLocaleTimeString() + " " + t.toLocaleDateString();
+                            out.icon = "css/checkmark.gif";
+                        }
+                        if (v==0) {
+                            out.icon = "css/queue.gif"; // queued
+                        }
+                        if (v==4) {
+                            out.icon = "css/ex.gif";
                         }
                             
                     }
@@ -520,6 +534,10 @@
           float: left;
           width: 50%;
         }
+        /* replace folder icons with another image, remove leaf image */        
+        /*li.jstree-open > a .jstree-icon {background:url("css/running.gif") 0px 0px no-repeat !important;}*/
+        /*li.jstree-closed > a .jstree-icon {background:url("imageClosed.gif") 0px 0px no-repeat !important;}*/
+        /*li.jstree-leaf > a .jstree-icon { display: none; }*/
     </style>
     </head>
     <body id="singleplot">
