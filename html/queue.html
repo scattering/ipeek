@@ -315,7 +315,16 @@
                         }
                         if (v == 3) {
                             var t = new Date(status.endCommandTimestamp);
-                            out.text += " " + t.toLocaleTimeString() + " " + t.toLocaleDateString();
+                            var hours_str = t.getHours().toFixed();
+                            if (hours_str.length < 2) {
+                                hours_str = "0" + hours_str; 
+                            }
+                            var minutes_str = t.getMinutes().toFixed();
+                            if (minutes_str.length < 2) {
+                                minutes_str = "0" + minutes_str; 
+                            }
+                            out.text += " " + hours_str + ":" + minutes_str;
+                            out.text += " " + t.toLocaleDateString();
                             out.icon = "css/checkmark.gif";
                         }
                         if (v==0) {
