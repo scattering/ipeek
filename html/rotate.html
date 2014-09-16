@@ -54,7 +54,7 @@
             SKIP_PAUSE = 2;
             
             COLS = 1;
-            INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'DCS', 'MAGIK', 'NGBSANS', 'NGB30SANS', 'NGD', 'NG2', 'NG5', 'NG7', 'NG7SANS', 'NSE'];
+            INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'DCS', 'MAGIK', 'NGBSANS', 'NGB30SANS', 'NG2', 'NG5', 'NG7', 'NG7SANS', 'NSE', 'PBR'];
             LOGY_INSTRUMENTS = ['NG7']; // or override from plot options
             LOGX_INSTRUMENTS = [];
             Y_TRANSFORM = {};
@@ -425,7 +425,10 @@
                 font-family: "Georgia", serif;
                 font-weight: bold;
             }
-                               
+            .instrument-button .ui-button-text {
+                padding-left: 0.5em !important;
+                padding-right: 0.5em;
+            }                  
             #instruments tr { margin-bottom: 30px; }
             div { 
                 user-select: none; 
