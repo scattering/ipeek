@@ -38,7 +38,7 @@ sources = [
      "root_dir": "/home/NIST/ncnr/",
      "live_datapath":"live_data",
      "live_datafiles": ["live_data.json"]},
-     {"name": "CGD",
+     {"name": "MAGIK",
      "host_name": "magik.ncnr.nist.gov",
      "host_port": 22,
      "retrieve_method": "ssh",
