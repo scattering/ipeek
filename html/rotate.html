@@ -64,6 +64,13 @@
                X_TRANSFORM[instr] = (LOGX_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
             });
             
+            // targets for single plot per-instrument.  Defaults to singleplotwindow.html?instrument=<instrument_name>
+            SINGLEPLOTS = {
+                NG7SANS: 'sansplot.html?instrument=NG7SANS',
+                NGBSANS: 'sansplot.html?instrument=NGBSANS',
+                NGB30SANS: 'sansplot.html?instrument=NGB30SANS'
+            }
+            
             if (localStorage && localStorage.Y_TRANSFORM) {
                 var stored_y_transform = {};
                 try { 
@@ -157,6 +164,15 @@
                 }
             }
             
+            function popout_single(event, instr) {
+                if (instr == null) {
+                    var instr = current_instr;
+                }
+                var href = 'singleplotwindow.html?instrument=' + instr;
+                if (instr in SINGLEPLOTS) { href = SINGLEPLOTS[instr] }
+                window.open(href);
+            }
+            
             function createPlotRegion(target) {
                 // create a plotting region in the target
                 var cell = $('<div />', {'class': 'plotcell', 'id': 'cell1'});
@@ -179,6 +195,9 @@
                     icons: {primary: "ui-icon-calculator"}
                 })
                 .click(function() { window.location.href="multiplotwindow.html"; });
+                var singlebutton = $( "<button />", { id:"singleview", text: "single"});
+                target.append($(singlebutton));
+                $(singlebutton).button().click(popout_single);
                 var playbutton = $( "<button />",  { id:"play", text:"play"});
                 target.append($(playbutton));
                 $( playbutton ).button({
@@ -210,6 +229,7 @@
                 $.each(INSTRUMENTS, function(index, instr) {
                     button = $('<button />', {'id': instr+'_button', text:instr, value:instr, class:'instrument-button'})
                     button.click({value: index}, jump);
+                    button.dblclick({instr: instr}, popout_single);
                     target.append($(button));
                     $(button).button().unbind('hover');
                 });

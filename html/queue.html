@@ -214,6 +214,7 @@
                 treequeue = json_to_jstree(queue, true);
                 newqueue = queue_to_jstree(queue, true);
                 $('#content_table').on('ready.jstree', function(e, data) { window.scrollTo(0,document.body.scrollHeight) });
+                $("#content_table").bind("select_node.jstree", function (e, data) { return data.instance.toggle_node(data.node); });
                 $('#content_table').jstree(newqueue);
                 
             }
