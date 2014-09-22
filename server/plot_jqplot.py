@@ -259,14 +259,22 @@ def layout_figure(fig,stream,dataid,scale=None):
   
     elif line.pixels > 1:
         # Keep life easy for now: only plot one 2-D image
-        xc = numpy.array(line.columns[line.primary])
+        xc = numpy.array(line.columns['PT'])
+        for colname in line.independent:
+            newxc = numpy.array(line.columns[colname])
+            newdx = numpy.diff(newxc)
+            if newdx.max() > 0:
+                xc = newxc
+                break
         if len(xc) == 1:
             x = numpy.array([xc[0]-0.5,xc[0]+0.5])
+            delta_x = 1.0
         else:
             dx = numpy.diff(xc)
-            x0 = xc[0]-dx[0]/2
-            xend = xc[-1]+dx[-1]/2
+            x0 = xc[0]-dx[0]/2.0
+            xend = xc[-1]+dx[-1]/2.0
             x = numpy.hstack([x0,x0+numpy.cumsum(dx),xend])
+            delta_x = dx[0]
         y = numpy.arange(line.pixels+1)+0.5
         v = numpy.array(line.columns['DATA'])
         if scale=='log':
@@ -289,6 +297,7 @@ def layout_figure(fig,stream,dataid,scale=None):
             'ydim': v.shape[1],
             'xmin': x.min(),
             'xmax': x.max(),
+            'dx': delta_x,
             'ymin': y.min(),
             'ymax': y.max(),
             'zmin': v.min(),
