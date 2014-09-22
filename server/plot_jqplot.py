@@ -264,7 +264,7 @@ def layout_figure(fig,stream,dataid,scale=None):
         for colname in line.independent:
             newxc = numpy.array(line.columns[colname])
             newdx = numpy.diff(newxc)
-            if newdx.max() > 0:
+            if abs(newdx.max()) > 0:
                 xc = newxc
                 primary_col = colname
                 break
