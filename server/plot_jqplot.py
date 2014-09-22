@@ -260,11 +260,13 @@ def layout_figure(fig,stream,dataid,scale=None):
     elif line.pixels > 1:
         # Keep life easy for now: only plot one 2-D image
         xc = numpy.array(line.columns['PT'])
+        primary_col = 'PT'
         for colname in line.independent:
             newxc = numpy.array(line.columns[colname])
             newdx = numpy.diff(newxc)
             if newdx.max() > 0:
                 xc = newxc
+                primary_col = colname
                 break
         if len(xc) == 1:
             x = numpy.array([xc[0]-0.5,xc[0]+0.5])
@@ -289,7 +291,7 @@ def layout_figure(fig,stream,dataid,scale=None):
         #fig = copy.deepcopy(plottable_data_2d)
         fig['metadata'] = {'instrument': line.instrument}
         fig['title'] = line.runid
-        fig['options']['axes']['xaxis']['label'] = line.primary
+        fig['options']['axes']['xaxis']['label'] = primary_col
         fig['options']['axes']['yaxis']['label'] = 'Pixel'
         fig['z'] = [v.T.tolist()]
         fig['dims'] = {
