@@ -299,7 +299,7 @@ def layout_figure(fig,stream,dataid,scale=None):
             'ydim': v.shape[1],
             'xmin': x.min(),
             'xmax': x.max(),
-            'dx': delta_x,
+            'dx': abs(delta_x),
             'ymin': y.min(),
             'ymax': y.max(),
             'zmin': v.min(),
