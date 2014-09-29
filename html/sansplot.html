@@ -95,7 +95,7 @@
                 }
             }
             
-            window.onresize = function() {
+            var onresize = function() {
                 //$('.plotgrid').width(($(window).innerWidth() / COLS - 75).toFixed() + 'px');
                 var new_width = (1.0/COLS * 100);
                 $('.plotcell').width(new_width.toFixed() + '%')
@@ -116,7 +116,7 @@
                 onshow();
                 
                 //loadData(INSTRUMENTS);
-                window.onresize();
+                onresize();
             }
             
             function loadData(instruments) {
