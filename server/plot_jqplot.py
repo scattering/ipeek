@@ -276,7 +276,7 @@ def layout_figure(fig,stream,dataid,scale=None):
             x0 = xc[0]-dx[0]/2.0
             xend = xc[-1]+dx[-1]/2.0
             x = numpy.hstack([x0,x0+numpy.cumsum(dx),xend])
-            delta_x = dx[0]
+            delta_x = (xc[-1] - xc[0]) / (len(xc) - 1)
         y = numpy.arange(line.pixels+1)+0.5
         v = numpy.array(line.columns['DATA'])
         if scale=='log':
