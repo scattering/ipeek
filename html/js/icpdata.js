@@ -565,15 +565,15 @@ function ICPParser() {
                           ['#2 counts', 'counts2'],
                           [' mon ', ' monitor '],
                           [' min ', ' time '],
-                          ['(', ''],
-                          [')', '']];
+                          ['\\(', ''],
+                          ['\\)', '']];
         var os, ns;
         for (var i=0; i<replacements.length; i++) {
-            os = replacements[i][0];
+            os = new RegExp(replacements[i][0], 'g');
             ns = replacements[i][1];
             line = line.replace(os, ns);
         }
-        this.columnnames = line.trim().split(/\s+/);
+        this.columnnames = line.trim().match(/\S+/g);
     }
 
     this.readcolumns = function(contents) {
