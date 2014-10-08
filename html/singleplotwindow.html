@@ -167,7 +167,8 @@
                 console.log('reading...');
                 var reader = new FileReader();
                 reader.onload = function(e) {
-                    var datalist = eval('('+this.result+')');
+                    //var datalist = eval('('+this.result+')');
+                    var datalist = JSON.parse(this.result);
                     console.log(datalist);
                     INSTRUMENTS = ["TEST"];
                     current_instr = "TEST";
