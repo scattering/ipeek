@@ -160,6 +160,7 @@ for source in sources:
         f = dest_sftp.open(remote_tmp, 'w')
         f.write(output[name][json_filename])
         f.close()
+        dest_sftp.unlink(remotepath)
         dest_sftp.rename(remote_tmp, remotepath)
         if DEBUG:
                 print "ending write:", name,  json_filename
