@@ -154,13 +154,15 @@ for source in sources:
     for json_filename in output[name].keys():    
         # now I push that file outside the firewall to webster:
         remote_tmp = os.path.join('ipeek', 'data', name, json_filename + ".tmp")
+        remotedir  = os.path.join('ipeek', 'data', name)
         remotepath = os.path.join('ipeek', 'data', name, json_filename)
         if DEBUG:
                 print "starting write:", name,  json_filename
         f = dest_sftp.open(remote_tmp, 'w')
         f.write(output[name][json_filename])
         f.close()
-        dest_sftp.unlink(remotepath)
+        if json_filename in dest_sftp.listdir(remotedir):
+            dest_sftp.unlink(remotepath)
         dest_sftp.rename(remote_tmp, remotepath)
         if DEBUG:
                 print "ending write:", name,  json_filename
