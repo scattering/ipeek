@@ -54,6 +54,7 @@
             INSTRUMENTS = [];
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
             ERRORBARS = ['BT7','BT9', 'BT4'];
+            PRECISION = 6;
             current_instr = null;
             plots = {};
             colorbars = {};
@@ -265,6 +266,9 @@
                         var key = keys[index];
                         
                         var value = metadata[key];
+                        if (typeof(value) == "number") {
+                            value = value.toPrecision(PRECISION);
+                        }
                         var label = row.insertCell(-1);
                         label.setAttribute('class', 'metadata-label');
                         label.innerHTML=key;
