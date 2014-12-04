@@ -59,6 +59,13 @@ sources = [
      "root_dir": "/usr/local/nice/server_data/experiments/",
      "live_datapath":"live_data",
      "live_datafiles": ["live_data.json", "live_queue.json"]},
+     {"name": "NGBSANS_NICE",
+     "host_name": "ngbsans.ncnr.nist.gov",
+     "host_port": 22,
+     "retrieve_method": "ssh",
+     "root_dir": "/usr/local/nice/server_data/experiments/",
+     "live_datapath":"live_data",
+     "live_datafiles": ["live_data.json"]}
 ]
 
 output = {}
