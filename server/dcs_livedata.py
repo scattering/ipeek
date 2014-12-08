@@ -65,7 +65,15 @@ sources = [
      "retrieve_method": "ssh",
      "root_dir": "/usr/local/nice/server_data/experiments/",
      "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]}
+     "live_datafiles": ["live_data.json"]},
+     {"name": "MACS",
+     "host_name": "macs.ncnr.nist.gov",
+     "host_port": 22,
+     "username": "ice",
+     "retrieve_method": "ssh",
+     "root_dir": "/home/ice/",
+     "live_datapath":"python_ipeek",
+     "live_datafiles": ["live_data.json"]},
 ]
 
 output = {}
@@ -92,6 +100,10 @@ for source in sources:
     live_datapath = source['live_datapath']
     root_dir = source['root_dir']
     name = source['name']
+    if ('username' in source): 
+        username = source['username']
+    else: 
+        username = "ncnr"
     source_host = source['host_name']
     source_port = source['host_port']
     #print "live data modified:", source_sftp.file(live_dataname).stat().st_mtime
@@ -128,7 +140,7 @@ for source in sources:
             source_transport = paramiko.Transport((source_host, source_port))
             source_transport.window_size = 2147483647
             source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
-            source_username = "ncnr"
+            source_username = username
             source_transport.connect(username=source_username, pkey = source_pkey)
             source_sftp = paramiko.SFTPClient.from_transport(source_transport)
             if DEBUG:
