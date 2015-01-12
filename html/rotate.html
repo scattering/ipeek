@@ -81,6 +81,7 @@
             }
                 
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
+            ERRORBARS = ['BT7','BT9', 'BT4', 'NGD', 'CGD', 'MAGIK', 'PBR', 'NSE', 'SPINS'];
             plots = {};
             colorbars = {};
             data = null;
@@ -346,6 +347,10 @@
                 
                 $('#' + next_target).show( "drop", { direction: "right" }, 1000);
                 if (data.type == '1d') {
+                    $.extend(true, data.options, {seriesDefaults: {renderer: $.jqplot.errorbarRenderer}});
+                    if (ERRORBARS.indexOf(current_instr) > -1) {
+                        data.options.seriesDefaults.rendererOptions = {errorBar: true};
+                    }
                     plots[next_target] = render1dplot(null, data, transform, next_target);
                     if (data.metadata) {
                         $('#' + eta_target).html(make_metadata_table(data.metadata));

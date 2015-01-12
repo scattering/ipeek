@@ -167,6 +167,7 @@
                     }
                     plots[instr] = null;
                     if (data.type == '1d') {
+                        $.extend(true, data.options, {seriesDefaults: {renderer: $.jqplot.errorbarRenderer}});
                         plots[instr] = render1dplot(null, data, transform, plot_target);
                     } else if (data.type == '2d') {
                         plots[instr] = renderImageData2(data, transform, plot_target);

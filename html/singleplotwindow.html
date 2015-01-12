@@ -295,7 +295,8 @@
                                 shadow: false, 
                                 markerOptions: {shadow: false, size: 8},
                                 breakOnNull: true, 
-                                label: "series"
+                                label: "series",
+                                renderer: $.jqplot.errorbarRenderer
                             },
                             cursor: { show: true,  zoom: true, clickReset: true, useAxesFormatters: false},
                             legend: {
@@ -309,7 +310,7 @@
                         };
                         
                         if (ERRORBARS.indexOf(instr) > -1) {
-                            plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
+                            //plot_options.seriesDefaults.renderer = $.jqplot.errorbarRenderer;
                             plot_options.seriesDefaults.rendererOptions = {errorBar: true};
                         }
                         $.extend(true, data.options, plot_options);
