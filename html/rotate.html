@@ -396,13 +396,15 @@
                 instr_link.html(instr_name);
                 $('.instrument-name', '#' + cell_target).empty()
                 $('.instrument-name', '#' + cell_target).append(instr_link)
-                if (CHRNS_INSTRUMENTS.indexOf(instr) > -1) { 
+                if (CHRNS_INSTRUMENTS.indexOf(instr) > -1) {
+                    var chrns_link =  $('<a />', {'href': 'http://www.ncnr.nist.gov/programs/CHRNS/'});
                     var img = $('<img />', {
                         'src': 'css/chrns_transparent.png',
                         'height': '32px',
                         'css': { 'vertical-align': 'middle' }
                     });
-                    $('.instrument-name', '#' + cell_target).append(img);
+                    chrns_link.append(img);
+                    $('.instrument-name', '#' + cell_target).append(chrns_link);
                 }
                 
                 $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
