@@ -81,6 +81,8 @@
             }
                 
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
+            // http://www.ncnr.nist.gov/instruments/chrns_small_logo.jpg
+            CHRNS_INSTRUMENTS = ['MACS', 'NSE', 'NGB30SANS', 'BT5', 'NG2'];
             ERRORBARS = ['BT7','BT9', 'BT4', 'NGD', 'CGD', 'MAGIK', 'PBR', 'NSE', 'SPINS'];
             plots = {};
             colorbars = {};
@@ -228,11 +230,17 @@
                   $( this ).button( "option", options );
                 });
                 $.each(INSTRUMENTS, function(index, instr) {
-                    button = $('<button />', {'id': instr+'_button', text:instr, value:instr, class:'instrument-button'})
+                    button = $('<button />', {'id': instr+'_button', text:instr, value:instr, class:'instrument-button'});
+                    var button_opts = {};
+                    if (CHRNS_INSTRUMENTS.indexOf(instr) > -1) { 
+                        button.addClass('CHRNS-instrument-button'); 
+                        //button_opts.icons = {primary: "ui-icon-arrowthick-1-e"};
+                        button_opts.icons = {primary: "chrns-icon"};
+                    };
                     button.click({value: index}, jump);
                     button.dblclick({instr: instr}, popout_single);
                     target.append($(button));
-                    $(button).button().unbind('hover');
+                    $(button).button(button_opts).unbind('hover');
                 });
             }
             
@@ -388,6 +396,16 @@
                 instr_link.html(instr_name);
                 $('.instrument-name', '#' + cell_target).empty()
                 $('.instrument-name', '#' + cell_target).append(instr_link)
+                if (CHRNS_INSTRUMENTS.indexOf(instr) > -1) {
+                    var chrns_link =  $('<a />', {'href': 'http://www.ncnr.nist.gov/programs/CHRNS/'});
+                    var img = $('<img />', {
+                        'src': 'css/chrns_transparent.png',
+                        'height': '32px',
+                        'css': { 'vertical-align': 'middle' }
+                    });
+                    chrns_link.append(img);
+                    $('.instrument-name', '#' + cell_target).append(chrns_link);
+                }
                 
                 $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
                     function() { 
@@ -445,15 +463,28 @@
             .active-instrument {
                 background-color: "red";
             }
-            .instrument-name { 
+            .instrument-name {
                 text-align: center;
                 font-family: "Georgia", serif;
                 font-weight: bold;
             }
+            .instrument-name img {
+                padding-left: 20px;
+            }
             .instrument-button .ui-button-text {
                 padding-left: 0.5em !important;
                 padding-right: 0.5em;
-            }                  
+            }
+            .CHRNS-instrument-button .ui-button-text {
+                padding-left: 2.0em !important;
+            }
+            .chrns-icon {
+                width: 24px !important;
+                height: 12px !important;
+                margin-top: -4px !important;
+                background-image: url('css/chrns_arrow.png') !important;
+                background-size: 100% !important;
+            }    
             #instruments tr { margin-bottom: 30px; }
             div { 
                 user-select: none; 
