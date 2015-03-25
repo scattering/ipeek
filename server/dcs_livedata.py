@@ -179,9 +179,9 @@ for source in sources:
     
     for json_filename in output[name].keys():    
         # now I push that file outside the firewall to webster:
-        remote_tmp = os.path.join('ipeek', 'data', name, json_filename + ".tmp")
-        remotedir  = os.path.join('ipeek', 'data', name)
-        remotepath = os.path.join('ipeek', 'data', name, json_filename)
+        remote_tmp = os.path.join('ipeek_html', 'data', name, json_filename + ".tmp")
+        remotedir  = os.path.join('ipeek_html', 'data', name)
+        remotepath = os.path.join('ipeek_html', 'data', name, json_filename)
         if DEBUG:
                 print "starting write:", name,  json_filename
         f = dest_sftp.open(remote_tmp, 'w')

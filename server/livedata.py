@@ -38,7 +38,7 @@ ACTIVEURL = URL+'ipeekon.php'
 STATUSURL='ftp://ftp-i.ncnr.nist.gov/pub/ncnrstatus/'
 # Data directory of the service
 #WEBSPACE = 'pkienzle@webster.ncnr.nist.gov:/var/www/html/ipeek'
-WEBSPACE = 'bbm@webster.ncnr.nist.gov:ipeek/data'
+WEBSPACE = 'bbm@webster.ncnr.nist.gov:ipeek_html/data'
 #INSTRUMENTS = ['BT1','BT4','BT5','BT7','BT8','BT9','CGD','NGD','NG2','NG5','NSE','NG7']
 # Taking NG4(DCS), BT7, Magik and PBR out of the rotation (they are generating their own jqplot files now)
 #INSTRUMENTS = ['CGD', 'NGD','NG7', 'NG2', 'NG4', 'BT4', 'BT5', 'BT7', 'BT1', 'NG5', 'BT8']
