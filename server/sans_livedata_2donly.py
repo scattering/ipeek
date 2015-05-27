@@ -24,10 +24,10 @@ sources = [
      "root_dir": "/var/ftp/pub/ncnrdata/ngb30sans/",
      "live_datapath":"pub/sansdata/NGB30Current/",
      "live_dataname": "live001.sa3_ice_a001"},
-    {"name": "NGBSANS", 
-     "root_dir": "/var/ftp/pub/ncnrdata/ngbsans/",
-     "live_datapath":"pub/sansdata/NGBCurrent/",
-     "live_dataname": "live001.sa3_ice_a001"},
+    #{"name": "NGBSANS", 
+    # "root_dir": "/var/ftp/pub/ncnrdata/ngbsans/",
+    # "live_datapath":"pub/sansdata/NGBCurrent/",
+    # "live_dataname": "live001.sa3_ice_a001"},
 ]
 
 output = {}

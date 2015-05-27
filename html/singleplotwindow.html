@@ -4,7 +4,8 @@
         <meta http-equiv="X-UA-Compatible" content="IE=9" >
         <meta http-equiv="refresh" content="3600">
         <title>NCNR live data</title>
- 
+        
+         <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Arimo" />
         <!-- Reference the theme's stylesheet on the Google CDN -->
         <link href="http://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"
             type="text/css" rel="Stylesheet" />
@@ -37,7 +38,7 @@
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
-        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.pinchZoom.js"></script>
+<!--        <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.pinchZoom.js"></script>-->
         
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
         <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
@@ -242,17 +243,12 @@
             
             function showData(datalist, instr) {
                 data = datalist[0];
-                $.extend(true, data.options, {
-                    axesDefaults: {
-                        renderer: $.jqplot.GracefulAxisRenderer,
-                        labelRenderer: $.jqplot.CanvasAxisLabelRenderer,
-                        tickRenderer: $.jqplot.CanvasAxisTickRenderer,
-                        tickOptions: {
-                            formatString: "%.2g",
-                            _styles: {right:2}
-                        }                    
+                $.extend(true, data.options, {axes: {
+                    xaxis: {renderer: $.jqplot.GracefulAxisRenderer, labelRenderer: $.jqplot.AxisLabelRenderer, tickRenderer: $.jqplot.AxisTickRenderer},
+                    yaxis: {renderer: $.jqplot.GracefulAxisRenderer, labelRenderer: $.jqplot.AxisLabelRenderer, tickRenderer: $.jqplot.AxisTickRenderer},
                     }
-                });
+                }); 
+                
                 //var instr = data.metadata.instrument;
                 var i = INSTRUMENTS.indexOf(instr);
                 if (i > -1) {
@@ -334,7 +330,7 @@
                         $('.transform[axis=yaxis]').hide();
                         $('.transform[axis=zaxis]').show();
                         data.options = data.options? data.options : {};
-                        data.options.seriesDefaults =  {rendererOptions: {transform: ztransform}}
+                        $.extend(true, data.options, {seriesDefaults: {rendererOptions: {transform: ztransform, draw_method: 'backed'}}});
                         //plots[instr] = plottingAPI(datalist, plot_target);
                         $('#' + plot_target).empty();
                         var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
@@ -345,9 +341,9 @@
                         plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_target + "_colorbar"}));
                         var plot = renderImageData2(data, ztransform, plot_target + "_plot");
                         var cbar_options = {
-                            axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
+                            axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer,  labelRenderer: $.jqplot.AxisLabelRenderer, tickRenderer: $.jqplot.AxisTickRenderer}}
                         }
-                        var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar');
+                        var colorbar = renderImageColorbar2(plot.series[0], plot_target + '_colorbar', cbar_options);
                         plots[instr] = plot;
                         colorbars[instr] = colorbar;
                         plot.replot(); // for aspect ratio plugin!
@@ -398,13 +394,14 @@
         <style>
             body {
                 height: 100%;
+                font-family: Arimo !important;
             }
             #instruments { 
                 width: 100%;
             }
             .instrument-name { 
                 text-align: center;
-                font-family: "Georgia", serif;
+                /* font-family: "Georgia", serif; */
                 font-weight: bold;
             }
                                
@@ -431,6 +428,12 @@
             }
             .jqplot-series-shadowCanvas {
                 display: none;
+            }
+            .jqplot-yaxis-label {
+                transform: rotate(-90deg);
+            }
+            .jqplot-yaxis-tick {
+                right: 5px !important;
             }
         </style>
          <style type="text/css">
