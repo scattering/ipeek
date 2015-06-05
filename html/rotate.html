@@ -392,7 +392,8 @@
                     }
                 } else {
                     // this will get triggered if data is missing or has a type other than 1d or 2d
-                    $('#' + next_target).empty().append('<div class="no-data">Ceci n\'est pas data</div>'); 
+                    $('#' + next_target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
+                    $('#' + eta_target).empty(); 
                 }
                 var instr = current_instr;
                 var instr_name = instr;
