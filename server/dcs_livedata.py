@@ -107,7 +107,6 @@ for source in sources:
     source_host = source['host_name']
     source_port = source['host_port']
     #print "live data modified:", source_sftp.file(live_dataname).stat().st_mtime
-    output[name] = {}
     try:
         for live_dataname in source['live_datafiles']:
             live_data = StringIO.StringIO()
@@ -167,7 +166,7 @@ for source in sources:
             #from plot_dcs import process_raw_dcs
             #json_data = process_raw_dcs(local_path)
             json_data = live_data    
-
+            output.setdefault(name, {})
             output[name][live_dataname] = json_data.read()
             
     except:
