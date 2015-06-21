@@ -108,74 +108,79 @@ for source in sources:
     source_port = source['host_port']
     #print "live data modified:", source_sftp.file(live_dataname).stat().st_mtime
     output[name] = {}
-    for live_dataname in source['live_datafiles']:
-        live_data = StringIO.StringIO()
-        #live_data = open(os.path.join(local_path, live_dataname), 'wb')
-        if retrieve_method == "urllib":       
-            req_addr = os.path.join("ftp://" + source_host, live_datapath, live_dataname)
-            #req = urllib2.Request(req_addr)
-            response = None
-            retries = 0
-            while retries < MAX_FTP_RETRIES:
-                try:
-                    response = urllib2.urlopen(req_addr)
-                    break
-                except:
-                    print "failed attempt %d to retrieve %s: trying again" % (retries, req_addr)
-                retries += 1
+    try:
+        for live_dataname in source['live_datafiles']:
+            live_data = StringIO.StringIO()
+            #live_data = open(os.path.join(local_path, live_dataname), 'wb')
+            if retrieve_method == "urllib":       
+                req_addr = os.path.join("ftp://" + source_host, live_datapath, live_dataname)
+                #req = urllib2.Request(req_addr)
+                response = None
+                retries = 0
+                while retries < MAX_FTP_RETRIES:
+                    try:
+                        response = urllib2.urlopen(req_addr)
+                        break
+                    except:
+                        print "failed attempt %d to retrieve %s: trying again" % (retries, req_addr)
+                    retries += 1
+                
+                        
+                if response is None: continue
+                print "retrieved %s" % (req_addr)
+                live_data.write(response.read())
             
-                    
-            if response is None: continue
-            print "retrieved %s" % (req_addr)
-            live_data.write(response.read())
-        
-        elif retrieve_method == "ftp":
-            ftp = ftplib.FTP(source_host)
-            ftp.login('anonymous')
-            ftp.cwd(live_datapath)
-            ftp.retrbinary("RETR " + live_dataname, live_data.write)
-            ftp.close()
+            elif retrieve_method == "ftp":
+                ftp = ftplib.FTP(source_host)
+                ftp.login('anonymous')
+                ftp.cwd(live_datapath)
+                ftp.retrbinary("RETR " + live_dataname, live_data.write)
+                ftp.close()
+                
+            elif retrieve_method == "ssh":
+                source_transport = paramiko.Transport((source_host, source_port))
+                source_transport.window_size = 2147483647
+                source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
+                source_username = username
+                source_transport.connect(username=source_username, pkey = source_pkey)
+                source_sftp = paramiko.SFTPClient.from_transport(source_transport)
+                if DEBUG:
+                    print "starting read:", name,  live_dataname
+                f = source_sftp.open(os.path.join(root_dir, live_datapath, live_dataname))
+                response = f.read()
+                f.close()
+                if DEBUG:
+                    print "ending read:", name,  live_dataname
+                live_data.write(response)
+                if DEBUG:
+                    print "ending stringIO:", name,  live_dataname
+                
+            else:
+                print "no valid retrieve_method"
+              
+            live_data.seek(0) # move back to the beginning of file
+            #live_data.close()
             
-        elif retrieve_method == "ssh":
-            source_transport = paramiko.Transport((source_host, source_port))
-            source_transport.window_size = 2147483647
-            source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
-            source_username = username
-            source_transport.connect(username=source_username, pkey = source_pkey)
-            source_sftp = paramiko.SFTPClient.from_transport(source_transport)
-            if DEBUG:
-                print "starting read:", name,  live_dataname
-            f = source_sftp.open(os.path.join(root_dir, live_datapath, live_dataname))
-            response = f.read()
-            f.close()
-            if DEBUG:
-                print "ending read:", name,  live_dataname
-            live_data.write(response)
-            if DEBUG:
-                print "ending stringIO:", name,  live_dataname
-            
-        else:
-            print "no valid retrieve_method"
-          
-        live_data.seek(0) # move back to the beginning of file
-        #live_data.close()
-        
-        files = [live_dataname,]
+            files = [live_dataname,]
 
-        # here I import the library that reads in SANS files:
-        #from plot_dcs import process_raw_dcs
-        #json_data = process_raw_dcs(local_path)
-        json_data = live_data    
+            # here I import the library that reads in SANS files:
+            #from plot_dcs import process_raw_dcs
+            #json_data = process_raw_dcs(local_path)
+            json_data = live_data    
 
-        output[name][live_dataname] = json_data.read()
+            output[name][live_dataname] = json_data.read()
+            
+    except:
+        if DEBUG:
+            print "could not connect to %s\n" % (name,)
 
 # Now initialize the transfer to the destination:    
 dest_transport = paramiko.Transport((dest_host, dest_port))
 dest_transport.connect(username = dest_username, pkey = dest_pkey)
 dest_sftp = paramiko.SFTPClient.from_transport(dest_transport)
 
-for source in sources:   
-    name = source['name']
+for name in output:   
+    #name = source['name']
     
     for json_filename in output[name].keys():    
         # now I push that file outside the firewall to webster:
