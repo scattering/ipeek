@@ -65,7 +65,7 @@ sources = [
      "retrieve_method": "ssh",
      "root_dir": "/usr/local/nice/server_data/experiments/",
      "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["live_data.json", "live_vaxformat.ngb"]},
      {"name": "MACS",
      "host_name": "macs.ncnr.nist.gov",
      "host_port": 22,
