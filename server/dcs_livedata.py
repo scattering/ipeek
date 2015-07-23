@@ -139,6 +139,7 @@ for source in sources:
             elif retrieve_method == "ssh":
                 source_transport = paramiko.Transport((source_host, source_port))
                 source_transport.window_size = 2147483647
+                source_transport.use_compression(True)
                 source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
                 source_username = username
                 source_transport.connect(username=source_username, pkey = source_pkey)
@@ -176,6 +177,8 @@ for source in sources:
 # Now initialize the transfer to the destination:    
 dest_transport = paramiko.Transport((dest_host, dest_port))
 dest_transport.connect(username = dest_username, pkey = dest_pkey)
+dest_transport.window_size = 2147483647
+dest_transport.use_compression(True)
 dest_sftp = paramiko.SFTPClient.from_transport(dest_transport)
 
 for name in output:   
