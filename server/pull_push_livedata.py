@@ -74,14 +74,6 @@ sources = [
      "root_dir": "/home/ice/",
      "live_datapath":"python_ipeek",
      "live_datafiles": ["live_data.json"]},
-     {"name": "PHADES",
-     "host_name": "cts.ncnr.nist.gov",
-     "host_port": 22,
-     "username": "ncnr",
-     "retrieve_method": "ssh",
-     "root_dir": "/usr/local/nice/server_data/experiments/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
 ]
 
 output = {}
