@@ -284,28 +284,20 @@
     $('.transform').change(updateTransform);
    
   });
+  window.onload = function() {
+      var layout = $('body').layout({
+          west__size:			350
+        ,	east__size:			0
+        ,   south__size:        "auto"
+          // RESIZE Accordion widget when panes resize
+        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+		  });
+		}
   </script>
 </head>
 <style>
-html,body{height:100%;margin:0;padding:0}
-body{font: 76% arial,sans-serif; min-height:100%;}
-p{margin:0 10px 10px}
-a{display:block;color: #981793;padding:10px}
-div#header h1{height:80px;line-height:80px;margin:0;
-  padding-left:10px;background: #EEE;color: #79B30B}
-div#navigation{background:#B9CAFF}
-div#extra{background:#FF8539}
-div#outer{position: absolute; top: 0px; left:0px; bottom: 50px; height: 100%;}
-div#footer{background: #333;color: #FFF}
-div#footer p{margin:0;padding:5px 10px}
-div#content{position:absolute; left: 350px; top: 80px;}
-/*div#navigation{float:left;width:300px;overflow:auto;}*/
-div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:350px;overflow:auto;}
-div.plotcell{height: 75%;}
-.patheditor { 
-    color: blue;
-    cursor: pointer;
-}
 li.subdiritem { 
     list-style-type: none; 
     cursor: pointer;
@@ -322,15 +314,6 @@ div.plotdiv {
     margin-right: 75px;
     margin-left: 25px;
 }
-/*div#footer{clear:both;width:100%}*/
-div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
-
-  #filebrowser .ui-selecting { background: #FECA40; }
-  #filebrowser .ui-selected { background: #F39814; color: white; }
-  #filebrowser { list-style-type: none; margin: 0; padding: 0; }
-  #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
-  #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
-  #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
 </style>
 <style type="text/css">
 svg,
@@ -426,19 +409,26 @@ canvas {
       stroke: steelblue;
       fill-opacity: 0.5;
     }
+    .ui-layout-north {
+      background-color: #FFA500;
+    }
 </style>
 <body>
 
-<div id="header" style="background-color:#FFA500;">
-<h1 style="margin-bottom:0;">BT7 data browser</h1></div>
-<div id="outer">
-    <div id = navigation></div>
-    <div id="content">
-      
+<div id="navigation" class="ui-layout-wrapper ui-layout-west">
+</div>
+<div id="bottom_panel" class="ui-layout-south">
+    <div id="buttons" style="display:inline-block;"></div>
+    <div id="bulk_edit_buttons" style="display: inline-block;"></div>
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="statusline">BT7 data browser</span>
+        <span id="instrument_name" class="instrument-name"></span>
     </div>
 </div>
-<div id="footer">
-Other instruments pending
+ 
+<div id="editor" class="ui-layout-center">
 </div>
 
 </body>
