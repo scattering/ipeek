@@ -94,7 +94,7 @@
     var getManyData = function(path, filenames) {
       var promise;
       for (var i in filenames) {
-        promise = $.when(promise, $.ajax(path + filenames[i]);
+        promise = $.when(promise, $.ajax(path + filenames[i]));
       }
       promise.then(function() {console.log('results: ', arguments)});
     };
