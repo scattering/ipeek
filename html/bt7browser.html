@@ -6,8 +6,10 @@
   <title>BT7 data reader</title>
   <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="js/jquery.layout-latest.js"></script>
   
     <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
@@ -292,10 +294,10 @@ div#header h1{height:80px;line-height:80px;margin:0;
   padding-left:10px;background: #EEE;color: #79B30B}
 div#navigation{background:#B9CAFF}
 div#extra{background:#FF8539}
-div#outer{height: 100%;}
+div#outer{position: absolute; top: 0px; left:0px; bottom: 50px; height: 100%;}
 div#footer{background: #333;color: #FFF}
 div#footer p{margin:0;padding:5px 10px}
-div#content{margin-left:350px; height:100%;}
+div#content{position:absolute; left: 350px; top: 80px;}
 /*div#navigation{float:left;width:300px;overflow:auto;}*/
 div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:350px;overflow:auto;}
 div.plotcell{height: 75%;}
@@ -356,9 +358,6 @@ canvas {
   shape-rendering: crispEdges;
 }
 
-.axis path {
-  /* display: none; */
-}
 
 .grid .tick {
     stroke: lightgrey;
@@ -368,45 +367,32 @@ canvas {
       stroke-width: 0;
 }
 .grid .tick {
-        stroke: lightgrey;
-        opacity: 0.7;
-        shape-rendering: crispEdges;
-        user-select: none; 
-        -webkit-user-select: none; 
-        -moz-user-select: none;
-    }
-     
-    .grid path {
-        stroke-width: 0;
-        fill: none;
-    }
-     
-    .axis path {
-        fill: none;
-        stroke: #bbb;
-        shape-rendering: crispEdges;
-    }
-     
-    .axis text {
-        fill: #555;
-    }
-     
-    .axis line {	
-        stroke: #e7e7e7;
-        shape-rendering: crispEdges;
-    }
-     
-    .axis .axis-label {
-        user-select: none; 
-        -webkit-user-select: none; 
-        -moz-user-select: none;
-    }
-    
-    .legend, .tick {
-        user-select: none; 
-        -webkit-user-select: none; 
-        -moz-user-select: none;
-    }
+    stroke: lightgrey;
+    opacity: 0.7;
+    shape-rendering: crispEdges;
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+ 
+.grid path {
+    stroke-width: 0;
+    fill: none;
+}
+ 
+
+ 
+.axis .axis-label {
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+
+.legend, .tick {
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
      
     .line {
         fill: none;
@@ -443,10 +429,11 @@ canvas {
 <body>
 
 <div id="header" style="background-color:#FFA500;">
-<h1 style="margin-bottom:0;">ICP data browser</h1></div>
+<h1 style="margin-bottom:0;">BT7 data browser</h1></div>
 <div id="outer">
     <div id = navigation></div>
     <div id="content">
+      
     </div>
 </div>
 <div id="footer">
