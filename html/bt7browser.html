@@ -200,6 +200,7 @@
                   if (selected.length > 0) {
                     var filenames = selected.map(function() {return $(this).attr("filename")}),
                         path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
+                    console.log(filenames, path);
                     //var last = selected.slice(-1)[0];
                     //getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
                     getManyData(path, filenames);
