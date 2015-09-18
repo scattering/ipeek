@@ -1,0 +1,383 @@
+<!doctype html>
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>BT7 data reader</title>
+  <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
+  <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  
+    <script src="js/geturlvars.js"></script>
+<!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
+  <script>
+    exports = {}; // compatibility with node scripts
+  </script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  <script src="//ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script>
+  $(function() {
+    BLACKLIST_EXTENSIONS = ['.nxs', '.nxz', '.log'];
+    current_instr = null;
+    plots = {};
+    colorbars = {};
+    data_path = ["ncnrdata"];
+
+    set_data = function(data) {
+        //console.log(readNCNRData(data));
+        ICP = new ICPParser();
+        ICP.read(data);
+        showSANSData(ICP.get_plottable());
+        //parseheader(data.split('\n'));
+    }
+    
+    var loadData = function() {
+        var file = document.getElementById('sansfile').files[0]; // only one file allowed
+        datafilename = file.name;
+        var result = null;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var data = new Uint8Array(this.result);
+            set_data(data);
+        }
+        reader.readAsText(file);
+        current_instr = "NG7SANS";
+    }
+    
+    var getData = function(url) {
+      d3.xhr(url, function(result) {
+        console.logt
+        var lines = result.responseText.split("\n");
+        header_lines = [];
+        body_lines = [];
+        var line, h=0, b=0;
+        for (var i=0; i<lines.length; i++) {
+          line = lines[i];
+          if (line[0] == "#") {
+            header_lines[h++] = line;
+          } else {
+            body_lines[b++] = line;
+          }
+        }
+        column_names = header_lines[h-1].split(/\s+/).slice(1);
+        output = column_names.join("\t") + "\n";
+        for (var i=0; i<b; i++) {
+          output += body_lines[i].trimLeft().replace(/\s+/g, "\t") + "\n"
+        }
+        data = d3.tsv.parse(output);
+        var xcol = column_names[0];
+        var ycol = "Detector";
+        var data_array = [];
+        
+            
+          
+        for (var i=0; i<data.length; i++){
+          data_array[i] = [parseFloat(data[i][xcol]), parseFloat(data[i][ycol])];
+        }
+        var options = {show_errorbars: false};
+        var outdata = {
+          options: {
+            series: [{xlabel: xcol, ylabel: ycol}]
+          },
+          data: [data_array]
+        }
+        var chart = xyChart(options);
+        mychart = chart;
+        $("#content").empty();
+        d3.select("#content")
+            .data([outdata.data])
+            .call(chart);
+        //plotD3("content", outdata, options);
+      });
+    }
+    
+    //var fileinput = document.getElementById('sansfile');
+    //fileinput.onchange = loadData;
+    
+    function updateTransform(ev) {
+        var logselected = ev.target.checked;
+        var axis = ev.target.getAttribute('axis');
+        var transform = logselected? 'log' : 'lin';
+        for (var p in plots); {                  
+            plots[p].setTransform(transform, axis);
+        }
+    }
+    
+    //createPlotRegion('plot_region');
+    
+    window.onresize = function() {
+        $('#content').height(($(window).innerHeight() - 250).toFixed() + 'px');
+        for (var p in plots) {
+            plots[p].replot();
+        }
+    }
+    
+    window.onresize();
+    
+    function compactDateTime(date) {
+        var outstring = '';
+        outstring += date.getHours().toFixed(0) + ":";
+        outstring += ("00" + date.getMinutes().toFixed(0)).slice(-2) + ":";
+        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + " ";
+        outstring += date.getMonth().toFixed(0) + "/";
+        outstring += date.getDay().toFixed(0) + "/";
+        outstring += date.getFullYear().toFixed(0);
+        return outstring
+    }
+    
+    function isBlacklisted(filename, blacklist) {
+        for (var i=0; i<blacklist.length; i++) {
+            if (filename.indexOf(blacklist[i]) > -1) { return true; }
+        }
+        return false;
+    }
+        
+    function updateFileBrowserPane(target_id, pathlist) {
+        function handler(dirdata) {
+            var files = dirdata.files;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
+
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
+            var subdiritem, dirlink, fileitem, new_pathlist;
+            if (pathlist.length > 0) {               
+                var new_pathlist = $.extend(true, [], pathlist);
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/ ";
+                    dirlink.onclick = function() {
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                    }
+                    patheditor.appendChild(dirlink);
+                });
+            }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
+            $.each(dirdata.subdirs, function(index, subdir) {
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "(dir) " + subdir;
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.push(subdir);
+                subdiritem.onclick = function() { 
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                dirbrowser.appendChild(subdiritem);
+            });
+            var filebrowser = document.createElement('ul');
+            filebrowser.id = "filebrowser";
+            $.each(files, function(index, filename) {
+                if (!(isBlacklisted(filename, BLACKLIST_EXTENSIONS))) {
+                    fileitem = document.createElement('li');
+                    fileitem.setAttribute('filename', filename);
+                    fileitem.classList.add('fileitem');
+                    fileitem.classList.add('ui-widget-content');
+                
+                    var filedate = new Date(dirdata.files_metadata[filename].mtime * 1000);
+                    //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
+                    fileitem.textContent = filename + ' ' + filedate.toLocaleString();
+                    filebrowser.appendChild(fileitem);
+                }
+            });
+            $('#' + target_id).empty();
+            $('#' + target_id).append(patheditor)
+            .append(dirbrowser)
+            .append(filebrowser);
+            $(filebrowser).selectable({
+                stop: function() {
+                  //var result = $( "#select-result" ).empty();
+                  var selected = $(".ui-selected", this);
+                  if (selected.length > 0) {
+                    var last = selected.slice(-1)[0];
+                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                  } 
+                }
+            });
+        }   
+        return handler
+    }
+    
+    dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
+    $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
+    
+    $('.transform').change(updateTransform);
+   
+  });
+  </script>
+</head>
+<style>
+html,body{height:100%;margin:0;padding:0}
+body{font: 76% arial,sans-serif; min-height:100%;}
+p{margin:0 10px 10px}
+a{display:block;color: #981793;padding:10px}
+div#header h1{height:80px;line-height:80px;margin:0;
+  padding-left:10px;background: #EEE;color: #79B30B}
+div#navigation{background:#B9CAFF}
+div#extra{background:#FF8539}
+div#outer{height: 100%;}
+div#footer{background: #333;color: #FFF}
+div#footer p{margin:0;padding:5px 10px}
+div#content{margin-left:350px; height:100%;}
+/*div#navigation{float:left;width:300px;overflow:auto;}*/
+div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:350px;overflow:auto;}
+div.plotcell{height: 75%;}
+.patheditor { 
+    color: blue;
+    cursor: pointer;
+}
+li.subdiritem { 
+    list-style-type: none; 
+    cursor: pointer;
+    color: blue;
+}
+li.fileitem {
+    cursor: pointer;
+    color: blue;
+    text-decoration: none;
+}
+div.plotdiv { 
+    height: 100%;
+    margin-bottom: 50px;
+    margin-right: 75px;
+    margin-left: 25px;
+}
+/*div#footer{clear:both;width:100%}*/
+div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
+
+  #filebrowser .ui-selecting { background: #FECA40; }
+  #filebrowser .ui-selected { background: #F39814; color: white; }
+  #filebrowser { list-style-type: none; margin: 0; padding: 0; }
+  #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+  #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+  #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+</style>
+<style type="text/css">
+svg,
+canvas {
+  position: absolute;
+  image-rendering: optimizeSpeed;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: optimize-contrast;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+.axis-label {
+  font-size: 18px;
+}
+
+.axis .tick text {
+  font-size: 14px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis path {
+  /* display: none; */
+}
+
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+}
+.grid path {
+      stroke-width: 0;
+}
+.grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+        shape-rendering: crispEdges;
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+     
+    .grid path {
+        stroke-width: 0;
+        fill: none;
+    }
+     
+    .axis path {
+        fill: none;
+        stroke: #bbb;
+        shape-rendering: crispEdges;
+    }
+     
+    .axis text {
+        fill: #555;
+    }
+     
+    .axis line {	
+        stroke: #e7e7e7;
+        shape-rendering: crispEdges;
+    }
+     
+    .axis .axis-label {
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+    
+    .legend, .tick {
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+     
+    .line {
+        fill: none;
+        stroke-width: 1.5px;
+    }
+    
+    .highlight {
+        stroke-width: 4.5px;
+    }
+     
+    .dot {
+        /* consider the stroke-with the mouse detect radius? */
+        stroke: transparent;
+        stroke-width: 10px;  
+        cursor: pointer;
+    }
+     
+    .dot:hover {
+        stroke: rgba(68, 127, 255, 0.3);
+    }
+    
+    rect {
+      fill: #fff;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+
+    rect.zoom {
+      stroke: steelblue;
+      fill-opacity: 0.5;
+    }
+</style>
+<body>
+
+<div id="header" style="background-color:#FFA500;">
+<h1 style="margin-bottom:0;">ICP data browser</h1></div>
+<div id="outer">
+    <div id = navigation></div>
+    <div id="content">
+    </div>
+</div>
+<div id="footer">
+Other instruments pending
+</div>
+
+</body>
+</html>
+
