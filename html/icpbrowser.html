@@ -3,7 +3,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>BT7 data reader</title>
+  <title>ICP data reader</title>
   <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
   <link rel="stylesheet" href="css/layout-default-latest.css" />
@@ -18,6 +18,7 @@
   </script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
   <script src="//ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script src="js/icpdata.js"></script>
   <script>
   $(function() {
     BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log'];
@@ -49,26 +50,10 @@
         current_instr = "NG7SANS";
     }
 
-    var parseBT7 = function(text) {
-      var lines = text.split("\n"),
-        header_lines = [],
-        body_lines = [];
-      var line, h=0, b=0;
-      for (var i=0; i<lines.length; i++) {
-        line = lines[i];
-        if (line[0] == "#") {
-          header_lines[h++] = line;
-        } else {
-          body_lines[b++] = line;
-        }
-      }
-      column_names = header_lines[h-1].split(/\s+/).slice(1);
-      output = column_names.join("\t") + "\n";
-      for (var i=0; i<b; i++) {
-        output += body_lines[i].trimLeft().replace(/\s+/g, "\t") + "\n"
-      }
-      data = d3.tsv.parse(output);
-      return {column_names: column_names, data: data};
+    var parseICP = function(text) {
+      var ICP = new ICPParser();
+      ICP.read(text);
+      return ICP
     }
     
     var getData = function(url) {
@@ -116,11 +101,25 @@
         //plotD3("content", outdata, options);
       });
     }
-    
+    /*
+    var getManyData = function(path, filenames) {
+      var promises = [];
+      for (var i in filenames) { 
+        promises.push($.ajax(path + filenames[i])) 
+      }
+      $.when.apply($, promises).then(function() {
+        var datas = [];
+        for (var i=0; i<arguments.length; i++) {
+          datas[i] = parseBT7(arguments[i][0]);
+        }
+        mydatas = datas;
+      });
+    };
+    */
     var makeXY = function(dataset, xcol, ycol) {
       var data_array = [];
-      for (var i=0; i<dataset.data.length; i++){
-        data_array[i] = [parseFloat(dataset.data[i][xcol]), parseFloat(dataset.data[i][ycol])];
+      for (var i=0; i<dataset.points; i++){
+        data_array[i] = [parseFloat(dataset.column[xcol][i]), parseFloat(dataset.column[ycol][i])];
       }
       return data_array;
     }
@@ -136,24 +135,51 @@
         var series = new Array();
         var options = {series: series, legend: {show: true, left: 150}}, datas = [];
         var files_retrieved = Object.keys(ajax_results);
+        var column_names = [];
         for (var i=0; i<files_retrieved.length; i++) {
-          datas[i] = parseBT7(ajax_results[files_retrieved[i]]);
+          datas[i] = parseICP(ajax_results[files_retrieved[i]]);
           options.series[i] = {label: files_retrieved[i] };
+          column_names[i] = Object.keys(datas[i].column);
         }
         var xcolselect = $("#xcol"),
-            ycolselect = $("#ycol");
-        for (var i=0; i<datas[0].column_names.length; i++) {
-          var cn = datas[0].column_names[i];
-          if (xcolselect.find('option[value="' + cn + '"]').length == 0) {
-            xcolselect.append($("<option />", {value: cn, text: cn}));
+            xcol = xcolselect.val(),
+            ycolselect = $("#ycol"),
+            ycol = ycolselect.val();
+        var all_columns = d3.set(column_names[0]); // start with the first set
+        for (var i=1; i<column_names.length; i++) {
+          var new_cols = d3.set(column_names[i]);
+          // if this has columns names that the previous do not, ignore;
+          // likewise, if it does not have column names that did exist, throw those out.
+          var all_columns_snapshot = all_columns.values()
+          for (var j=0; j<all_columns_snapshot.length; j++) {
+            var cn = all_columns_snapshot[j];
+            if (!new_cols.has(cn)) {
+              all_columns.remove(cn);
+            }
           }
-          if (ycolselect.find('option[value="' + cn + '"]').length == 0) {
-            ycolselect.append($("<option />", {value: cn, text: cn}))
-          }
+        }
+        // ... then convert back to an array.
+        all_columns = all_columns.values();
+        xcolselect.empty();
+        ycolselect.empty();
+        for (var i=0; i<all_columns.length; i++) {
+          var cn = all_columns[i];
+          xcolselect.append($("<option />", {value: cn, text: cn}));
+          ycolselect.append($("<option />", {value: cn, text: cn}))
+        }
+        if (xcolselect.find('option[value="' + xcol + '"]').length > 0) {
+          // then the previous x-value still exists in the selector - select it!
+          xcolselect.val(xcol);
+        }
+        if (ycolselect.find('option[value="' + ycol + '"]').length > 0) {
+          // then the previous y-value still exists in the selector - select it!
+          ycolselect.val(ycol);
         }
         var xcol = xcolselect.val(),
             ycol = ycolselect.val();
         options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
+        options.xtransform = $("#xscale").val();
+        options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
           xys[i] = makeXY(datas[i], xcol, ycol);
@@ -301,6 +327,7 @@
     $('.transform').change(updateTransform);
     $('#xcol').change(handleSelection);
     $('#ycol').change(handleSelection);
+    $('#xscale, #yscale').change(handleSelection);
     
    
   });
@@ -456,13 +483,21 @@ canvas {
 </div>
 <div id="bottom_panel" class="ui-layout-south">
   <div id="controls">
-    <span class="axis-select-label">x-axis:</span><select id="xcol" value="QX"><option>QX</option></select>
-    <span class="axis-select-label">y-axis:</span><select id="ycol" value="Detector"><option>Detector</option></select>
+    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>
+    <select id="xscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+    <span class="axis-select-label">y-axis:</span><select id="ycol" ></select>
+    <select id="yscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
   </div>
 </div>
 <div id="top_panel" class="ui-layout-north">
     <div id="status">
-        <span id="statusline">BT7 data browser</span>
+        <span id="statusline">ICP data browser</span>
         <span id="instrument_name" class="instrument-name"></span>
     </div>
 </div>
