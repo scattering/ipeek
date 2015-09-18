@@ -159,8 +159,8 @@
         }
         var chart = xyChart();
         mychart = chart;
-        $("#content").empty();
-        d3.select("#content")
+        $("#plotdiv").empty();
+        d3.select("#plotdiv")
             .data([xys])
             .call(chart);
       });
@@ -422,6 +422,10 @@ canvas {
     .ui-layout-north {
       background-color: #FFA500;
     }
+    #plotdiv {
+      height: 100%;
+      margin-bottom: 50px;
+    }
 </style>
 <body>
 
@@ -438,7 +442,12 @@ canvas {
     </div>
 </div>
  
-<div id="editor" class="ui-layout-center">
+<div id="plotpane" class="ui-layout-center">
+  <div id="plotdiv"></div>
+  <div id="controls">
+    <select id="xcol" value="QX"><option>QX</option></select>
+    <select id="ycol" value="Detector"><option>Detector</option></select>
+  </div>
 </div>
 
 </body>
