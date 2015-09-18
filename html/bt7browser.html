@@ -24,7 +24,9 @@
     current_instr = null;
     plots = {};
     colorbars = {};
-    data_path = ["ncnrdata"];
+    data_path = ["ncnrdata/bt7"];
+    datasets = [];
+    
 
     set_data = function(data) {
         //console.log(readNCNRData(data));
@@ -137,27 +139,42 @@
       return data_array;
     }
     var getManyData = function(path, filenames) {
-      var promises = [];
-      for (var i in filenames) { 
-        promises.push($.ajax(path + filenames[i])) 
+      var promises = [],
+          ajax_results = {};
+      for (var i in filenames) {
+        var fn = filenames[i];
+        var success = (function(fn) { return function(r) {ajax_results[fn] = r; }})(fn);
+        promises.push($.ajax(path + fn, {success: success})); 
       }
       $.when.apply($, promises).then(function() {
-        var datas = [];
-        if ((typeof arguments[0]) == "string") {
-          datas[0] = parseBT7(arguments[0]);
-        } else {
-          for (var i=0; i<arguments.length; i++) {
-            datas[i] = parseBT7(arguments[i][0]);
+        var series = new Array();
+        var options = {series: series, legend: {show: true, left: 150}}, datas = [];
+        var files_retrieved = Object.keys(ajax_results);
+        for (var i=0; i<files_retrieved.length; i++) {
+          datas[i] = parseBT7(ajax_results[files_retrieved[i]]);
+          console.log(i, {label: files_retrieved[i] });
+          options.series[i] = {label: files_retrieved[i] };
+        }
+        console.log(options);
+        var xcolselect = $("#xcol"),
+            ycolselect = $("#ycol");
+        for (var i=0; i<datas[0].column_names.length; i++) {
+          var cn = datas[0].column_names[i];
+          if (xcolselect.find("option[value=" + cn + "]").length == 0) {
+            xcolselect.append($("<option />", {value: cn, text: cn}));
+          }
+          if (ycolselect.find("option[value=" + cn + "]").length == 0) {
+            ycolselect.append($("<option />", {value: cn, text: cn}))
           }
         }
-        mydatas = datas;
-        var xcol = ((datas[0]).column_names)[0],
-            ycol = "Detector";
+        var xcol = xcolselect.val(),
+            ycol = ycolselect.val();
+        options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
         var xys = [];
         for (var i=0; i<datas.length; i++) {
           xys[i] = makeXY(datas[i], xcol, ycol);
         }
-        var chart = xyChart();
+        var chart = xyChart(options);
         mychart = chart;
         $("#plotdiv").empty();
         d3.select("#plotdiv")
@@ -205,7 +222,12 @@
         }
         return false;
     }
-        
+    
+    function getCurrentPath() {
+      var path = $(".patheditor span").map(function(p,i) {return ($(this).text()); }).get().join("");
+      return path;      
+    }
+    
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
             var files = dirdata.files;
@@ -219,7 +241,7 @@
                 var new_pathlist = $.extend(true, [], pathlist);
                 $.each(new_pathlist, function(index, pathitem) {
                     dirlink = document.createElement('span');
-                    dirlink.textContent = pathitem + "/ ";
+                    dirlink.textContent = pathitem + "/";
                     dirlink.onclick = function() {
                         $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
                     }
@@ -261,27 +283,41 @@
             .append(dirbrowser)
             .append(filebrowser);
             $(filebrowser).selectable({
-                stop: function() {
-                  //var result = $( "#select-result" ).empty();
-                  var selected = $(".ui-selected", this);
-                  if (selected.length > 0) {
-                    var filenames = selected.map(function() {return $(this).attr("filename")}).get(),
-                        path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
-                    console.log(filenames, path);
-                    //var last = selected.slice(-1)[0];
-                    //getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
-                    getManyData(path, filenames);
-                  } 
-                }
+                stop: handleSelection
+                //function() {
+                //  //var result = $( "#select-result" ).empty();
+                //  var selected = $(".ui-selected", this);
+                //  if (selected.length > 0) {
+                //    var filenames = selected.map(function() {return $(this).attr("filename")}).get(),
+                //        path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
+                //    console.log(filenames, path);
+                //    //var last = selected.slice(-1)[0];
+                //    //getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                //    getManyData(path, filenames);
+                //  } 
+                //}
             });
         }   
         return handler
+    }
+    
+    var handleSelection = function() {
+      var selected = $("#navigation .ui-selected"),
+          path = 'http://ncnr.nist.gov/pub/' + getCurrentPath();
+      if (selected.length > 0) {
+        var filenames = selected.map(function() {return $(this).attr("filename")}).get();
+            //path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
+        getManyData(path, filenames);
+      }
     }
     
     dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
     $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
     
     $('.transform').change(updateTransform);
+    $('#xcol').change(handleSelection);
+    $('#ycol').change(handleSelection);
+    
    
   });
   window.onload = function() {
@@ -426,14 +462,19 @@ canvas {
       height: 100%;
       margin-bottom: 50px;
     }
+    .ui-layout-south {
+      text-align: center;
+    }
 </style>
 <body>
 
 <div id="navigation" class="ui-layout-wrapper ui-layout-west">
 </div>
 <div id="bottom_panel" class="ui-layout-south">
-    <div id="buttons" style="display:inline-block;"></div>
-    <div id="bulk_edit_buttons" style="display: inline-block;"></div>
+  <div id="controls">
+    <span class="axis-select-label">x-axis:</span><select id="xcol" value="QX"><option>QX</option></select>
+    <span class="axis-select-label">y-axis:</span><select id="ycol" value="Detector"><option>Detector</option></select>
+  </div>
 </div>
 <div id="top_panel" class="ui-layout-north">
     <div id="status">
@@ -444,10 +485,6 @@ canvas {
  
 <div id="plotpane" class="ui-layout-center">
   <div id="plotdiv"></div>
-  <div id="controls">
-    <select id="xcol" value="QX"><option>QX</option></select>
-    <select id="ycol" value="Detector"><option>Detector</option></select>
-  </div>
 </div>
 
 </body>
