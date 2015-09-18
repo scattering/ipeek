@@ -116,10 +116,18 @@
       });
     };
     */
-    var makeXY = function(dataset, xcol, ycol) {
-      var data_array = [];
+    var makeXY = function(dataset, xcol, ycol, ynormcol, log_errorbars) {
+      var data_array = [], x, y, ynorm;
       for (var i=0; i<dataset.points; i++){
-        data_array[i] = [parseFloat(dataset.column[xcol][i]), parseFloat(dataset.column[ycol][i])];
+        x = parseFloat(dataset.column[xcol][i]);
+        y = parseFloat(dataset.column[ycol][i]);
+        if (ynormcol == "1" || ynormcol == null) {
+          ynorm = y;
+        } 
+        else {
+          ynorm = y / parseFloat(dataset.column[ynormcol][i]);
+        }
+        data_array[i] = [x, ynorm];
       }
       return data_array;
     }
@@ -144,7 +152,9 @@
         var xcolselect = $("#xcol"),
             xcol = xcolselect.val(),
             ycolselect = $("#ycol"),
-            ycol = ycolselect.val();
+            ycol = ycolselect.val(),
+            ynormalize = $("#ynormalize"),
+            ynormval = ynormalize.val();
         var all_columns = d3.set(column_names[0]); // start with the first set
         for (var i=1; i<column_names.length; i++) {
           var new_cols = d3.set(column_names[i]);
@@ -162,10 +172,13 @@
         all_columns = all_columns.values();
         xcolselect.empty();
         ycolselect.empty();
+        ynormalize.empty();
+        ynormalize.append($("<option />", {value: "1", text: "1"}));
         for (var i=0; i<all_columns.length; i++) {
           var cn = all_columns[i];
           xcolselect.append($("<option />", {value: cn, text: cn}));
-          ycolselect.append($("<option />", {value: cn, text: cn}))
+          ycolselect.append($("<option />", {value: cn, text: cn}));
+          ynormalize.append($("<option />", {value: cn, text: cn}));
         }
         if (xcolselect.find('option[value="' + xcol + '"]').length > 0) {
           // then the previous x-value still exists in the selector - select it!
@@ -175,14 +188,19 @@
           // then the previous y-value still exists in the selector - select it!
           ycolselect.val(ycol);
         }
+        if (ynormalize.find('option[value="' + ynormval + '"]').length > 0) {
+          // then the previous y-normalize value still exists in the selector - select it!
+          ynormalize.val(ynormval);
+        }
         var xcol = xcolselect.val(),
             ycol = ycolselect.val();
-        options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
+            ynormval = ynormalize.val();
+        options.axes = {xaxis: {label: xcol}, yaxis: {label: (ynormval == "1") ? ycol : ycol + " / " + ynormval }};
         options.xtransform = $("#xscale").val();
         options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
-          xys[i] = makeXY(datas[i], xcol, ycol);
+          xys[i] = makeXY(datas[i], xcol, ycol, ynormval);
         }
         var chart = xyChart(options);
         mychart = chart;
@@ -193,18 +211,6 @@
       });
     };
     //var fileinput = document.getElementById('sansfile');
-    //fileinput.onchange = loadData;
-    
-    function updateTransform(ev) {
-        var logselected = ev.target.checked;
-        var axis = ev.target.getAttribute('axis');
-        var transform = logselected? 'log' : 'lin';
-        for (var p in plots); {                  
-            plots[p].setTransform(transform, axis);
-        }
-    }
-    
-    //createPlotRegion('plot_region');
     
     window.onresize = function() {
         $('#content').height(($(window).innerHeight() - 250).toFixed() + 'px');
@@ -324,11 +330,7 @@
     dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
     $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
     
-    $('.transform').change(updateTransform);
-    $('#xcol').change(handleSelection);
-    $('#ycol').change(handleSelection);
-    $('#xscale, #yscale').change(handleSelection);
-    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleSelection);    
    
   });
   window.onload = function() {
@@ -492,6 +494,9 @@ canvas {
     <select id="yscale">
       <option value="linear">linear</option>
       <option value="log">log</option>
+    </select>
+    <span class="axis-select-label">divide by:</span>
+    <select id="ynormalize">
     </select>
   </div>
 </div>
