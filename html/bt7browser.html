@@ -47,7 +47,6 @@
     
     var getData = function(url) {
       d3.xhr(url, function(result) {
-        console.logt
         var lines = result.responseText.split("\n");
         header_lines = [];
         body_lines = [];
@@ -91,6 +90,14 @@
         //plotD3("content", outdata, options);
       });
     }
+    
+    var getManyData = function(path, filenames) {
+      var promise;
+      for (var i in filenames) {
+        promise = $.when(promise, $.ajax(path + filenames[i]);
+      }
+      promise.then(function() {console.log('results: ', arguments)});
+    };
     
     //var fileinput = document.getElementById('sansfile');
     //fileinput.onchange = loadData;
@@ -191,8 +198,11 @@
                   //var result = $( "#select-result" ).empty();
                   var selected = $(".ui-selected", this);
                   if (selected.length > 0) {
-                    var last = selected.slice(-1)[0];
-                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                    var filenames = selected.map(function() {return $(this).attr("filename")}),
+                        path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
+                    //var last = selected.slice(-1)[0];
+                    //getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                    getManyData(path, filenames);
                   } 
                 }
             });
