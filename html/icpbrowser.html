@@ -238,10 +238,10 @@
     
     window.onpopstate = function(e) {
       var start_path = $.extend(true, [], data_path),
-          url_vars = getUrlVars(),
-          requested_path = (url_vars.pathlist || "").split("+");
-      if (requested_path.length > 0) { start_path = requested_path; }
-      console.log(requested_path, start_path);
+          url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+          start_path = url_vars.pathlist.split("+");
+      }
       $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
     }
     
