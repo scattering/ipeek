@@ -21,33 +21,9 @@
   <script>
   $(function() {
     BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log'];
-    current_instr = null;
-    plots = {};
-    colorbars = {};
+    dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
     data_path = ["ncnrdata"];
     datasets = [];
-    
-
-    set_data = function(data) {
-        //console.log(readNCNRData(data));
-        ICP = new ICPParser();
-        ICP.read(data);
-        showSANSData(ICP.get_plottable());
-        //parseheader(data.split('\n'));
-    }
-    
-    var loadData = function() {
-        var file = document.getElementById('sansfile').files[0]; // only one file allowed
-        datafilename = file.name;
-        var result = null;
-        var reader = new FileReader();
-        reader.onload = function(e) {
-            var data = new Uint8Array(this.result);
-            set_data(data);
-        }
-        reader.readAsText(file);
-        current_instr = "NG7SANS";
-    }
 
     var parseBT7 = function(text) {
       var lines = text.split("\n"),
@@ -71,52 +47,6 @@
       return {column_names: column_names, data: data};
     }
     
-    var getData = function(url) {
-      d3.xhr(url, function(result) {
-        var lines = result.responseText.split("\n");
-        header_lines = [];
-        body_lines = [];
-        var line, h=0, b=0;
-        for (var i=0; i<lines.length; i++) {
-          line = lines[i];
-          if (line[0] == "#") {
-            header_lines[h++] = line;
-          } else {
-            body_lines[b++] = line;
-          }
-        }
-        column_names = header_lines[h-1].split(/\s+/).slice(1);
-        output = column_names.join("\t") + "\n";
-        for (var i=0; i<b; i++) {
-          output += body_lines[i].trimLeft().replace(/\s+/g, "\t") + "\n"
-        }
-        data = d3.tsv.parse(output);
-        var xcol = column_names[0];
-        var ycol = "Detector";
-        var data_array = [];
-        
-            
-          
-        for (var i=0; i<data.length; i++){
-          data_array[i] = [parseFloat(data[i][xcol]), parseFloat(data[i][ycol])];
-        }
-        var options = {show_errorbars: false};
-        var outdata = {
-          options: {
-            series: [{xlabel: xcol, ylabel: ycol}]
-          },
-          data: [data_array]
-        }
-        var chart = xyChart(options);
-        mychart = chart;
-        $("#content").empty();
-        d3.select("#content")
-            .data([outdata.data])
-            .call(chart);
-        //plotD3("content", outdata, options);
-      });
-    }
-    
     var makeXY = function(dataset, xcol, ycol) {
       var data_array = [];
       for (var i=0; i<dataset.data.length; i++){
@@ -124,6 +54,7 @@
       }
       return data_array;
     }
+    
     var getManyData = function(path, filenames) {
       var promises = [],
           ajax_results = {};
@@ -170,26 +101,6 @@
     //var fileinput = document.getElementById('sansfile');
     //fileinput.onchange = loadData;
     
-    function updateTransform(ev) {
-        var logselected = ev.target.checked;
-        var axis = ev.target.getAttribute('axis');
-        var transform = logselected? 'log' : 'lin';
-        for (var p in plots); {                  
-            plots[p].setTransform(transform, axis);
-        }
-    }
-    
-    //createPlotRegion('plot_region');
-    
-    window.onresize = function() {
-        $('#content').height(($(window).innerHeight() - 250).toFixed() + 'px');
-        for (var p in plots) {
-            plots[p].replot();
-        }
-    }
-    
-    window.onresize();
-    
     function compactDateTime(date) {
         var outstring = '';
         outstring += date.getHours().toFixed(0) + ":";
@@ -217,8 +128,8 @@
         function handler(dirdata) {
             var files = dirdata.files;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
-            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
-
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+            
             var patheditor = document.createElement('div');
             patheditor.className = 'patheditor';
             var subdiritem, dirlink, fileitem, new_pathlist;
@@ -228,6 +139,7 @@
                     dirlink = document.createElement('span');
                     dirlink.textContent = pathitem + "/";
                     dirlink.onclick = function() {
+                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
                         $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
                     }
                     patheditor.appendChild(dirlink);
@@ -243,7 +155,8 @@
                 subdiritem.textContent = "(dir) " + subdir;
                 var new_pathlist = $.extend(true, [], pathlist);
                 new_pathlist.push(subdir);
-                subdiritem.onclick = function() { 
+                subdiritem.onclick = function() {
+                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
                     $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
                 }
                 dirbrowser.appendChild(subdiritem);
@@ -269,18 +182,6 @@
             .append(filebrowser);
             $(filebrowser).selectable({
                 stop: handleSelection
-                //function() {
-                //  //var result = $( "#select-result" ).empty();
-                //  var selected = $(".ui-selected", this);
-                //  if (selected.length > 0) {
-                //    var filenames = selected.map(function() {return $(this).attr("filename")}).get(),
-                //        path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
-                //    console.log(filenames, path);
-                //    //var last = selected.slice(-1)[0];
-                //    //getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
-                //    getManyData(path, filenames);
-                //  } 
-                //}
             });
         }   
         return handler
@@ -291,17 +192,22 @@
           path = 'http://ncnr.nist.gov/pub/' + getCurrentPath();
       if (selected.length > 0) {
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
-            //path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
         getManyData(path, filenames);
       }
     }
     
-    dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
-    $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
+    window.onpopstate = function(e) {
+      var start_path = $.extend(true, [], data_path),
+          url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+          start_path = url_vars.pathlist.split("+");
+      }
+      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+    }
     
-    $('.transform').change(updateTransform);
-    $('#xcol').change(handleSelection);
-    $('#ycol').change(handleSelection);
+    window.onpopstate(); // call it on first load, too!
+    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleSelection);
     
    
   });

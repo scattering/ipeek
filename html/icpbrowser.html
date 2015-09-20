@@ -231,7 +231,6 @@
           path = 'http://ncnr.nist.gov/pub/' + getCurrentPath();
       if (selected.length > 0) {
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
-            //path = 'http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/';
         getManyData(path, filenames);
       }
     }
