@@ -167,9 +167,8 @@
         function handler(dirdata) {
             var files = dirdata.files;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
-            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
-
-            history.pushState({}, "", "?pathlist=" + pathlist.join("+"));
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+            
             var patheditor = document.createElement('div');
             patheditor.className = 'patheditor';
             var subdiritem, dirlink, fileitem, new_pathlist;
@@ -179,6 +178,7 @@
                     dirlink = document.createElement('span');
                     dirlink.textContent = pathitem + "/";
                     dirlink.onclick = function() {
+                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
                         $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
                     }
                     patheditor.appendChild(dirlink);
@@ -194,7 +194,8 @@
                 subdiritem.textContent = "(dir) " + subdir;
                 var new_pathlist = $.extend(true, [], pathlist);
                 new_pathlist.push(subdir);
-                subdiritem.onclick = function() { 
+                subdiritem.onclick = function() {
+                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
                     $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
                 }
                 dirbrowser.appendChild(subdiritem);
@@ -240,6 +241,7 @@
           url_vars = getUrlVars(),
           requested_path = (url_vars.pathlist || "").split("+");
       if (requested_path.length > 0) { start_path = requested_path; }
+      console.log(requested_path, start_path);
       $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
     }
     
