@@ -214,7 +214,7 @@
                     chb.setAttribute("type", "checkbox");
                     chb.setAttribute("filename", filename);
                     chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
-                    chb.onchange = handleChecked;
+                    //chb.onchange = handleChecked;
                     var check_td = tr.insertCell();
                     check_td.appendChild(chb)
                     
@@ -275,7 +275,7 @@
         getManyData(path, filenames);
       }
     }
-    
+    $("#navigation").on("change", "input", handleChecked);
     window.onpopstate = function(e) {
       var start_path = $.extend(true, [], data_path),
           url_vars = getUrlVars();
