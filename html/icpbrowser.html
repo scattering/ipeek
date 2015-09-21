@@ -228,7 +228,7 @@
                     var label_td = tr.insertCell();
                     label_td.appendChild(filelabel);
                     var mtime_td = tr.insertCell();
-                    mtime_td.innerHTML = filedate.toLocaleString().replace(/\s/g, "&nbsp", true); //compactDateTime(filedate);
+                    mtime_td.innerHTML = filedate.toLocaleString();
                     mtime_td.setAttribute("mtime", timestamp);
                     
                     
@@ -255,7 +255,7 @@
                 filter:'td', 
                 stop: handleSelection
             });
-            $(filebrowser).tablesorter({headers: {2: {textExtraction: function(node) { return node.getAttribute("mtime") }}}});
+            $(filebrowser).tablesorter();
         }   
         return handler
     }
@@ -328,6 +328,7 @@ div.plotdiv {
 #filebrowser .ui-selecting { background: #FECA40; }
 #filebrowser .ui-selected { background: #F39814; color: white; }
 #filebrowser { list-style-type: none; margin: 0; padding: 0; }
+#filebrowser { white-space: nowrap; }
 #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
 #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
 #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
