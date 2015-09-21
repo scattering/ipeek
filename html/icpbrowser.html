@@ -10,6 +10,8 @@
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
   <script src="js/jquery.layout-latest.js"></script>
+  <script src="js/jquery.tablesorter.min.js"></script>
+  
   
     <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
@@ -144,7 +146,7 @@
         var outstring = '';
         outstring += date.getHours().toFixed(0) + ":";
         outstring += ("00" + date.getMinutes().toFixed(0)).slice(-2) + ":";
-        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + " ";
+        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + "&nbsp;";
         outstring += date.getMonth().toFixed(0) + "/";
         outstring += date.getDay().toFixed(0) + "/";
         outstring += date.getFullYear().toFixed(0);
@@ -171,7 +173,7 @@
             
             var patheditor = document.createElement('div');
             patheditor.className = 'patheditor';
-            var subdiritem, dirlink, fileitem, new_pathlist;
+            var subdiritem, dirlink, new_pathlist;
             if (pathlist.length > 0) {               
                 var new_pathlist = $.extend(true, [], pathlist);
                 $.each(new_pathlist, function(index, pathitem) {
@@ -200,36 +202,75 @@
                 }
                 dirbrowser.appendChild(subdiritem);
             });
-            var filebrowser = document.createElement('ul');
+            var filebrowser = document.createElement('table');
+            filebrowser.classList.add("tablesorter");
             filebrowser.id = "filebrowser";
+            var browser_body = filebrowser.createTBody();
+            
             $.each(files, function(index, filename) {
                 if (!(isBlacklisted(filename, BLACKLIST_EXTENSIONS))) {
-                    fileitem = document.createElement('li');
-                    fileitem.setAttribute('filename', filename);
-                    fileitem.classList.add('fileitem');
-                    fileitem.classList.add('ui-widget-content');
-                
-                    var filedate = new Date(dirdata.files_metadata[filename].mtime * 1000);
+                    var tr = filebrowser.insertRow();
+                    var chb = document.createElement('input');
+                    chb.setAttribute("type", "checkbox");
+                    chb.setAttribute("filename", filename);
+                    chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
+                    chb.onchange = handleChecked;
+                    var check_td = tr.insertCell();
+                    check_td.appendChild(chb)
+                    
+                    var filelabel = document.createElement('label');
+                    var timestamp = dirdata.files_metadata[filename].mtime * 1000;
+                    var filedate = new Date(timestamp);
                     //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
-                    fileitem.textContent = filename + ' ' + filedate.toLocaleString();
-                    filebrowser.appendChild(fileitem);
+                    filelabel.textContent = filename;
+                    //filelabel.textContent = (filename + ' ' + filedate.toLocaleString());
+                    filelabel.setAttribute("for", "checkbox_" + filename);
+                    var label_td = tr.insertCell();
+                    label_td.appendChild(filelabel);
+                    var mtime_td = tr.insertCell();
+                    mtime_td.innerHTML = filedate.toLocaleString().replace(/\s/g, "&nbsp", true); //compactDateTime(filedate);
+                    mtime_td.setAttribute("mtime", timestamp);
+                    
+                    
+                    //fileitem.appendChild(filelabel);
+                    //filebrowser.appendChild(fileitem);
                 }
             });
+            var thead = filebrowser.createTHead();
+            var tr = thead.insertRow();
+            var th = document.createElement("th");
+            th.innerHTML = "x";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "filename";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "date";
+            tr.appendChild(th);
             $('#' + target_id).empty();
             $('#' + target_id).append(patheditor)
             .append(dirbrowser)
             .append(filebrowser);
-            $(filebrowser).selectable({
+            $(browser_body).selectable({
+                filter:'td', 
                 stop: handleSelection
             });
+            $(filebrowser).tablesorter({headers: {2: {textExtraction: function(node) { return node.getAttribute("mtime") }}}});
         }   
         return handler
     }
     
     var handleSelection = function() {
-      var selected = $("#navigation .ui-selected"),
+      var selected = $("#navigation .ui-selected");
+      // remove selection class but check all the boxes:
+      selected.removeClass("ui-selected").parent().find("input").prop("checked", true);
+      handleChecked();
+    }
+    var handleChecked = function() {
+      var selected = $("#navigation input:checked"),
           path = 'http://ncnr.nist.gov/pub/' + getCurrentPath();
       if (selected.length > 0) {
+        
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
         getManyData(path, filenames);
       }
@@ -246,7 +287,7 @@
     
     window.onpopstate(); // call it on first load, too!
     
-    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleSelection);    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleChecked);    
    
   });
   window.onload = function() {
@@ -259,6 +300,7 @@
         ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
         ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
 		  });
+		  $("#filebrowser").tablesorter(); 
 		}
   </script>
 </head>
