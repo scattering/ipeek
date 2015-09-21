@@ -80,11 +80,11 @@
           column_names[i] = Object.keys(datas[i].column);
         }
         var xcolselect = $("#xcol"),
-            xcol = xcolselect.val(),
+            xcol = xcolselect.val() || "point",
             ycolselect = $("#ycol"),
-            ycol = ycolselect.val(),
+            ycol = ycolselect.val() || "counts",
             ynormalize = $("#ynormalize"),
-            ynormval = ynormalize.val();
+            ynormval = ynormalize.val() || "1";
         var all_columns = d3.set(column_names[0]); // start with the first set
         for (var i=1; i<column_names.length; i++) {
           var new_cols = d3.set(column_names[i]);
@@ -110,15 +110,15 @@
           ycolselect.append($("<option />", {value: cn, text: cn}));
           ynormalize.append($("<option />", {value: cn, text: cn}));
         }
-        if (xcolselect.find('option[value="' + xcol + '"]').length > 0) {
+        if (all_columns.indexOf(xcol) > -1) {
           // then the previous x-value still exists in the selector - select it!
           xcolselect.val(xcol);
         }
-        if (ycolselect.find('option[value="' + ycol + '"]').length > 0) {
+        if (all_columns.indexOf(ycol) > -1) {
           // then the previous y-value still exists in the selector - select it!
           ycolselect.val(ycol);
         }
-        if (ynormalize.find('option[value="' + ynormval + '"]').length > 0) {
+        if (all_columns.indexOf(ynormval) > -1) {
           // then the previous y-normalize value still exists in the selector - select it!
           ynormalize.val(ynormval);
         }
