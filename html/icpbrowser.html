@@ -161,12 +161,30 @@
     }
     
     function getCurrentPath() {
-      var path = $(".patheditor span").map(function(p,i) {return ($(this).text()); }).get().join("");
+      var path = "";
+      $(".patheditor span").each(function(i,v) {
+        path += $(v).text();
+      });
       return path;      
     }
     
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
+            var buttons = $("<div />", {class: "buttons"});
+            var clear_all = $("<button />", {
+                text: "clear all"
+            });
+            clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
+            var download_all = $("<button />", {
+                text: "download selected"
+            });
+            download_all.click(function() {
+                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            });
+            buttons
+              .append(clear_all)
+              .append(download_all);
+        
             var files = dirdata.files;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
@@ -230,6 +248,15 @@
                     var mtime_td = tr.insertCell();
                     mtime_td.innerHTML = filedate.toLocaleString();
                     mtime_td.setAttribute("mtime", timestamp);
+                    var download_td = tr.insertCell();
+                    var download_a = document.createElement("a")
+                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+                    download_a.setAttribute("download", filename);
+                    var download_link = document.createElement("span");
+                    download_link.innerHTML = "";
+                    download_a.appendChild(download_link);
+                    download_td.appendChild(download_a);
+                    
                     
                     
                     //fileitem.appendChild(filelabel);
@@ -247,10 +274,14 @@
             th = document.createElement("th");
             th.innerHTML = "date";
             tr.appendChild(th);
-            $('#' + target_id).empty();
-            $('#' + target_id).append(patheditor)
-            .append(dirbrowser)
-            .append(filebrowser);
+            th = document.createElement("th");
+            th.innerHTML = "";
+            tr.appendChild(th);
+            $('#' + target_id).empty()
+              .append(buttons)
+              .append(patheditor)
+              .append(dirbrowser)
+              .append(filebrowser);
             $(browser_body).selectable({
                 filter:'td', 
                 stop: handleSelection
