@@ -40,13 +40,19 @@
     var parseBT7 = function(text) {
       var lines = text.split("\n"),
         header_lines = [],
-        body_lines = [];
-      var line, h=0, b=0;
+        body_lines = [],
+        footer_lines = [];
+      var line, h=0, b=0, f=0, in_header=true;
       for (var i=0; i<lines.length; i++) {
         line = lines[i];
         if (line[0] == "#") {
-          header_lines[h++] = line;
+          if (in_header) {
+            header_lines[h++] = line;
+          } else {
+            footer_lines[f++] = line;
+          }
         } else {
+          in_header = false;
           body_lines[b++] = line;
         }
       }
