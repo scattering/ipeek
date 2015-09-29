@@ -59,10 +59,18 @@
       return {column_names: column_names, data: data};
     }
     
-    var makeXY = function(dataset, xcol, ycol) {
-      var data_array = [];
+    var makeXY = function(dataset, xcol, ycol, ynormcol) {
+      var data_array = [], x, y, ynorm;
       for (var i=0; i<dataset.data.length; i++){
-        data_array[i] = [parseFloat(dataset.data[i][xcol]), parseFloat(dataset.data[i][ycol])];
+        x = parseFloat(dataset.data[i][xcol]);
+        y = parseFloat(dataset.data[i][ycol]);
+        if (ynormcol == "1" || ynormcol == null) {
+          ynorm = y;
+        } 
+        else {
+          ynorm = y / parseFloat(dataset.data[i][ynormcol]);
+        }
+        data_array[i] = [x, ynorm];
       }
       return data_array;
     }
@@ -86,7 +94,9 @@
         var xcolselect = $("#xcol"),
             xcol = xcolselect.val() || "QX",
             ycolselect = $("#ycol"),
-            ycol = ycolselect.val() || "Detector";
+            ycol = ycolselect.val() || "Detector"
+            ynormalize = $("#ynormalize"),
+            ynormval = ynormalize.val() || "1";
         var all_columns = d3.set(datas[0].column_names);
         for (var i=1; i<datas.length; i++) {
           var new_cols = d3.set(datas[i].column_names);
@@ -104,13 +114,13 @@
         all_columns = all_columns.values();
         xcolselect.empty();
         ycolselect.empty();
-        //ynormalize.empty();
-        //ynormalize.append($("<option />", {value: "1", text: "1"}));
+        ynormalize.empty();
+        ynormalize.append($("<option />", {value: "1", text: "1"}));
         for (var i=0; i<all_columns.length; i++) {
           var cn = all_columns[i];
           xcolselect.append($("<option />", {value: cn, text: cn}));
           ycolselect.append($("<option />", {value: cn, text: cn}));
-          //ynormalize.append($("<option />", {value: cn, text: cn}));
+          ynormalize.append($("<option />", {value: cn, text: cn}));
         }
         if (all_columns.indexOf(xcol) > -1) {
           // then the previous x-value still exists in the selector - select it!
@@ -120,19 +130,19 @@
           // then the previous y-value still exists in the selector - select it!
           ycolselect.val(ycol);
         }
-        //if (all_columns.indexOf(ynormval) > -1) {
-        //  // then the previous y-normalize value still exists in the selector - select it!
-        //  ynormalize.val(ynormval);
-        //}
+        if (all_columns.indexOf(ynormval) > -1) {
+          // then the previous y-normalize value still exists in the selector - select it!
+          ynormalize.val(ynormval);
+        }
         var xcol = xcolselect.val(),
             ycol = ycolselect.val();
-            //ynormval = ynormalize.val();
-        options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
+            ynormcol = ynormalize.val();
+        options.axes = {xaxis: {label: xcol}, yaxis: {label: (ynormval == "1") ? ycol : ycol + " / " + ynormcol }};
         options.xtransform = $("#xscale").val();
         options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
-          xys[i] = makeXY(datas[i], xcol, ycol);
+          xys[i] = makeXY(datas[i], xcol, ycol, ynormcol);
         }
         var chart = xyChart(options);
         mychart = chart;
@@ -318,7 +328,7 @@
     
     window.onpopstate(); // call it on first load, too!
     
-    $('#xcol, #ycol, #xscale, #yscale').change(handleChecked);
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleChecked); 
     
    
   });
@@ -483,6 +493,9 @@ canvas {
     <select id="yscale">
       <option value="linear">linear</option>
       <option value="log">log</option>
+    </select>
+    <span class="axis-select-label">divide by:</span>
+    <select id="ynormalize">
     </select>
   </div>
 </div>

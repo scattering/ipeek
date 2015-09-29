@@ -44,7 +44,7 @@
       return ICP
     }
        
-    var makeXY = function(dataset, xcol, ycol, ynormcol, log_errorbars) {
+    var makeXY = function(dataset, xcol, ycol, ynormcol) {
       var data_array = [], x, y, ynorm;
       for (var i=0; i<dataset.points; i++){
         x = parseFloat(dataset.column[xcol][i]);
@@ -123,13 +123,13 @@
         }
         var xcol = xcolselect.val(),
             ycol = ycolselect.val();
-            ynormval = ynormalize.val();
-        options.axes = {xaxis: {label: xcol}, yaxis: {label: (ynormval == "1") ? ycol : ycol + " / " + ynormval }};
+            ynormcol = ynormalize.val();
+        options.axes = {xaxis: {label: xcol}, yaxis: {label: (ynormval == "1") ? ycol : ycol + " / " + ynormcol }};
         options.xtransform = $("#xscale").val();
         options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
-          xys[i] = makeXY(datas[i], xcol, ycol, ynormval);
+          xys[i] = makeXY(datas[i], xcol, ycol, ynormcol);
         }
         var chart = xyChart(options);
         mychart = chart;
