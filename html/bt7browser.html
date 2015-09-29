@@ -10,7 +10,8 @@
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
   <script src="js/jquery.layout-latest.js"></script>
-  
+  <script src="js/jquery.tablesorter.min.js"></script>
+    
     <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
   <script>
@@ -83,20 +84,52 @@
           options.series[i] = {label: files_retrieved[i] };
         }
         var xcolselect = $("#xcol"),
-            ycolselect = $("#ycol");
-        for (var i=0; i<datas[0].column_names.length; i++) {
-          var cn = datas[0].column_names[i];
-          if (xcolselect.find('option[value="' + cn + '"]').length == 0) {
-            xcolselect.append($("<option />", {value: cn, text: cn}));
-          }
-          if (ycolselect.find('option[value="' + cn + '"]').length == 0) {
-            ycolselect.append($("<option />", {value: cn, text: cn}))
+            xcol = xcolselect.val() || "QX",
+            ycolselect = $("#ycol"),
+            ycol = ycolselect.val() || "Detector";
+        var all_columns = d3.set(datas[0].column_names);
+        for (var i=1; i<datas.length; i++) {
+          var new_cols = d3.set(datas[i].column_names);
+          // if this has columns names that the previous do not, ignore;
+          // likewise, if it does not have column names that did exist, throw those out.
+          var all_columns_snapshot = all_columns.values()
+          for (var j=0; j<all_columns_snapshot.length; j++) {
+            var cn = all_columns_snapshot[j];
+            if (!new_cols.has(cn)) {
+              all_columns.remove(cn);
+            }
           }
         }
-        mydatas = datas;
+        // ... then convert back to an array.
+        all_columns = all_columns.values();
+        xcolselect.empty();
+        ycolselect.empty();
+        //ynormalize.empty();
+        //ynormalize.append($("<option />", {value: "1", text: "1"}));
+        for (var i=0; i<all_columns.length; i++) {
+          var cn = all_columns[i];
+          xcolselect.append($("<option />", {value: cn, text: cn}));
+          ycolselect.append($("<option />", {value: cn, text: cn}));
+          //ynormalize.append($("<option />", {value: cn, text: cn}));
+        }
+        if (all_columns.indexOf(xcol) > -1) {
+          // then the previous x-value still exists in the selector - select it!
+          xcolselect.val(xcol);
+        }
+        if (all_columns.indexOf(ycol) > -1) {
+          // then the previous y-value still exists in the selector - select it!
+          ycolselect.val(ycol);
+        }
+        //if (all_columns.indexOf(ynormval) > -1) {
+        //  // then the previous y-normalize value still exists in the selector - select it!
+        //  ynormalize.val(ynormval);
+        //}
         var xcol = xcolselect.val(),
             ycol = ycolselect.val();
+            //ynormval = ynormalize.val();
         options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
+        options.xtransform = $("#xscale").val();
+        options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
           xys[i] = makeXY(datas[i], xcol, ycol);
@@ -137,13 +170,28 @@
     
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
+            var buttons = $("<div />", {class: "buttons"});
+            var clear_all = $("<button />", {
+                text: "clear all"
+            });
+            clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
+            var download_all = $("<button />", {
+                text: "download selected"
+            });
+            download_all.click(function() {
+                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            });
+            buttons
+              .append(clear_all)
+              .append(download_all);
+        
             var files = dirdata.files;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
             
             var patheditor = document.createElement('div');
             patheditor.className = 'patheditor';
-            var subdiritem, dirlink, fileitem, new_pathlist;
+            var subdiritem, dirlink, new_pathlist;
             if (pathlist.length > 0) {               
                 var new_pathlist = $.extend(true, [], pathlist);
                 $.each(new_pathlist, function(index, pathitem) {
@@ -172,41 +220,93 @@
                 }
                 dirbrowser.appendChild(subdiritem);
             });
-            var filebrowser = document.createElement('ul');
+            var filebrowser = document.createElement('table');
+            filebrowser.classList.add("tablesorter");
             filebrowser.id = "filebrowser";
+            var browser_body = filebrowser.createTBody();
+            
             $.each(files, function(index, filename) {
                 if (!(isBlacklisted(filename, BLACKLIST_EXTENSIONS))) {
-                    fileitem = document.createElement('li');
-                    fileitem.setAttribute('filename', filename);
-                    fileitem.classList.add('fileitem');
-                    fileitem.classList.add('ui-widget-content');
-                
-                    var filedate = new Date(dirdata.files_metadata[filename].mtime * 1000);
+                    var tr = filebrowser.insertRow();
+                    var chb = document.createElement('input');
+                    chb.setAttribute("type", "checkbox");
+                    chb.setAttribute("filename", filename);
+                    chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
+                    //chb.onchange = handleChecked;
+                    var check_td = tr.insertCell();
+                    check_td.appendChild(chb)
+                    
+                    var filelabel = document.createElement('label');
+                    var timestamp = dirdata.files_metadata[filename].mtime * 1000;
+                    var filedate = new Date(timestamp);
                     //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
-                    fileitem.textContent = filename + ' ' + filedate.toLocaleString();
-                    filebrowser.appendChild(fileitem);
+                    filelabel.textContent = filename;
+                    //filelabel.textContent = (filename + ' ' + filedate.toLocaleString());
+                    filelabel.setAttribute("for", "checkbox_" + filename);
+                    var label_td = tr.insertCell();
+                    label_td.appendChild(filelabel);
+                    var mtime_td = tr.insertCell();
+                    mtime_td.innerHTML = filedate.toLocaleString();
+                    mtime_td.setAttribute("mtime", timestamp);
+                    var download_td = tr.insertCell();
+                    var download_a = document.createElement("a")
+                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+                    download_a.setAttribute("download", filename);
+                    var download_link = document.createElement("span");
+                    download_link.innerHTML = "";
+                    download_a.appendChild(download_link);
+                    download_td.appendChild(download_a);
+                    
+                    
+                    
+                    //fileitem.appendChild(filelabel);
+                    //filebrowser.appendChild(fileitem);
                 }
             });
-            $('#' + target_id).empty();
-            $('#' + target_id).append(patheditor)
-            .append(dirbrowser)
-            .append(filebrowser);
-            $(filebrowser).selectable({
+            var thead = filebrowser.createTHead();
+            var tr = thead.insertRow();
+            var th = document.createElement("th");
+            th.innerHTML = "x";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "filename";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "date";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "";
+            tr.appendChild(th);
+            $('#' + target_id).empty()
+              .append(buttons)
+              .append(patheditor)
+              .append(dirbrowser)
+              .append(filebrowser);
+            $(browser_body).selectable({
+                filter:'td', 
                 stop: handleSelection
             });
+            $(filebrowser).tablesorter();
         }   
         return handler
     }
     
     var handleSelection = function() {
-      var selected = $("#navigation .ui-selected"),
+      var selected = $("#navigation .ui-selected");
+      // remove selection class but check all the boxes:
+      selected.removeClass("ui-selected").parent().find("input").prop("checked", true);
+      handleChecked();
+    }
+    var handleChecked = function() {
+      var selected = $("#navigation input:checked"),
           path = '/pub/' + getCurrentPath();
       if (selected.length > 0) {
+        
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
         getManyData(path, filenames);
       }
     }
-    
+    $("#navigation").on("change", "input", handleChecked);
     window.onpopstate = function(e) {
       var start_path = $.extend(true, [], data_path),
           url_vars = getUrlVars();
@@ -218,7 +318,7 @@
     
     window.onpopstate(); // call it on first load, too!
     
-    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleSelection);
+    $('#xcol, #ycol, #xscale, #yscale').change(handleChecked);
     
    
   });
@@ -258,7 +358,7 @@ div.plotdiv {
 }
 #filebrowser .ui-selecting { background: #FECA40; }
 #filebrowser .ui-selected { background: #F39814; color: white; }
-#filebrowser { list-style-type: none; margin: 0; padding: 0; }
+#filebrowser { list-style-type: none; margin: 0; padding: 0; white-space: nowrap; }
 #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
 #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
 #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
@@ -374,8 +474,16 @@ canvas {
 </div>
 <div id="bottom_panel" class="ui-layout-south">
   <div id="controls">
-    <span class="axis-select-label">x-axis:</span><select id="xcol" value="QX"><option>QX</option></select>
-    <span class="axis-select-label">y-axis:</span><select id="ycol" value="Detector"><option>Detector</option></select>
+    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>
+    <select id="xscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+    <span class="axis-select-label">y-axis:</span><select id="ycol" ></select>
+    <select id="yscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
   </div>
 </div>
 <div id="top_panel" class="ui-layout-north">
