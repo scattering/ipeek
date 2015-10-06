@@ -1,0 +1,277 @@
+<html>
+<head>
+  <script src="js/zip/zip.js"></script>
+  <script src="js/zip/deflate.js"></script>
+  <script src="js/zip/inflate.js"></script>
+  <script src="js/zip/zip-fs.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <script src="data/PBR/21222/data/files.js"></script>
+  <script type="text/javascript">
+    zip.useWebWorkers = false;
+    //zip.workerScriptsPath = "js/zip/";
+    var start_time = (new Date()).getTime();
+    var writer = new zip.TextWriter();
+    var fileinfo = {};
+    function getBlob(url) {
+      // Return a new promise.
+      return new Promise(function(resolve, reject) {
+        // Do the usual XHR stuff
+        var req = new XMLHttpRequest();
+        req.open('GET', url);
+        req.responseType = 'blob'
+
+        req.onload = function() {
+          // This is called even on 404 etc
+          // so check the status
+          if (req.status == 200) {
+            // Resolve the promise with the response text
+            resolve([req.response, url]);
+          }
+          else {
+            // Otherwise reject with the status text
+            // which will hopefully be a meaningful error
+            reject(Error(req.statusText));
+          }
+        };
+
+        // Handle network errors
+        req.onerror = function() {
+          reject(Error("Network Error"));
+        };
+
+        // Make the request
+        req.send();
+      });
+    }
+    
+    
+    function getTextData(entry) {
+      return new Promise(function(resolve, reject) {
+        if (entry == null) { resolve(null); return }
+        else {
+          entry.getData(new zip.TextWriter(), function(text) { resolve(text) });
+        }
+      });
+    }
+    
+    function getJSONData(entry) {
+      return new Promise(function(resolve, reject) {
+        if (entry == null) { resolve(null); return }
+        else {
+          entry.getData(new zip.TextWriter(), function(text) { resolve(JSON.parse(text)) });
+        }
+      });
+    }
+    
+    var primary_axis_pattern = {
+      "SPEC": /trajectoryData\/_q$/,
+      "BG": /trajectoryData\/_q$/,
+      "SLIT": /trajectoryData\/_q$/,
+      "ROCK": /sampleAngle\/softPosition$/
+    }
+    
+    function readData(entries, path) {
+      // first, get the attributes:
+      var attrs_file = path + ".attrs";
+      var attrs_entry = entries.filter(function(e,i,a) { return (e.filename == attrs_file) })
+      if (attrs_entry.length < 1) { throw "key error: " + attrs_file }
+      getTextData(attrs_entry[0]).then(function(a) { 
+        var attrs = JSON.parse(a);
+        if (attrs.binary) {
+          console.log("binary read not implemented yet");
+          return Promise.resolve(null);
+        }
+        else {
+          
+        }
+      });
+    }
+    function handleBlob(args) {
+      var url = args[1];
+      var blob = args[0];
+      return new Promise(function(resolve, reject) {
+        zip.createReader(new zip.BlobReader(blob), function(reader) {
+          // get all entries from the zip
+          reader.getEntries(function(entries) {
+            myentries = entries;
+            var columns = entries.filter(function(e, i, a) { return (/DAS_logs\/[^\/]+\/$/).test(e.filename) });
+            var entry_names = entries.filter(function(e, i, a) { return (/^[^\/]+\/$/).test(e.filename) }).map(function(e) {return e.filename.replace("/", "")});
+            var sample_names = entries.filter(function(e, i, a) { return (/DAS_logs\/sample\/name$/).test(e.filename) });
+            var scan_types = entries.filter(function(e, i, a) { return (/DAS_logs\/trajectoryData\/_scanType$/).test(e.filename) });
+            var q = entries.filter(function(e,i,a) { return (/trajectoryData\/_q$/).test(e.filename) });
+            var counts = entries.filter(function(e,i,a) { return (/counter\/liveROI$/).test(e.filename) });
+            var sout = {}, sequence = Promise.resolve();
+            sample_names.forEach(function(n) {
+              readData(entries, n.filename);
+              var entry_name = n.filename.split("/")[0];
+              sout[entry_name] = sout[entry_name] || {};
+              sequence = sequence.then(function() {return getTextData(n);})
+                .then(function(s) {
+                  sout[entry_name].samplename = s.trim();
+                });
+            });
+            //sn_req = sample_names.map(getTextData);
+            //pp.push(Promise.all(sn_req).then(function(s) {return s}));
+            scan_types.forEach(function(n) {
+              var entry_name = n.filename.split("/")[0];
+              sout[entry_name] = sout[entry_name] || {};
+              sequence = sequence.then(function() {return getTextData(n);})
+                .then(function(s) {
+                  sout[entry_name].scantype = s.trim();
+                });
+            });
+            
+            q.forEach(function(n) {
+              var entry_name = n.filename.split("/")[0];
+              sout[entry_name] = sout[entry_name] || {};
+              sequence = sequence.then(function() {return getTextData(n);})
+                .then(function(s) {
+                  sout[entry_name]._q = s.trim().split("\n").map(parseFloat);
+                });
+            });
+            
+            counts.forEach(function(n) {
+              var entry_name = n.filename.split("/")[0];
+              sout[entry_name] = sout[entry_name] || {};
+              sequence = sequence.then(function() {return getTextData(n);})
+                .then(function(s) {
+                  sout[entry_name].counts = s.trim().split("\n").map(parseFloat);
+                });
+            });
+            
+            sequence.then(function() { resolve(sout) });
+            /*
+            var ps = getTextData(sample_names[0]);
+            var pt = Promise.resolve(null);
+            //if (sample_names.length > 0) {
+            //  ps = ps.then(function() { return getTextData(sample_names[0]) });
+            //}
+            if (scan_types.length > 0) {                      
+              pt = pt.then(function() { return getTextData(scan_types[0]) });
+            }
+            var output = {};
+            ps
+              .then(function(s) { output.name = s.trimRight(); })
+            .then(function() {return pt})
+              .then(function(t) { output.type = t.trimRight(); })
+            .then(resolve(output));
+            */
+          });
+        }, function(error) {
+              reject(error); // onerror callback
+        });
+      });
+    }
+    
+    var rejectBlob = function(error) {
+      console.error("Failed!", error);
+    };
+    datafiles = files.filter(function(x) {return ((/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
+    var sequence = Promise.resolve();
+    datafiles.forEach(function(j) { sequence = sequence.then(function() { return getBlob("data/PBR/21222/data/" + j).then(handleBlob, rejectBlob).then(function(s) {fileinfo[j] = s}) })})
+    sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)});
+    
+    var get_name = function(filename) {
+      var xhr = new XMLHttpRequest();
+      xhr.responseType = 'blob';
+      xhr.open('GET', "data/PBR/21222/data/" + filename, true); // async
+
+      var promise = xhr.onload = function(e) {
+        if (this.status == 200) {
+          // get binary data as a response
+          var blob = this.response;
+          zip.createReader(new zip.BlobReader(blob), function(reader) {
+
+            // get all entries from the zip
+            reader.getEntries(function(entries) {
+              var columns = entries.filter(function(e, i, a) { return (/DAS_logs\/[^\/]+\/$/).test(e.filename) });
+              var sample_name = entries.filter(function(e, i, a) { return (/DAS_logs\/sample\/name$/).test(e.filename) });
+              var sn = sample_name[0].getData(new zip.TextWriter(), function(text) {console.log(text,  (new Date()).getTime() - start_time)});
+              //console.log(sample_name, (new Date()).getTime() - start_time);
+              //if (entries.length) {
+              if (false) {
+
+                // get first entry content as text
+                entries[0].getData(new zip.TextWriter(), function(text) {
+                  // text contains the entry data as a String
+                  console.log(text);
+
+                  // close the zip reader
+                  reader.close(function() {
+                    // onclose callback
+                  });
+
+                }, function(current, total) {
+                  // onprogress callback
+                });
+              }
+            });
+          }, function(error) {
+            // onerror callback
+          });
+        }
+      };
+      xhr.send(null);
+      return promise;
+    }
+    //for (var i=0; i<files.length; i+=10) {
+      //var i=0;
+      //$.when(files.slice(i,i+10).map(get_name), function(x) {console.log("batch: ", i)});
+    //};
+    files.slice(0,20).forEach(get_name);
+    var i=0;
+    function get_all_names(stepsize, i) {
+      console.log(i);
+      if (i > files.length) return;
+      var i = (i == null) ? 0 : i;
+      Promise.all(files.slice(i, i+stepsize).map(function(f) {return getBlob("data/PBR/21222/data/" + f).then(handleBlob, rejectBlob)}))
+        .then(get_all_names(stepsize, i+stepsize));
+    }
+    
+    var xhr2 = new XMLHttpRequest();
+    xhr2.open('GET', "data/CGD/smores38.nxs.cgd", true);
+    xhr2.responseType = 'blob';
+    var FS2 = new zip.fs.FS();
+    
+    xhr2.onload = function(e) {
+      console.log(e);
+      if (this.status == 200) {
+        // get binary data as a response
+        var blob = this.response;
+        FS2.importBlob(blob, function(e) {
+          FS2.find("unpolarized/DAS_logs/sampleAngle/softPosition").getText(function(x) {console.log(x.length, (new Date()).getTime() - start_time)})
+        });
+      }
+    };
+    function getTest() {
+      var xhr3 = new XMLHttpRequest();
+      xhr3.open('GET', "data/CGD/smores38.nxs.cgdt", true);
+      xhr3.responseType = 'blob';
+      xhr3.setRequestHeader( "pragma", "no-cache" );
+      var FS3 = new zip.fs.FS();
+      
+      xhr3.onload = function(e) {
+        console.log(e);
+        if (this.status == 200) {
+          // get binary data as a response
+          var blob = this.response;
+          FS3.importBlob(blob, function(e) {
+            FS3.find("unpolarized/DAS_logs/sampleAngle/softPosition").getText(function(x) {console.log(x, (new Date()).getTime() - start_time)})
+          });
+        }
+      };
+      xhr3.send();
+    }
+ 
+    xhr2.send();
+    //for (var i=0; i<20; i++) {
+    //  getTest()
+    //}    
+  </script>
+</head>
+<body>
+Unzip
+</body>
+</html>
+
+
