@@ -1,0 +1,248 @@
+nz = {};
+
+function dirname(path) {
+  var path = rstrip(path, "\/");
+  var pathlist = path.split("/")
+  return pathlist.slice(0, pathlist.length-1).join("/")
+}
+
+function rstrip(str, tostrip) {
+  var tostrip = (tostrip == null) ? "\\s" : tostrip;
+  var endregex = new RegExp(tostrip + tostrip + '*$')
+  return str.replace(endregex, '');
+}
+
+function lstrip(str, tostrip) {
+  var tostrip = (tostrip == null) ? '\\s' : tostrip;
+  var startregex = new RegExp('^' + tostrip + tostrip + '*');
+  return str.replace(startregex, '');
+}
+
+function strip (str, tostrip) {
+  return rstrip(lstrip(str, tostrip), tostrip);
+}
+
+nz.Node = function() {}; // base class
+nz.Node.prototype = {
+  _attrs_filename: ".attrs",
+  _link_filename: ".link",
+  
+  init: function(parent, path, nxclass) {
+    // handling of the arguments:
+    this.root = (parent == null) ? this : parent.root;
+    this.readonly = this.root.readonly;
+    this._attrs = null; // caching spot.
+    if (path[0] == "/") {
+      this.path = path;
+    } else {
+      this.path = rstrip(parent.path, "/") + "/" + path;
+    }
+    this.nxclass = nxclass;
+  },
+  
+  getAttrs: function() {
+    // use cached value if not null:
+    if (this._attrs != null) { return Promise.resolve(this._attrs) }
+    else { 
+      var that = this;
+      var attrs_promise = this.file_readText(lstrip(this.path + this._attrs_filename, "/"))
+        .then(function(a) { 
+          var attrs = JSON.parse(a);
+          that._attrs = attrs;
+          return attrs 
+        });
+      return attrs_promise;
+    };
+  },
+  
+  getLink: function() {
+    return this.file_readText(lstrip(this.path + this._link_filename, "/"))
+        .then(function(l) { return JSON.parse(l) });
+  },
+  
+  parent: function() {
+    return this.root.get(dirname(this.path));
+  },
+    
+  groupnames: function() {
+    return 
+  },
+  
+  keys: function() {
+    var nonkey_regex = /^[^\.]*$/;
+    return this.file_listdir().filter(nonkey_regex);
+  },
+  
+  contains: function(key) {
+    return this.file_exists(this.path + "/" + key);
+  },
+  
+  get: function(path) {
+    // convert to full path:
+    var path = (path[0] == "/") ? path : rstrip(this.path, "/") + "/" + path;
+    if (!(this.file_exists(path))) {
+      //throw "key error";
+      return Promise.resolve(null);
+    }
+    else if (this.file_isdir(path)) {
+      var g = new nz.Group();
+      g.init(this, path);
+      return Promise.resolve(g);
+    }
+    else if (this.file_exists(path + this._attrs_filename)) {
+      var f = new nz.Field();
+      f.init(this, path);
+      return Promise.resolve(f);
+    }
+    else if (this.file_exists(path + this._link_filename)) {
+      return this.getLink(path).then(function(linkinfo) {
+        return makeSoftLink(this, path, linkinfo.target);
+      });
+    }
+    else {
+      throw "unknown element type"
+    }
+  },
+  
+  file_isdir: function(path) {
+    var path = strip(path, "/") + "/";
+    // root path is "/"
+    return (path == "/" || path in this.root.zipfiles) 
+  },
+  
+  file_listdir: function(path) {
+    // abstraction for looking up paths
+    // should work for unpacked directories and packed zip archives
+    var path = (path == null) ? this.path : path;
+    path = strip(path, "/") + "/"; // never one on the left, always one on the right;
+    var path_regex = new RegExp('^' + path + "[^/]+/?$"); // some non-pathsep characters followed by optional single pathsep;
+    var filenames = Object.keys(this.root.zipfiles);
+    var direntries = filenames.filter(path_regex.test).map(function(fn) {return fn.replace(path_regex, '')});
+    return direntries;
+  },
+  
+  file_exists: function(path) {
+    var path = strip(path, "/");
+    return (path in this.root.zipfiles || (path + "/") in this.root.zipfiles)
+  },
+  
+  file_readText: function(path) {
+    // returns a Promise, to be resolved with the data.
+    var entry =  this.root.zipfiles[path];
+    return new Promise(function(resolve, reject) {
+      if (entry == null) { resolve(null); return }
+      else {
+        entry.getData(new zip.TextWriter(), function(text) { resolve(text) });
+      }
+    });    
+  },
+  
+  file_readBlob: function(path) {
+    // returns a Promise, to be resolved with the data.
+    var entry =  this.root.zipfiles[path];
+    return new Promise(function(resolve, reject) {
+      if (entry == null) { resolve(null); return }
+      else {
+        entry.getData(new zip.BlobWriter(), function(blob) { resolve(blob) });
+      }
+    });    
+  },
+  
+  file_getsize: function(path) {
+    var path = strip(path, "/");
+    var entry = this.root.zipfiles[path];
+    return (entry == null) ? null : entry.uncompressedSize;
+  }
+  
+}
+
+nz.File = function() { nz.Node.call(this); }
+nz.File.prototype = new nz.Node();
+nz.File.prototype.constructor = nz.File;
+nz.File.prototype.init = function(filename, zipentries) {
+  nz.Node.prototype.init.call(this, null, "/", "NXroot", {});
+  this.filename = filename;
+  this.mode = "r";
+  this.zipentries = zipentries;
+  this.zipfiles = {};
+  var fn, entry;
+  for (var i=0; i<zipentries.length; i++) {
+    entry = zipentries[i];
+    fn = entry.filename;   
+    this.zipfiles[fn] = entry;
+  } 
+}
+
+nz.Group = function() { nz.Node.call(this); }
+nz.Group.prototype = new nz.Node();
+nz.Group.prototype.constructor = nz.Group;
+nz.Group.prototype.init = function(node, path) {
+  nz.Node.prototype.init.call(this, node, path, "NXCollection");
+  // precache the attrs?
+  this.getAttrs();
+}
+
+nz.Field = function() {};
+nz.Field.prototype = {
+  _attrs_suffix: ".attrs",
+  
+  init: function(parent, path) {
+    this._attrs = null;
+    
+    this.root = parent.root;
+    if (path[0] == "/") {
+      this.path = path;
+    } else {
+      this.path = rstrip(parent.path, "/") + "/" + path;
+    }
+  },
+  
+  getAttrs: function() {
+    // use cached value if not null:
+    if (this._attrs != null) { return Promise.resolve(this._attrs) }
+    else { 
+      var that = this;
+      var attrs_promise = this.root.file_readText(lstrip(this.path + this._attrs_suffix, "/"))
+        .then(function(a) { 
+          var attrs = JSON.parse(a);
+          that._attrs = attrs;
+          return attrs 
+        });
+      return attrs_promise;
+    };
+  },
+  
+  getValue: function() {
+    var root = this.root,
+        path = lstrip(this.path, "/");
+    return this.getAttrs().then(function(attrs) {
+      if (attrs.binary) {
+        // do binary stuff using DataStream.js.
+        return root.file_readBlob(path).then(function(blob) {
+          return new Promise(function(resolve, reject) {
+            var fileReader = new FileReader();
+            fileReader.onload = function() {
+              resolve(this.result);
+            }
+            fileReader.onerror = function() {
+              reject(this.result);
+            }
+            fileReader.readAsArrayBuffer(blob);
+          });
+        });
+      }
+      else {
+        return root.file_readText(path).then(function(text) {
+          return d3.tsv.parseRows(text);
+        });
+      }
+    });
+  },
+  
+}
+
+nz.makeSoftLink = function(parent, path) {
+  parent.root.getLink
+}
+
+
