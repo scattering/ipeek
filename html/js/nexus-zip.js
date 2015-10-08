@@ -114,13 +114,26 @@ nz.Node.prototype = {
     return this.root.get(dirname(this.path));
   },
     
-  groupnames: function() {
-    return 
+  groupnames: function() {  
+    var that = this;
+    return this.keys().filter(function(fn) {return that.file_isdir(fn)});
+  },
+  
+  fieldnames: function() {
+    var that = this;
+    return this.keys().filter(function(fn) {return !(that.file_isdir(fn))});
   },
   
   keys: function() {
     var nonkey_regex = /^[^\.]*$/;
     return this.file_listdir().filter(function(fn) {return fn.indexOf(".") < 0});// nonkey_regex.test(fn)});
+  },
+  
+  items: function() {
+    var that = this;
+    return this.keys().map(function(fn) {
+      return [fn, that.get(fn)] 
+    });
   },
   
   contains: function(key) {
