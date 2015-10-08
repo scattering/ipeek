@@ -4,6 +4,7 @@
   <script src="js/zip/deflate.js"></script>
   <script src="js/zip/inflate.js"></script>
   <script src="js/zip/zip-fs.js"></script>
+  <script src="js/DataStream.js"></script>
   <script src="js/nexus-zip.js"></script>
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
   <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
@@ -171,7 +172,11 @@
     datafiles = files.filter(function(x) {return ((/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
     var sequence = Promise.resolve();
     datafiles.forEach(function(j) { sequence = sequence.then(function() { return getBlob("data/PBR/21222/data/" + j).then(handleBlob, rejectBlob).then(function(s) {fileinfo[j] = s}) })})
-    sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)});
+    sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
+        .then(function() {
+            var f = new nz.File().init("myfilename", myentries)
+            f.get("entry/DAS_logs/areaDetector/counts").then(getValue).then(function(s) {console.log(s.byteLength, (new Date()).getTime() - start_time)});
+        });
     
     var get_name = function(filename) {
       var xhr = new XMLHttpRequest();

@@ -1,4 +1,54 @@
+/* require("DataStream.js"); */
+
 nz = {};
+
+format_DataStream_types = {
+  "s": "readCString",
+  "c": "readUInt8Array",
+  "b": "readInt8Array",
+  "B": "readUInt8Array",
+  "h": "readInt16Array",
+  "H": "readUInt16Array",
+  "i": "readInt32Array",
+  "I": "readUInt32Array",
+  "l": "readInt32Array",
+  "L": "readUInt32Array",
+  "f": "readFloat32Array",
+  "d": "readFloat64Array"
+}
+
+format_types = {
+  "c": "Int",
+  "b": "Int", 
+  "h": "Int",
+  "i": "Int",
+  "l": "Int",
+  "f": "Float",
+  "d": "Float"
+}
+
+
+function fmt_to_DS(format_string) {
+  // match format string to required DataStream reader
+  //var endianness = endianness_lookup[format_string[0]];
+  var ft = format_string[1];
+  var bytes = parseInt(format_string[2]);
+  var type = format_types[ft.toLowerCase()];
+  var unsigned = (ft == ft.toUpperCase());
+  return "read" + ((unsigned)? "U" : "") + type + (bytes*8).toFixed() + "Array"; 
+}
+
+function fmt_endianness(format_string) {
+  if (format_string[0] == "<") {
+    return DataStream.LITTLE_ENDIAN;
+  }
+  else if (format_string[0] == ">") {
+    return DataStream.BIG_ENDIAN;
+  }
+  else {
+    throw "invalid format string: must start with < or >"
+  }
+}
 
 function dirname(path) {
   var path = rstrip(path, "\/");
@@ -55,8 +105,8 @@ nz.Node.prototype = {
     };
   },
   
-  getLink: function() {
-    return this.file_readText(lstrip(this.path + this._link_filename, "/"))
+  getLink: function(path) {
+    return this.file_readText(lstrip(path + this._link_filename, "/"))
         .then(function(l) { return JSON.parse(l) });
   },
   
@@ -70,7 +120,7 @@ nz.Node.prototype = {
   
   keys: function() {
     var nonkey_regex = /^[^\.]*$/;
-    return this.file_listdir().filter(nonkey_regex);
+    return this.file_listdir().filter(function(fn) {return fn.indexOf(".") < 0});// nonkey_regex.test(fn)});
   },
   
   contains: function(key) {
@@ -79,6 +129,7 @@ nz.Node.prototype = {
   
   get: function(path) {
     // convert to full path:
+    var that = this;
     var path = (path[0] == "/") ? path : rstrip(this.path, "/") + "/" + path;
     if (!(this.file_exists(path))) {
       //throw "key error";
@@ -96,7 +147,7 @@ nz.Node.prototype = {
     }
     else if (this.file_exists(path + this._link_filename)) {
       return this.getLink(path).then(function(linkinfo) {
-        return makeSoftLink(this, path, linkinfo.target);
+        return makeSoftLink(that, path, linkinfo.target);
       });
     }
     else {
@@ -114,10 +165,10 @@ nz.Node.prototype = {
     // abstraction for looking up paths
     // should work for unpacked directories and packed zip archives
     var path = (path == null) ? this.path : path;
-    path = strip(path, "/") + "/"; // never one on the left, always one on the right;
-    var path_regex = new RegExp('^' + path + "[^/]+/?$"); // some non-pathsep characters followed by optional single pathsep;
+    path = lstrip(rstrip(path, "/") + "/", "/"); // never one on the left, always one on the right;
+    var path_regex = new RegExp('^' + path + "([^/]+)/?$"); // some non-pathsep characters followed by optional single pathsep;
     var filenames = Object.keys(this.root.zipfiles);
-    var direntries = filenames.filter(path_regex.test).map(function(fn) {return fn.replace(path_regex, '')});
+    var direntries = filenames.filter(function(s) {return path_regex.test(s)}).map(function(fn) {return fn.match(path_regex)[1]});
     return direntries;
   },
   
@@ -171,6 +222,7 @@ nz.File.prototype.init = function(filename, zipentries) {
     fn = entry.filename;   
     this.zipfiles[fn] = entry;
   } 
+  return this;
 }
 
 nz.Group = function() { nz.Node.call(this); }
@@ -214,8 +266,13 @@ nz.Field.prototype = {
   
   getValue: function() {
     var root = this.root,
-        path = lstrip(this.path, "/");
-    return this.getAttrs().then(function(attrs) {
+        path = lstrip(this.path, "/"),
+        attrs,
+        format_string;
+        
+    return this.getAttrs().then(function(a) {
+      attrs = a;
+      format_string = attrs.format;
       if (attrs.binary) {
         // do binary stuff using DataStream.js.
         return root.file_readBlob(path).then(function(blob) {
@@ -229,6 +286,12 @@ nz.Field.prototype = {
             }
             fileReader.readAsArrayBuffer(blob);
           });
+        }).then(function(buf) {
+          var ds = new DataStream(buf);
+          ds.endianness = fmt_endianness(format_string);
+          var reader = fmt_to_DS(format_string);
+          var bytes_each = parseInt(format_string[2]);
+          return ds[reader](ds.byteLength / bytes_each);
         });
       }
       else {
@@ -241,8 +304,43 @@ nz.Field.prototype = {
   
 }
 
-nz.makeSoftLink = function(parent, path) {
-  parent.root.getLink
+function makeSoftLink(parent, path) {
+  return parent.root.getLink(path).then(function(linkinfo) {
+    var target = linkinfo.target;
+    return parent.root.get(target)
+  })
+  .then(function(target_obj) {
+    target_obj.orig_path = path;
+    return target_obj;
+  });
 }
 
+function getValue(field) {
+  return field.getValue();
+}
+
+function getAttrs(field) {
+  return field.getAttrs();
+}
+
+function logj(value) {
+  console.log(JSON.stringify(value));
+  return value;
+}
+
+/*
+'A': {en:m._EnArray, de:m._DeArray},
+'s': {en:m._EnString, de:m._DeString},
+'c': {en:m._EnChar, de:m._DeChar},
+'b': {en:m._EnInt, de:m._DeInt, len:1, bSigned:true, min:-Math.pow(2, 7), max:Math.pow(2, 7)-1},
+'B': {en:m._EnInt, de:m._DeInt, len:1, bSigned:false, min:0, max:Math.pow(2, 8)-1},
+'h': {en:m._EnInt, de:m._DeInt, len:2, bSigned:true, min:-Math.pow(2, 15), max:Math.pow(2, 15)-1},
+'H': {en:m._EnInt, de:m._DeInt, len:2, bSigned:false, min:0, max:Math.pow(2, 16)-1},
+'i': {en:m._EnInt, de:m._DeInt, len:4, bSigned:true, min:-Math.pow(2, 31), max:Math.pow(2, 31)-1},
+'I': {en:m._EnInt, de:m._DeInt, len:4, bSigned:false, min:0, max:Math.pow(2, 32)-1},
+'l': {en:m._EnInt, de:m._DeInt, len:4, bSigned:true, min:-Math.pow(2, 31), max:Math.pow(2, 31)-1},
+'L': {en:m._EnInt, de:m._DeInt, len:4, bSigned:false, min:0, max:Math.pow(2, 32)-1},
+'f': {en:m._En754, de:m._De754, len:4, mLen:23, rt:Math.pow(2, -24)-Math.pow(2, -77)},
+'d': {en:m._En754, de:m._De754, len:8, mLen:52, rt:0}};
+*/
 
