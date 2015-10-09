@@ -125,7 +125,7 @@ nz.Node.prototype = {
   },
   
   keys: function() {
-    var nonkey_regex = /^[^\.]*$/;
+    //var nonkey_regex = /^[^\.]*$/;
     return this.file_listdir().filter(function(fn) {return fn.indexOf(".") < 0});// nonkey_regex.test(fn)});
   },
   
@@ -307,7 +307,7 @@ nz.Field.prototype = {
           return ds[reader](ds.byteLength / bytes_each);
         });
       }
-      else {
+      else {        
         return root.file_readText(path).then(function(text) {
           return d3.tsv.parseRows(text);
         });
@@ -329,12 +329,15 @@ function makeSoftLink(parent, path) {
 }
 
 function getValue(field) {
-  return field.getValue();
+  if (field == null) { return null }
+  else return field.getValue();
 }
+nz.getValue = getValue
 
 function getAttrs(field) {
   return field.getAttrs();
 }
+nz.getAttrs = getAttrs;
 
 function logj(value) {
   console.log(JSON.stringify(value));
