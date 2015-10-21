@@ -98,8 +98,8 @@
             f = new nz.File().init(filename, entries);
             var filelist = Object.keys(f.zipfiles);
             tree = filelist_to_tree(filelist);
-            if ($("#plotdiv").jstree()) { $("#plotdiv").jstree().destroy() }
-            $("#plotdiv").jstree({
+            if ($("#treediv").jstree()) { $("#treediv").jstree().destroy() }
+            $("#treediv").jstree({
               plugins: ["sort"],
               sort: function(a,b) { 
                 var a_isdir = (a.slice(-1) == "/"),
@@ -110,7 +110,8 @@
               },
               core: {data: filelist_to_tree(filelist)}
             });
-            $("#plotdiv").bind("select_node.jstree", function (e, data) {
+            $("#fileid").html(filename);
+            $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
               var isdir = (id.slice(-1) == "/");
               if (!isdir) {
@@ -334,7 +335,7 @@ li.fileitem {
     color: blue;
     text-decoration: none;
 }
-div.plotdiv { 
+div.treediv { 
     height: 100%;
     margin-bottom: 50px;
     margin-right: 75px;
@@ -445,8 +446,7 @@ canvas {
     .ui-layout-north {
       background-color: #FFA500;
     }
-    #plotdiv {
-      height: 100%;
+    #treediv {
       margin-bottom: 50px;
     }
     .ui-layout-south {
@@ -466,8 +466,9 @@ canvas {
     </div>
 </div>
  
-<div id="plotpane" class="ui-layout-center">
-  <div id="plotdiv"></div>
+<div id="centerpane" class="ui-layout-center">
+  <div id="fileid"></div>
+  <div id="treediv"></div>
 </div>
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
