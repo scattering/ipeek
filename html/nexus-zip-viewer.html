@@ -115,7 +115,8 @@
               var id = $(data.node).attr("id");
               var isdir = (id.slice(-1) == "/");
               if (!isdir) {
-                f.get(id).then(nz.getValue).then(function(v) {$("#device_values").html("<pre>" + JSON.stringify(v, null, 2) + "</pre>")})
+                f.get(id).then(nz.getValue).then(function(v) {$("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")});
+                f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               } else {
                 data.instance.toggle_node(data.node); 
               }
@@ -284,7 +285,6 @@
       if (selected.length > 0) {
         var selection = selected.first();
         var path = '/pub/' + getCurrentPath();
-        console.log(selection, selection.parent().find('input'), selection.parent().find('input').attr("filename"));
         getNexusZip(path, selection.parent().find('input').attr("filename"));
       }
     }
@@ -472,6 +472,7 @@ canvas {
 </div>
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
+  <div id="device_attrs"></div>
 </div>
 
 </body>

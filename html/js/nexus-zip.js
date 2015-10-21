@@ -18,6 +18,7 @@ format_DataStream_types = {
 }
 
 format_types = {
+  "s": "String",
   "c": "Int",
   "b": "Int", 
   "h": "Int",
@@ -32,10 +33,14 @@ function fmt_to_DS(format_string) {
   // match format string to required DataStream reader
   //var endianness = endianness_lookup[format_string[0]];
   var ft = format_string[1];
-  var bytes = parseInt(format_string[2]);
-  var type = format_types[ft.toLowerCase()];
-  var unsigned = (ft == ft.toUpperCase());
-  return "read" + ((unsigned)? "U" : "") + type + (bytes*8).toFixed() + "Array"; 
+  if (ft.toLowerCase() == "s") { 
+    return "readCString" 
+  } else {
+    var bytes = parseInt(format_string[2]);
+    var type = format_types[ft.toLowerCase()];
+    var unsigned = (ft == ft.toUpperCase());
+    return "read" + ((unsigned)? "U" : "") + type + (bytes*8).toFixed() + "Array";
+  }
 }
 
 function fmt_endianness(format_string) {
@@ -309,7 +314,20 @@ nz.Field.prototype = {
       }
       else {        
         return root.file_readText(path).then(function(text) {
-          return d3.tsv.parseRows(text);
+          var accessor;
+          //if (attrs.format[1].toLowerCase() == "s") {
+          //  accessor = null; // use default passthrough
+          //} "s": "String"
+          if (/[fd]/.test(attrs.format[1].toLowerCase())) {
+            accessor = function(d) {return d.map(parseFloat)};
+          }
+          else if (/[cbhil]/.test(attrs.format[1].toLowerCase())) {
+            accessor = function(d) {return d.map(parseInt)};
+          }
+          else {
+            accessor = function(d) {return d};
+          }
+          return d3.tsv.parseRows(text, accessor);
         });
       }
     });
