@@ -158,7 +158,7 @@ nz.Node.prototype = {
       return f;
     }
     else if (this.file_exists(path + this._link_filename)) {
-      return makeSoftLink(this, path, this.getLink(path).target));
+      return makeSoftLink(this, path, this.getLink(path).target);
     }
     else {
       throw "unknown element type"
