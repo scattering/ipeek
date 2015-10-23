@@ -1,0 +1,477 @@
+<html>
+<head>
+  <script src="js/zip/jszip.min.js"></script>
+  <script src="js/zip/jszip-utils.min.js"></script>
+  <script src="js/DataStream.js"></script>
+  <script src="js/nexus-jszip.js"></script>
+  <script src="js/sha1.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="js/jquery.layout-latest.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+  <script type="text/javascript" src="/instruments/magik/jstree/dist/jstree.js"></script>
+  <script src="/instruments/magik/d3-science/xy-chart.js"></script>
+  <script type="text/javascript">
+    NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+    dirHelper = "/instruments/magik/listftpfiles.php";
+    data_path = ["ncnrdata"];
+    
+    //zip.workerScripts = {
+    //  deflater: ['js/zip/z-worker.js', 'js/zip/zlib.js', 'js/zip/zlib-asm/codecs.js'],
+    //  inflater: ['js/zip/z-worker.js', 'js/zip/zlib.js', 'js/zip/zlib-asm/codecs.js']
+    //};
+    //zip.workerScriptsPath = "js/zip/";
+    getUrlVars = function(){
+      var vars = [], hash;
+      var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+      for(var i = 0; i < hashes.length; i++) {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+      }
+      return vars;
+    }
+    
+    var start_time = (new Date()).getTime();
+    var fileinfo = {};
+    function getArrayBuffer(url) {
+      // Return a new promise.
+      return new Promise(function(resolve, reject) {
+        // Do the usual XHR stuff
+        var req = new XMLHttpRequest();
+        req.open('GET', url);
+        req.responseType = 'arraybuffer'
+
+        req.onload = function() {
+          // This is called even on 404 etc
+          // so check the status
+          if (req.status == 200) {
+            // Resolve the promise with the response text
+            resolve([req.response, url]);
+          }
+          else {
+            // Otherwise reject with the status text
+            // which will hopefully be a meaningful error
+            reject(Error(req.statusText));
+          }
+        };
+
+        // Handle network errors
+        req.onerror = function() {
+          reject(Error("Network Error"));
+        };
+
+        // Make the request
+        req.send();
+      });
+    }
+    
+    
+    function getTextData(entry) {
+      return new Promise(function(resolve, reject) {
+        if (entry == null) { resolve(null); return }
+        else {
+          entry.getData(new zip.TextWriter(), function(text) { resolve(text) });
+        }
+      });
+    }
+    
+    function getJSONData(entry) {
+      return new Promise(function(resolve, reject) {
+        if (entry == null) { resolve(null); return }
+        else {
+          entry.getData(new zip.TextWriter(), function(text) { resolve(JSON.parse(text)) });
+        }
+      });
+    }
+    
+    var primary_axis_pattern = {
+      "SPEC": /trajectoryData\/_q$/,
+      "BG": /trajectoryData\/_q$/,
+      "SLIT": /trajectoryData\/_q$/,
+      "ROCK": /sampleAngle\/softPosition$/
+    }
+    
+    function readData(entries, path) {
+      // first, get the attributes:
+      var attrs_file = path + ".attrs";
+      var attrs_entry = entries.filter(function(e,i,a) { return (e.filename == attrs_file) })
+      if (attrs_entry.length < 1) { throw "key error: " + attrs_file }
+      getTextData(attrs_entry[0]).then(function(a) { 
+        var attrs = JSON.parse(a);
+        if (attrs.binary) {
+          console.log("binary read not implemented yet");
+          return Promise.resolve(null);
+        }
+        else {
+          
+        }
+      });
+    }
+
+    function flatten(array) {
+      if (array.constructor.name == "Array") {
+        return flatten(array[0]);
+      }
+      else {
+        return array;
+      }
+    }
+    var nexus_objs = {};
+    
+    function handleZip(url, zip) {
+      var sout = {};
+      var f = new nz.File().init(url, f.files);
+      nexus_objs[url.split("/").slice(-1)] = f;
+      var entry_names = f.groupnames();
+      entry_names.forEach(function(entry) {
+          sout[entry] = sout[entry] || {};
+          sout[entry].samplename =  f.get(entry + "/sample/name").getValue()[0][0];
+          sout[entry].scantype =  f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
+        
+      });
+      console.log(entry_names);
+      return sout;
+    }
+    function handleAB(args) {
+      var url = args[1];
+      var ab = args[0];
+      var zip = new JSZip(ab);
+      console.log(zip);
+      var sout = {};
+      var f = new nz.File().init(url, zip.files);
+      nexus_objs[url.split("/").slice(-1)] = f;
+      var entry_names = f.groupnames();
+      entry_names.forEach(function(entry) {
+          sout[entry] = sout[entry] || {};
+          sout[entry].samplename = f.get(entry + "/sample/name").getValue()[0][0];
+          sout[entry].scantype = f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
+          sout[entry].counts = f.get(entry + "/DAS_logs/counter/liveROI").getValue().reduce(function(a, b) {return a.concat(b)});
+        
+      });
+      console.log(entry_names);
+      return sout;
+    }
+    
+    var rejectAB = function(error) {
+      console.error("Failed!", error);
+    };
+    
+    function finfo_to_tree(finfo){
+      var out = [], sample_names = {};
+      for (var fn in finfo) {
+        var fn_info = finfo[fn];
+        for (var entry in fn_info) {
+          var info = fn_info[entry];        
+          var samplename = info.samplename,
+              scantype = info.scantype;
+          sample_names[samplename] = sample_names[samplename] || {};
+          sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
+          sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {};
+          out.push({"id": fn+":"+entry, "parent": fn, "text": fn + ":" + entry, "icon": false});
+        }
+      }
+      for (var sn in sample_names) {
+        out.push({"id": sn, "parent": "#", "text": sn});
+        var sample_obj = sample_names[sn];
+        for (var t in sample_obj) {
+          var type_obj = sample_obj[t];
+          out.push({"id": sn + ":" + t, "parent": sn, "text": t});
+          for (var fn in type_obj) {
+            out.push({"id": fn, "parent": sn + ":" + t, "text": fn, "icon": false});
+          }
+        }
+      }
+      return out;
+    }
+    
+    function categorize_files(files, path) {
+      var t0 = new Date();
+      var tree_entries = [],
+          file_names = {};
+      var datafiles = files.filter(function(x) {return (/\.nxz\.pbr$/.test(x) && (/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
+      var sequence = Promise.resolve();
+      datafiles.forEach(function(j) { 
+        sequence = sequence.then(function() { 
+          return getArrayBuffer(path + "/" + j).then(handleAB, rejectAB).then(function(s) {
+          fileinfo[j] = s}) })
+      });
+      sequence.then(function() { 
+        //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
+        var treeinfo = finfo_to_tree(fileinfo);
+        console.log(treeinfo);
+        $("#filebrowser").jstree({
+          "plugins": ["checkbox"],
+          "checkbox" : {
+            "two_state": true
+          }, 
+          "core": {"data": treeinfo}
+        });
+        $("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
+        
+        console.log(new Date() - t0);
+      });
+    }
+    
+    function getCurrentPath() {
+      var path = "";
+      $(".patheditor span").each(function(i,v) {
+        path += $(v).text();
+      });
+      return path;      
+    }
+    
+    function updateFileBrowserPane(target_id, pathlist) {
+        function handler(dirdata) {
+            var buttons = $("<div />", {class: "buttons"});
+            //var clear_all = $("<button />", {
+            //    text: "clear all"
+            //});
+            //clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
+            var download_all = $("<button />", {
+                text: "download selected"
+            });
+            download_all.click(function() {
+                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            });
+            buttons
+              //.append(clear_all)
+              .append(download_all);
+        
+            var files = dirdata.files;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+            
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
+            var subdiritem, dirlink, new_pathlist;
+            if (pathlist.length > 0) {               
+                var new_pathlist = $.extend(true, [], pathlist);
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/";
+                    dirlink.onclick = function() {
+                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                    }
+                    patheditor.appendChild(dirlink);
+                });
+            }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
+            dirdata.subdirs.reverse();
+            $.each(dirdata.subdirs, function(index, subdir) {
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "(dir) " + subdir;
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.push(subdir);
+                subdiritem.onclick = function() {
+                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                dirbrowser.appendChild(subdiritem);
+            });
+            var filebrowser = document.createElement('div');
+            filebrowser.id = "filebrowser";
+            filebrowser.classList.add("tablesorter");
+            
+            
+            $('#' + target_id).empty()
+              .append(buttons)
+              .append(patheditor)
+              .append(dirbrowser)
+              .append(filebrowser);
+            
+            categorize_files(files, "/pub/" + pathlist.join("/"));
+            
+            //$(dirbrowser).selectable({
+            //    filter:'td', 
+            //    stop: handleSelection
+            //});
+            //$(filebrowser).tablesorter();
+        }   
+        return handler
+    }
+    
+    function handleSelection() {console.log(selection)};
+    
+    function plot(nf) {
+      var plottables = nf.items().map(function(en) {
+        var entryname = en[0],
+            entry = en[1];
+        var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
+        var xcol, ycol, xdata, ydata;
+        if (ycols.length > 0) {
+          xcol = ycols[0][1].getAttrs().axes;
+          ycol = ycols[0][0];
+          ydata = ycols[0][1].getValue();
+          xdata = entry.get("DAS_logs/" + xcol).getValue();
+        }
+        return [xdata, ydata];
+      });
+    }
+    
+    window.onpopstate = function(e) {
+      var start_path = $.extend(true, [], data_path),
+          url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+          start_path = url_vars.pathlist.split("+");
+      }
+      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+    }
+    
+    window.onpopstate(); // call it on first load, too!
+        
+    window.onload = function() {
+      var layout = $('body').layout({
+          west__size:			350
+        ,	east__size:			0
+        ,   south__size:        "auto"
+          // RESIZE Accordion widget when panes resize
+        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+		  });
+		
+      //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
+      $("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
+      $("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
+      //sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
+    }  
+    
+  </script>
+  <style type="text/css">
+    svg,
+    canvas {
+      position: absolute;
+      image-rendering: optimizeSpeed;
+      image-rendering: crisp-edges;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: optimize-contrast;
+      -ms-interpolation-mode: nearest-neighbor;
+    }
+
+    .axis-label {
+      font-size: 18px;
+    }
+
+    .axis .tick text {
+      font-size: 14px;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+
+
+    .grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+    }
+    .grid path {
+          stroke-width: 0;
+    }
+    .grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+        shape-rendering: crispEdges;
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+     
+    .grid path {
+        stroke-width: 0;
+        fill: none;
+    }
+     
+
+     
+    .axis .axis-label {
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+
+    .legend, .tick {
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+     
+    .line {
+        fill: none;
+        stroke-width: 1.5px;
+    }
+    
+    .highlight {
+        stroke-width: 4.5px;
+    }
+     
+    .dot {
+        /* consider the stroke-with the mouse detect radius? */
+        stroke: transparent;
+        stroke-width: 10px;  
+        cursor: pointer;
+    }
+     
+    .dot:hover {
+        stroke: rgba(68, 127, 255, 0.3);
+    }
+    
+    rect {
+      fill: none;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+
+    rect.zoom {
+      stroke: steelblue;
+      fill-opacity: 0.5;
+    }
+    .ui-layout-north {
+      background-color: yellow;
+    }
+    #plotdiv {
+      height: 100%;
+      margin-bottom: 50px;
+    }
+    .ui-layout-south {
+      text-align: center;
+    }
+</style>
+</head>
+<body>
+<div id="navigation" class="ui-layout-wrapper ui-layout-west">
+</div>
+<div id="bottom_panel" class="ui-layout-south">
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="statusline">Reflectometry reduction</span>
+        <span id="instrument_name" class="instrument-name"></span>
+    </div>
+</div>
+ 
+<div id="centerpane" class="ui-layout-center">
+  <div id="plotdov"></div>
+</div>
+<div id="right" class="ui-layout-east">
+  <div id="device_values"></div>
+  <div id="device_attrs"></div>
+</div>
+
+</body>
+</html>
+
+

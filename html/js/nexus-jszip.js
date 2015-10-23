@@ -99,7 +99,7 @@ nz.Node.prototype = {
   getAttrs: function() {
     // use cached value if not null:
     if (this._attrs == null) { 
-      var attrs = JSON.parse(this.file_readText(lstrip(this.path + this._attrs_filename, "/")));
+      var attrs = JSON.parse(this.file_readText(lstrip(this.path + "/" + this._attrs_filename, "/")));
       this._attrs = attrs;
     };
     return this._attrs;
@@ -243,17 +243,11 @@ nz.Field.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs != null) { return Promise.resolve(this._attrs) }
-    else { 
-      var that = this;
-      var attrs_promise = this.root.file_readText(lstrip(this.path + this._attrs_suffix, "/"))
-        .then(function(a) { 
-          var attrs = JSON.parse(a);
-          that._attrs = attrs;
-          return attrs 
-        });
-      return attrs_promise;
+    if (this._attrs == null) { 
+      var attrs = JSON.parse(this.root.file_readText(lstrip(this.path + this._attrs_suffix, "/")));
+      this._attrs = attrs;
     };
+    return this._attrs;
   },
   
   getValue: function() {
@@ -285,21 +279,18 @@ nz.Field.prototype = {
       else {
         accessor = function(d) {return d};
       }
-      return d3.tsv.parseRows(text, accessor); 
+      return d3.tsv.parseRows(valstr, accessor); 
     }
   },
   
 }
 
 function makeSoftLink(parent, path) {
-  return parent.root.getLink(path).then(function(linkinfo) {
-    var target = linkinfo.target;
-    return parent.root.get(target)
-  })
-  .then(function(target_obj) {
-    target_obj.orig_path = path;
-    return target_obj;
-  });
+  var linkinfo = parent.root.getLink(path);
+  var target = linkinfo.target;
+  var target_obj = parent.root.get(target);
+  target_obj.orig_path = path;
+  return target_obj;
 }
 
 function getValue(field) {
