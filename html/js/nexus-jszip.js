@@ -93,6 +93,8 @@ nz.Node.prototype = {
       this.path = path;
     } else {
       this.path = rstrip(parent.path, "/") + "/" + path;
+      // add paths to cache... useful later.
+      this.root._cache[this.path] = null;
     }
     this.nxclass = nxclass;
   },
@@ -324,6 +326,18 @@ nz.getAttrs = getAttrs;
 function logj(value) {
   console.log(JSON.stringify(value));
   return value;
+}
+
+nz.cacheAll = function(node) {
+  node.getAttrs();
+  var itemname, itemobj, items = node.items();
+  items.forEach(function(item,i) {
+    itemname = item[0];
+    itemobj = item[1];
+    itemobj.getAttrs();
+    if (itemobj.items) { nz.cacheAll(itemobj) }
+    else if (itemobj.getValue) { itemobj.getValue(); }
+  });
 }
 
 /*
