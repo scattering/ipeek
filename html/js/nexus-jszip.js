@@ -238,7 +238,7 @@ nz.Group.prototype.init = function(node, path) {
   nz.Node.prototype.init.call(this, node, path, "NXCollection");
   // precache the attrs?
   this.getAttrs();
-  this.root._cache[lstrip(this.path, "/")] = null;
+  this.root._cache[strip(this.path, "/") + "/"] = null;
 }
 
 nz.Field = function() {};
