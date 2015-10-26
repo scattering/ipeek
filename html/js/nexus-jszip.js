@@ -93,10 +93,10 @@ nz.Node.prototype = {
       this.path = path;
     } else {
       this.path = rstrip(parent.path, "/") + "/" + path;
-      // add paths to cache... useful later.
-      this.root._cache[this.path] = null;
     }
     this.nxclass = nxclass;
+    // add paths to cache... useful later.
+    this.root._cache[this.path] = null;
   },
   
   getAttrs: function() {
