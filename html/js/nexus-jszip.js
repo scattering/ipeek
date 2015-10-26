@@ -1,7 +1,7 @@
 /* require("DataStream.js"); */
 /* require("jszip.js"); */
 
-nz = {};
+nz = {"version", 1};
 
 format_DataStream_types = {
   "s": "readCString",
@@ -246,9 +246,7 @@ nz.Field.prototype = {
   _attrs_suffix: ".attrs",
   _type: "Field",
   
-  init: function(parent, path) {
-    this._attrs = null;
-    
+  init: function(parent, path) {    
     this.root = parent.root;
     if (path[0] == "/") {
       this.path = path;
@@ -341,6 +339,7 @@ nz.cacheAll = function(node) {
     if (itemobj.items) { nz.cacheAll(itemobj) }
     else if (itemobj.getValue) { itemobj.getValue(); }
   });
+  return node._cache;
 }
 
 /*
