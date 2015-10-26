@@ -94,9 +94,7 @@ nz.Node.prototype = {
     } else {
       this.path = rstrip(parent.path, "/") + "/" + path;
     }
-    this.nxclass = nxclass;
-    // add paths to cache... useful later.
-    this.root._cache[this.path] = null;
+    this.nxclass = nxclass;    
   },
   
   getAttrs: function() {
@@ -177,7 +175,7 @@ nz.Node.prototype = {
   file_isdir: function(path) {
     var path = strip(path, "/") + "/";
     // root path is "/"
-    return (path == "/" || path in this.root.filenames) 
+    return (path == "/" || path in this.root._cache || path in this.root.filenames) 
   },
   
   file_listdir: function(path) {
@@ -193,11 +191,15 @@ nz.Node.prototype = {
   
   file_exists: function(path) {
     var path = strip(path, "/");
-    return (path in this.root.filenames || (path + "/") in this.root.filenames)
+    return ( path in this.root._cache ||
+             (path + "/") in this.root._cache ||
+              path in this.root.filenames || 
+             (path + "/") in this.root.filenames )
   },
   
   file_readText: function(path) {
     // returns a Promise, to be resolved with the data.
+    // filenames in zip file do not have leading "/":
     var entry =  this.root.filenames[path];
     return entry.asText();
   },
@@ -219,12 +221,12 @@ nz.File = function() { nz.Node.call(this); }
 nz.File.prototype = new nz.Node();
 nz.File.prototype.constructor = nz.File;
 nz.File.prototype._type = "File"
-nz.File.prototype.init = function(zipfilename, filenames) {
-  this._cache = {};
+nz.File.prototype.init = function(zipfilename, filenames, cache) {
+  this._cache = cache || {};
   nz.Node.prototype.init.call(this, null, "/", "NXroot", {});
   this.zipfilename = zipfilename;
   this.mode = "r";
-  this.filenames = filenames;
+  this.filenames = filenames || {};
   return this;
 }
 
@@ -236,6 +238,7 @@ nz.Group.prototype.init = function(node, path) {
   nz.Node.prototype.init.call(this, node, path, "NXCollection");
   // precache the attrs?
   this.getAttrs();
+  this.root._cache[lstrip(this.path, "/")] = null;
 }
 
 nz.Field = function() {};
@@ -256,7 +259,7 @@ nz.Field.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    var attrs_path = lstrip(this.path + this._attrs_suffix, "/");
+    var attrs_path = lstrip(this.path + this._attrs_suffix, "/"); 
     if (this.root._cache[attrs_path] == null) {     
       var attrs = JSON.parse(this.root.file_readText(attrs_path));
       this.root._cache[attrs_path] = attrs;
