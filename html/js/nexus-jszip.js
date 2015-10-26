@@ -220,11 +220,11 @@ nz.File.prototype = new nz.Node();
 nz.File.prototype.constructor = nz.File;
 nz.File.prototype._type = "File"
 nz.File.prototype.init = function(zipfilename, filenames) {
+  this._cache = {};
   nz.Node.prototype.init.call(this, null, "/", "NXroot", {});
   this.zipfilename = zipfilename;
   this.mode = "r";
   this.filenames = filenames;
-  this._cache = {};
   return this;
 }
 
