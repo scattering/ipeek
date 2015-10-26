@@ -108,7 +108,7 @@ nz.Node.prototype = {
   },
   
   getLink: function(path) {
-    var link_path = lstrip(this.path + "/" + this._link_filename, "/");
+    var link_path = lstrip(path + this._link_filename, "/");
     if (this.root._cache[link_path] == null) {     
       var link = JSON.parse(this.file_readText(link_path));
       this.root._cache[link_path] = link;
@@ -222,6 +222,7 @@ nz.File.prototype.init = function(zipfilename, filenames) {
   this.zipfilename = zipfilename;
   this.mode = "r";
   this.filenames = filenames;
+  this._cache = {};
   return this;
 }
 
