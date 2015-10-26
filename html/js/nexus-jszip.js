@@ -1,7 +1,7 @@
 /* require("DataStream.js"); */
 /* require("jszip.js"); */
 
-nz = {"version", 1};
+nz = {"version": 1};
 
 format_DataStream_types = {
   "s": "readCString",
