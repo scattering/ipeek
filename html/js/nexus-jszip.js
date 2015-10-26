@@ -256,7 +256,7 @@ nz.Field.prototype = {
     // use cached value if not null:
     var attrs_path = lstrip(this.path + this._attrs_suffix, "/");
     if (this.root._cache[attrs_path] == null) {     
-      var attrs = JSON.parse(this.file_readText(attrs_path));
+      var attrs = JSON.parse(this.root.file_readText(attrs_path));
       this.root._cache[attrs_path] = attrs;
     };
     return this.root._cache[attrs_path];
