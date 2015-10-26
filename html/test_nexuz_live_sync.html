@@ -219,7 +219,7 @@
       var sequence = Promise.resolve();
       datafiles.forEach(function(j) { 
         sequence = sequence.then(function() { 
-          return getArrayBuffer(path + "/" + j).then(handleAB, rejectAB) //.then(function(s) {fileinfo[j] = s}) 
+          return getArrayBuffer(path, j).then(handleAB, rejectAB) //.then(function(s) {fileinfo[j] = s}) 
         })
       });
       datafiles.forEach(function(j) {
