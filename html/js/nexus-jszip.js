@@ -82,12 +82,13 @@ nz.Node = function() {}; // base class
 nz.Node.prototype = {
   _attrs_filename: ".attrs",
   _link_filename: ".link",
+  _type: "Node",
   
   init: function(parent, path, nxclass) {
     // handling of the arguments:
+    // if _cache is not null, populate the cache for this node
     this.root = (parent == null) ? this : parent.root;
     this.readonly = this.root.readonly;
-    this._attrs = null; // caching spot.
     if (path[0] == "/") {
       this.path = path;
     } else {
@@ -98,15 +99,21 @@ nz.Node.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs == null) { 
-      var attrs = JSON.parse(this.file_readText(lstrip(this.path + "/" + this._attrs_filename, "/")));
-      this._attrs = attrs;
+    var attrs_path = lstrip(this.path + "/" + this._attrs_filename, "/");
+    if (this.root._cache[attrs_path] == null) {     
+      var attrs = JSON.parse(this.file_readText(attrs_path));
+      this.root._cache[attrs_path] = attrs;
     };
-    return this._attrs;
+    return this.root._cache[attrs_path];
   },
   
   getLink: function(path) {
-    return JSON.parse(this.file_readText(lstrip(path + this._link_filename, "/")));
+    var link_path = lstrip(this.path + "/" + this._link_filename, "/");
+    if (this.root._cache[link_path] == null) {     
+      var link = JSON.parse(this.file_readText(link_path));
+      this.root._cache[link_path] = link;
+    };
+    return this.root._cache[link_path];
   },
   
   parent: function() {
@@ -168,7 +175,7 @@ nz.Node.prototype = {
   file_isdir: function(path) {
     var path = strip(path, "/") + "/";
     // root path is "/"
-    return (path == "/" || path in this.root.zipfiles) 
+    return (path == "/" || path in this.root.filenames) 
   },
   
   file_listdir: function(path) {
@@ -177,30 +184,30 @@ nz.Node.prototype = {
     var path = (path == null) ? this.path : path;
     path = lstrip(rstrip(path, "/") + "/", "/"); // never one on the left, always one on the right;
     var path_regex = new RegExp('^' + path + "([^/]+)/?$"); // some non-pathsep characters followed by optional single pathsep;
-    var filenames = Object.keys(this.root.zipfiles);
+    var filenames = Object.keys(this.root.filenames);
     var direntries = filenames.filter(function(s) {return path_regex.test(s)}).map(function(fn) {return fn.match(path_regex)[1]});
     return direntries;
   },
   
   file_exists: function(path) {
     var path = strip(path, "/");
-    return (path in this.root.zipfiles || (path + "/") in this.root.zipfiles)
+    return (path in this.root.filenames || (path + "/") in this.root.filenames)
   },
   
   file_readText: function(path) {
     // returns a Promise, to be resolved with the data.
-    var entry =  this.root.zipfiles[path];
+    var entry =  this.root.filenames[path];
     return entry.asText();
   },
   
   file_readArrayBuffer: function(path) {
-    var entry = this.root.zipfiles[path];
+    var entry = this.root.filenames[path];
     return entry.asArrayBuffer();
   },
   
   file_getsize: function(path) {
     var path = strip(path, "/");
-    var entry = this.root.zipfiles[path];
+    var entry = this.root.filenames[path];
     return (entry == null) ? null : entry.uncompressedSize;
   }
   
@@ -209,17 +216,19 @@ nz.Node.prototype = {
 nz.File = function() { nz.Node.call(this); }
 nz.File.prototype = new nz.Node();
 nz.File.prototype.constructor = nz.File;
-nz.File.prototype.init = function(filename, zipfiles) {
+nz.File.prototype._type = "File"
+nz.File.prototype.init = function(zipfilename, filenames) {
   nz.Node.prototype.init.call(this, null, "/", "NXroot", {});
-  this.filename = filename;
+  this.zipfilename = zipfilename;
   this.mode = "r";
-  this.zipfiles = zipfiles;
+  this.filenames = filenames;
   return this;
 }
 
 nz.Group = function() { nz.Node.call(this); }
 nz.Group.prototype = new nz.Node();
 nz.Group.prototype.constructor = nz.Group;
+nz.Group.prototype._type = "Group"
 nz.Group.prototype.init = function(node, path) {
   nz.Node.prototype.init.call(this, node, path, "NXCollection");
   // precache the attrs?
@@ -229,6 +238,7 @@ nz.Group.prototype.init = function(node, path) {
 nz.Field = function() {};
 nz.Field.prototype = {
   _attrs_suffix: ".attrs",
+  _type: "Field",
   
   init: function(parent, path) {
     this._attrs = null;
@@ -243,45 +253,51 @@ nz.Field.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs == null) { 
-      var attrs = JSON.parse(this.root.file_readText(lstrip(this.path + this._attrs_suffix, "/")));
-      this._attrs = attrs;
+    var attrs_path = lstrip(this.path + this._attrs_suffix, "/");
+    if (this.root._cache[attrs_path] == null) {     
+      var attrs = JSON.parse(this.file_readText(attrs_path));
+      this.root._cache[attrs_path] = attrs;
     };
-    return this._attrs;
+    return this.root._cache[attrs_path];
   },
   
+  
   getValue: function() {
-    var root = this.root,
-        path = lstrip(this.path, "/"),
-        attrs,
-        format_string;
-    
-    var attrs = this.getAttrs();
-    format_string = attrs.format;
-    if (attrs.binary) {
-      // returns deferred
-      var buf = root.file_readArrayBuffer(path);
-      var ds = new DataStream(buf);
-      ds.endianness = fmt_endianness(format_string);
-      var reader = fmt_to_DS(format_string);
-      var bytes_each = parseInt(format_string[2]);
-      return ds[reader](ds.byteLength / bytes_each);
+    var value_path = lstrip(this.path, "/");
+    if (this.root._cache[value_path] == null) {     
+      var root = this.root,
+          path = lstrip(this.path, "/"),
+          attrs,
+          format_string;
+      
+      var attrs = this.getAttrs();
+      format_string = attrs.format;
+      if (attrs.binary) {
+        // returns deferred
+        var buf = root.file_readArrayBuffer(path);
+        var ds = new DataStream(buf);
+        ds.endianness = fmt_endianness(format_string);
+        var reader = fmt_to_DS(format_string);
+        var bytes_each = parseInt(format_string[2]);
+        this.root._cache[value_path] = ds[reader](ds.byteLength / bytes_each);
+      }
+      else {    
+        var valstr = root.file_readText(path);
+        var accessor;
+        if (/[fd]/.test(attrs.format[1].toLowerCase())) {
+          accessor = function(d) {return d.map(parseFloat)};
+        }
+        else if (/[cbhil]/.test(attrs.format[1].toLowerCase())) {
+          accessor = function(d) {return d.map(parseInt)};
+        }
+        else {
+          accessor = function(d) {return d};
+        }
+        this.root._cache[value_path] = d3.tsv.parseRows(valstr, accessor); 
+      }
     }
-    else {    
-      var valstr = root.file_readText(path);
-      var accessor;
-      if (/[fd]/.test(attrs.format[1].toLowerCase())) {
-        accessor = function(d) {return d.map(parseFloat)};
-      }
-      else if (/[cbhil]/.test(attrs.format[1].toLowerCase())) {
-        accessor = function(d) {return d.map(parseInt)};
-      }
-      else {
-        accessor = function(d) {return d};
-      }
-      return d3.tsv.parseRows(valstr, accessor); 
-    }
-  },
+    return this.root._cache[value_path];
+  }
   
 }
 

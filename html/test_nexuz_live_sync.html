@@ -307,13 +307,14 @@
         var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
         var xcol, ycol, xdata, ydata;
         if (ycols.length > 0) {
-          xcol = ycols[0][1].getAttrs().axes;
+          xcol = ycols[0][1].getAttrs().axes; //.replace("_", "/");
           ycol = ycols[0][0];
           ydata = ycols[0][1].getValue();
           xdata = entry.get("DAS_logs/" + xcol).getValue();
         }
         return [xdata, ydata];
       });
+      return plottables;
     }
     
     window.onpopstate = function(e) {
