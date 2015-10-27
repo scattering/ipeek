@@ -364,25 +364,34 @@
     
     function handleSelection() {console.log(selection)};
     
-    function plot(nf) {
-      var plottables = nf.items().map(function(en) {
-        var entryname = en[0],
-            entry = en[1];
-        var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
-        var xcol, ycol, xdata, ydata;
-        if (ycols.length > 0) {
-          xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
-          ycol = ycols[0][0];
-          ydata = ycols[0][1].getValue();
-          xdata = entry.get("DAS_logs/" + xcol).getValue();
+    function plot(nzs) {
+      var series = new Array();
+      var options = {series: series, legend: {show: true, left: 150}}, datas = [];
+      nzs.forEach(function(nf) {
+        var filename = nf.zipfilename.split("/").slice(-1).join("");
+        var items = nf.items();
+        for (var i in items) {
+          var en = items[i];
+          var entryname = en[0],
+              entry = en[1];
+          var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
+          var xcol, ycol, xdata, ydata;
+          if (ycols.length > 0) {
+            xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
+            ycol = ycols[0][0];
+            ydata = ycols[0][1].getValue();
+            xdata = entry.get("DAS_logs/" + xcol).getValue();
+          }
+          var xydata = [], x, y;
+          for (var i=0; i<xdata.length || i<ydata.length; i++) {
+            xydata[i] = xdata[i].concat(ydata[i]);
+          }
+          datas.push(xydata);
+          options.series.push({label: filename + ":" + entryname});
         }
-        var xydata = [], x, y;
-        for (var i=0; i<xdata.length || i<ydata.length; i++) {
-          xydata[i] = xdata[i].concat(ydata[i]);
-        }
-        return xydata;
       });
-      return plottables;
+    
+      return {options: options, data: datas};
     }
     
     window.onpopstate = function(e) {
