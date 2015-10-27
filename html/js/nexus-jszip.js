@@ -112,6 +112,8 @@ nz.Node.prototype = {
     if (this.root._cache[link_path] == null) {     
       var link = JSON.parse(this.file_readText(link_path));
       this.root._cache[link_path] = link;
+      // make sure there's an entry for the bare filename, too...
+      this.root._cache[lstrip(path, "/")] = null;
     };
     return this.root._cache[link_path];
   },

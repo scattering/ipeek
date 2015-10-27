@@ -38,7 +38,7 @@
     
     var start_time = (new Date()).getTime();
     var fileinfo;
-    function getArrayBuffer(base_url, filename) {
+    function getArrayBuffer(base_url, filename, mtime) {
       // Return a new promise.
       var url = base_url + "/" + filename;
       return new Promise(function(resolve, reject) {
@@ -52,7 +52,7 @@
           // so check the status
           if (req.status == 200) {
             // Resolve the promise with the response text
-            resolve([req.response, url]);
+            resolve([req.response, url, mtime]);
           }
           else {
             // Otherwise reject with the status text
@@ -140,18 +140,22 @@
       return sout;
     }
     function handleAB(args) {
-      var url = args[1];
-      var ab = args[0];
+      var url = args[1],
+          ab = args[0],
+          mtime = args[2];
+      
       var zip = new JSZip(ab);
-      console.log(zip);
-      var sout = {};
+      //console.log(zip);
       var f = new nz.File().init(url, zip.files);
+      f.mtime = mtime;
       //nexus_objs[url.split("/").slice(-1)] = f;
       nexus_objs[url] = f;
+      console.log(url);
     }
     
     function get_info(nz_obj) {
-      var f = nz_obj;
+      var f = nz_obj, sout = {};
+      console.log(f);
       var entry_names = f.groupnames();
       entry_names.forEach(function(entry) {
           sout[entry] = sout[entry] || {};
@@ -209,21 +213,32 @@
     //db.filenames.where("url").equalsIgnoreCase("http://ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
     // .each returns a Promise, resolved with "undefined" after last iteration is complete.
 
-    function categorize_files(files, path) {
+    function categorize_files(files, files_metadata, path) {
       var t0 = new Date();
       var tree_entries = [],
           file_names = {},
-          nexus_objs = {},
           fileinfo = {};
       var datafiles = files.filter(function(x) {return (/\.nxz\.pbr$/.test(x) && (/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
       var sequence = Promise.resolve();
       datafiles.forEach(function(j) { 
         sequence = sequence.then(function() { 
-          return getArrayBuffer(path, j).then(handleAB, rejectAB) //.then(function(s) {fileinfo[j] = s}) 
+          return db.filenames.where("url").equals(path + "/" + j).first(function(c) {
+            if (c == undefined) { return getArrayBuffer(path, j, files_metadata[j].mtime).then(handleAB, rejectAB)  } //.then(function(s) {fileinfo[j] = s}) 
+            else { // load from cached version in db:
+              var url = path + "/" + j;
+              var f = new nz.File().init(url, c.data, c.data);
+              f.mtime = files_metadata[j].mtime;
+              //nexus_objs[url.split("/").slice(-1)] = f;
+              nexus_objs[url] = f;
+              return 
+            }
+          })
         })
       });
       datafiles.forEach(function(j) {
         sequence = sequence.then(function() {
+          console.log(path + "/" + j, nexus_objs);
+          
           fileinfo[j] = get_info(nexus_objs[path + "/" + j]);
         })
       });
@@ -246,6 +261,10 @@
     }
     
     function cache_nexus_objs(nzobjs) {
+      for (var url in nzobjs) {
+        var nxz = nzobjs[url];
+        db.filenames.put({url: url, mtime: nxz.mtime, data: nz.cacheAll(nxz)});
+      }
     }
     
     function getCurrentPath() {
@@ -273,7 +292,8 @@
               //.append(clear_all)
               .append(download_all);
         
-            var files = dirdata.files;
+            var files = dirdata.files,
+                metadata = dirdata.files_metadata;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
             
@@ -319,7 +339,7 @@
               .append(dirbrowser)
               .append(filebrowser);
             
-            categorize_files(files, "/pub/" + pathlist.join("/"));
+            categorize_files(files, metadata, "/pub/" + pathlist.join("/"));
             
             //$(dirbrowser).selectable({
             //    filter:'td', 
