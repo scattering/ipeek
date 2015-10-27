@@ -155,7 +155,6 @@
     
     function get_info(nz_obj) {
       var f = nz_obj, sout = {};
-      console.log(f);
       var entry_names = f.groupnames();
       entry_names.forEach(function(entry) {
           sout[entry] = sout[entry] || {};
@@ -164,7 +163,6 @@
           sout[entry].counts = f.get(entry + "/DAS_logs/counter/liveROI").getValue().reduce(function(a, b) {return a.concat(b)});
         
       });
-      console.log(entry_names);
       return sout;
     }
     
@@ -237,7 +235,7 @@
       });
       datafiles.forEach(function(j) {
         sequence = sequence.then(function() {
-          console.log(path + "/" + j, nexus_objs);
+          //console.log(path + "/" + j, nexus_objs);
           
           fileinfo[j] = get_info(nexus_objs[path + "/" + j]);
         })
@@ -257,10 +255,24 @@
         
         console.log(new Date() - t0);
         
-      });
+      })
+        .then(function() {
+        webworker_cache_objs(datafiles, files_metadata, path);
+      })
+      
+    }
+    
+    caching_worker = new Worker('js/cache_db_worker.js');
+    //caching_worker.onmessage = function(x) { console.log(x) };
+    
+    function webworker_cache_objs(files, metadata, path) {
+      var mtimes = files.map(function(fn) { return metadata[fn].mtime });
+      var data = {filenames: files, mtimes: mtimes, path: path};
+      caching_worker.postMessage(data);
     }
     
     function cache_nexus_objs(nzobjs) {
+      // deprecated
       for (var url in nzobjs) {
         var nxz = nzobjs[url];
         db.filenames.put({url: url, mtime: nxz.mtime, data: nz.cacheAll(nxz)});
@@ -359,12 +371,16 @@
         var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
         var xcol, ycol, xdata, ydata;
         if (ycols.length > 0) {
-          xcol = ycols[0][1].getAttrs().axes; //.replace("_", "/");
+          xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
           ycol = ycols[0][0];
           ydata = ycols[0][1].getValue();
           xdata = entry.get("DAS_logs/" + xcol).getValue();
         }
-        return [xdata, ydata];
+        var xydata = [], x, y;
+        for (var i=0; i<xdata.length || i<ydata.length; i++) {
+          xydata[i] = xdata[i].concat(ydata[i]);
+        }
+        return xydata;
       });
       return plottables;
     }
@@ -489,7 +505,6 @@
     }
 
     rect.zoom {
-      stroke: steelblue;
       fill-opacity: 0.5;
     }
     .ui-layout-north {
@@ -517,7 +532,7 @@
 </div>
  
 <div id="centerpane" class="ui-layout-center">
-  <div id="plotdov"></div>
+  <div id="plotdiv"></div>
 </div>
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
