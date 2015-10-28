@@ -14,7 +14,7 @@
   <link rel="stylesheet" href="/instruments/magik/jstree/dist/themes/default/style.min.css"/>
   <script type="text/javascript" src="/instruments/magik/jstree/dist/jstree.js"></script>
   <script src="/instruments/magik/d3-science/xy-chart.js"></script>
-  <script src="http://ncnr.nist.gov/ipeek/js/Dexie.js"></script>
+  <script src="/ipeek/js/Dexie.js"></script>
   <script type="text/javascript">
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     dirHelper = "/instruments/magik/listftpfiles.php";
@@ -170,7 +170,7 @@
       console.error("Failed!", error);
     };
     
-    function finfo_to_tree(finfo){
+    function finfo_to_tree(finfo, path){
       var out = [], sample_names = {};
       for (var fn in finfo) {
         var fn_info = finfo[fn];
@@ -181,7 +181,7 @@
           sample_names[samplename] = sample_names[samplename] || {};
           sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
           sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {};
-          out.push({"id": fn+":"+entry, "parent": fn, "text": fn + ":" + entry, "icon": false});
+          out.push({"id": fn+":"+entry, "parent": fn, "text": fn + ":" + entry, "icon": false, "li_attr": {"path": path} });
         }
       }
       for (var sn in sample_names) {
@@ -242,16 +242,30 @@
       });
       sequence.then(function() { 
         //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
-        var treeinfo = finfo_to_tree(fileinfo);
+        var treeinfo = finfo_to_tree(fileinfo, path);
         console.log(treeinfo);
         $("#filebrowser").jstree({
-          "plugins": ["checkbox"],
+          "plugins": ["checkbox", "changed"],
           "checkbox" : {
             "two_state": true
           }, 
           "core": {"data": treeinfo}
         });
-        $("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
+        $("#filebrowser").on("changed.jstree", function (e, data) { 
+          console.log(this, this.get_node, e, data);
+          var jstree = $(this).jstree(true);
+          var selected_nodes = data.selected.map(function(s) {return jstree.get_node(s)});
+          var plotnodes = selected_nodes.filter(function(n) {return n.li_attr.path != null});
+          var plot_entry_ids = plotnodes.map(function(n) { 
+            return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+          });
+          console.log(plot_entry_ids);
+          var plotdata = plot(plot_entry_ids);
+          console.log(plotdata);
+          mychart = new xyChart(plotdata.options);
+          d3.selectAll("#plotdiv svg").remove();
+          d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
+        });
         
         console.log(new Date() - t0);
         
@@ -364,31 +378,38 @@
     
     function handleSelection() {console.log(selection)};
     
-    function plot(nzs) {
+    function plot(entry_ids) {
+      // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
       var series = new Array();
-      var options = {series: series, legend: {show: true, left: 150}}, datas = [];
-      nzs.forEach(function(nf) {
-        var filename = nf.zipfilename.split("/").slice(-1).join("");
-        var items = nf.items();
-        for (var i in items) {
-          var en = items[i];
-          var entryname = en[0],
-              entry = en[1];
-          var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
-          var xcol, ycol, xdata, ydata;
-          if (ycols.length > 0) {
-            xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
-            ycol = ycols[0][0];
-            ydata = ycols[0][1].getValue();
-            xdata = entry.get("DAS_logs/" + xcol).getValue();
-          }
-          var xydata = [], x, y;
-          for (var i=0; i<xdata.length || i<ydata.length; i++) {
-            xydata[i] = xdata[i].concat(ydata[i]);
-          }
-          datas.push(xydata);
-          options.series.push({label: filename + ":" + entryname});
+      var options = {
+        series: series, 
+        legend: {show: true, left: 150},
+        axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}} 
+      };
+      var datas = [];
+      entry_ids.forEach(function(eid) {
+        var nf = nexus_objs[eid.path + "/" + eid.filename];
+        var entry = nf.get(eid.entryname);
+        //var ycol_link = "y";
+        //var xcol_link = "x";
+        var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
+        var xcol, ycol, xdata, ydata;
+        if (ycols.length > 0) {
+          xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
+          ycol = ycols[0][0];
+          ydata = ycols[0][1].getValue();
+          xdata = entry.get("DAS_logs/" + xcol).getValue();
         }
+        var xydata = [], x, y;
+        for (var i=0; i<xdata.length || i<ydata.length; i++) {
+          xydata[i] = xdata[i].concat(ydata[i]);
+        }
+        datas.push(xydata);
+        options.series.push({label: eid.filename + ":" + eid.entryname});
+        options.axes.xaxis.label = xcol.replace("/", ".");
+        options.axes.yaxis.label = ycol.replace("/", ".");
+        options.xtransform = $("#xscale").val();
+        options.ytransform = $("#yscale").val();
       });
     
       return {options: options, data: datas};
@@ -532,6 +553,23 @@
 <div id="navigation" class="ui-layout-wrapper ui-layout-west">
 </div>
 <div id="bottom_panel" class="ui-layout-south">
+<div id="controls">
+<!--    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>-->
+    <label>x-axis</label>
+    <select id="xscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+<!--    <span class="axis-select-label">y-axis:</span><select id="ycol" ></select>-->
+    <label>y-axis</label>
+    <select id="yscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+<!--    <span class="axis-select-label">divide by:</span>-->
+<!--    <select id="ynormalize">-->
+<!--    </select>-->
+  </div>
 </div>
 <div id="top_panel" class="ui-layout-north">
     <div id="status">
