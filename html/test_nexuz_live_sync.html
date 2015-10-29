@@ -161,7 +161,14 @@
           sout[entry].samplename = f.get(entry + "/sample/name").getValue()[0][0];
           sout[entry].scantype = f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
           sout[entry].counts = f.get(entry + "/DAS_logs/counter/liveROI").getValue().reduce(function(a, b) {return a.concat(b)});
-        
+          //var x = f.get(entry + "/data/x").getValue(),
+          var x = f.get(entry + "/DAS_logs/trajectoryData/_q");
+          if (x) {
+            var xvals = x.getValue(),
+              extent = d3.extent(xvals);
+            sout[entry].min_x = extent[0][0];
+            sout[entry].max_x = extent[1][0];
+          }        
       });
       return sout;
     }
@@ -180,8 +187,15 @@
               scantype = info.scantype;
           sample_names[samplename] = sample_names[samplename] || {};
           sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
-          sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {};
-          out.push({"id": fn+":"+entry, "parent": fn, "text": fn + ":" + entry, "icon": false, "li_attr": {"path": path} });
+          // min_x and max_x for a file are grabbed from the first entry that pops up:
+          sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {min_x: info.min_x, max_x: info.max_x};
+          out.push({
+            "id": fn+":"+entry, 
+            "parent": fn, 
+            "text": fn + ":" + entry, 
+            "icon": false, 
+            "li_attr": {"path": path, "min_x": info.min_x, "max_x": info.max_x} 
+          });
         }
       }
       for (var sn in sample_names) {
@@ -189,13 +203,37 @@
         var sample_obj = sample_names[sn];
         for (var t in sample_obj) {
           var type_obj = sample_obj[t];
-          out.push({"id": sn + ":" + t, "parent": sn, "text": t});
+          var global_min_x = Infinity,
+              global_max_x = -Infinity;          
           for (var fn in type_obj) {
-            out.push({"id": fn, "parent": sn + ":" + t, "text": fn, "icon": false});
+            // once through to get max and min...
+            var f_obj = type_obj[fn];
+            global_min_x = Math.min(f_obj.min_x, global_min_x);
+            global_max_x = Math.max(f_obj.max_x, global_max_x);
           }
+          for (var fn in type_obj) {
+            // and again to make the range icon.
+            var f_obj = type_obj[fn];
+            var range_icon = make_range_icon(global_min_x, global_max_x, f_obj.min_x, f_obj.max_x);
+            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
+          }
+          out.push({"id": sn + ":" + t, "parent": sn, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
         }
       }
       return out;
+    }
+    
+    function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
+      var icon_width = 75;
+      var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
+      var width = icon_width * rel_width;
+      var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
+      var x = icon_width * rel_x;
+      var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
+      output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:red;stroke:none\"/>"
+      output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
+      output += "</svg>"
+      return output
     }
     
     // Dexie:  
@@ -445,7 +483,6 @@
     
   </script>
   <style type="text/css">
-    svg,
     canvas {
       position: absolute;
       image-rendering: optimizeSpeed;
@@ -454,6 +491,11 @@
       image-rendering: -webkit-optimize-contrast;
       image-rendering: optimize-contrast;
       -ms-interpolation-mode: nearest-neighbor;
+    }
+    
+    a svg, a span {
+      vertical-align: middle;
+      position: relative;
     }
 
     .axis-label {
@@ -527,7 +569,7 @@
         stroke: rgba(68, 127, 255, 0.3);
     }
     
-    rect {
+    .mainview rect {
       fill: none;
       user-select: none; 
       -webkit-user-select: none; 
@@ -547,6 +589,11 @@
     .ui-layout-south {
       text-align: center;
     }
+    
+    .jstree > ul > li > a > .jstree-checkbox {
+      display: none !important;
+    }
+    
 </style>
 </head>
 <body>
