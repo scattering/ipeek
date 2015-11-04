@@ -114,10 +114,13 @@
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
               var isdir = (id.slice(-1) == "/");
+              f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               if (!isdir) {
-                f.get(id).then(nz.getValue).then(function(v) {$("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")});
-                f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
+                f.get(id).then(nz.getValue).then(function(v) {
+                    $("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
+                });    
               } else {
+                $("#device_values").html("<pre>Group</pre>")
                 data.instance.toggle_node(data.node); 
               }
             });
