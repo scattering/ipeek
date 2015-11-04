@@ -97,6 +97,13 @@
       "ROCK": /sampleAngle\/softPosition$/
     }
     
+    var primary_axis = {
+      "SPEC": "/DAS_logs/trajectoryData/_q",
+      "BG": "/DAS_logs/trajectoryData/_q",
+      "SLIT": "/DAS_logs/trajectoryData/_q",
+      "ROCK": "/DAS_logs/sampleAngle/softPosition"
+    }
+    
     function readData(entries, path) {
       // first, get the attributes:
       var attrs_file = path + ".attrs";
@@ -162,7 +169,7 @@
           sout[entry].scantype = f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
           sout[entry].counts = f.get(entry + "/DAS_logs/counter/liveROI").getValue().reduce(function(a, b) {return a.concat(b)});
           //var x = f.get(entry + "/data/x").getValue(),
-          var x = f.get(entry + "/DAS_logs/trajectoryData/_q");
+          var x = f.get(entry + primary_axis[sout[entry].scantype]);
           if (x) {
             var xvals = x.getValue(),
               extent = d3.extent(xvals);
@@ -289,22 +296,7 @@
           }, 
           "core": {"data": treeinfo}
         });
-        $("#filebrowser").on("changed.jstree", function (e, data) { 
-          console.log(this, this.get_node, e, data);
-          var jstree = $(this).jstree(true);
-          var selected_nodes = data.selected.map(function(s) {return jstree.get_node(s)});
-          var plotnodes = selected_nodes.filter(function(n) {return n.li_attr.path != null});
-          var plot_entry_ids = plotnodes.map(function(n) { 
-            return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
-          });
-          console.log(plot_entry_ids);
-          var plotdata = plot(plot_entry_ids);
-          console.log(plotdata);
-          mychart = new xyChart(plotdata.options);
-          d3.selectAll("#plotdiv svg").remove();
-          d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
-        });
-        
+        $("#filebrowser").on("changed.jstree", handleChecked);
         console.log(new Date() - t0);
         
       })
@@ -312,6 +304,19 @@
         webworker_cache_objs(datafiles, files_metadata, path);
       })
       
+    }
+    
+    var handleChecked = function() {
+      var jstree = $("#filebrowser").jstree(true);
+      var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
+      var plotnodes = selected_nodes.filter(function(n) {return n.li_attr.path != null});
+      var plot_entry_ids = plotnodes.map(function(n) { 
+        return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+      });
+      var plotdata = plot(plot_entry_ids);
+      mychart = new xyChart(plotdata.options);
+      d3.selectAll("#plotdiv svg").remove();
+      d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
     }
     
     caching_worker = new Worker('js/cache_db_worker.js');
@@ -431,21 +436,35 @@
         //var ycol_link = "y";
         //var xcol_link = "x";
         var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
-        var xcol, ycol, xdata, ydata;
+        var xcol, ycol, ynormcol, xdata, ydata, ynormdata;
         if (ycols.length > 0) {
           xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
           ycol = ycols[0][0];
+          ynormcol = "control/monitor_counts";
           ydata = ycols[0][1].getValue();
-          xdata = entry.get("DAS_logs/" + xcol).getValue();
+          xdata = entry.get("DAS_logs/" + xcol);
+          if (xdata.getValue) {
+            xdata = xdata.getValue();
+          } else {
+            //get the primary axis if it's a device:
+            if ('primary' in xdata.getAttrs()) {
+              xdata = xdata.get(xdata.getAttrs().primary).getValue();
+            }
+          }
+          ynormdata = entry.get(ynormcol).getValue();
         }
-        var xydata = [], x, y;
-        for (var i=0; i<xdata.length || i<ydata.length; i++) {
-          xydata[i] = xdata[i].concat(ydata[i]);
+        var xydata = [], x, y, ynorm;
+        for (var i=0; i<xdata.length || i<ydata.length || i<ynormdata.length; i++) {
+          x = (i<xdata.length) ? xdata[i][0] : x; // use last value
+          y = (i<ydata.length) ? ydata[i][0] : y; // use last value
+          ynorm = (i<ynormdata.length) ? ynormdata[i][0] : ynorm; // use last value
+          xydata[i] = [x,y/ynorm];
+          //xydata[i] = xdata[i].concat(ydata[i]);
         }
         datas.push(xydata);
         options.series.push({label: eid.filename + ":" + eid.entryname});
         options.axes.xaxis.label = xcol.replace("/", ".");
-        options.axes.yaxis.label = ycol.replace("/", ".");
+        options.axes.yaxis.label = ycol.replace("/", ".") + "/monitor";
         options.xtransform = $("#xscale").val();
         options.ytransform = $("#yscale").val();
       });
@@ -476,8 +495,9 @@
 		  });
 		
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
-      $("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
-      $("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
+      //$("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
+      //$("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
+      $("#xscale, #yscale").change(handleChecked);
       //sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
     }  
     
