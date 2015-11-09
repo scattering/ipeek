@@ -93,6 +93,8 @@
     var primary_axis_pattern = {
       "SPEC": /trajectoryData\/_q$/,
       "BG": /trajectoryData\/_q$/,
+      "BGP": /trajectoryData\/_q$/,
+      "BGM": /trajectoryData\/_q$/,
       "SLIT": /trajectoryData\/_q$/,
       "ROCK": /sampleAngle\/softPosition$/
     }
@@ -100,6 +102,8 @@
     var primary_axis = {
       "SPEC": "/DAS_logs/trajectoryData/_q",
       "BG": "/DAS_logs/trajectoryData/_q",
+      "BGP": "/DAS_logs/trajectoryData/_q",
+      "BGM": "/DAS_logs/trajectoryData/_q",
       "SLIT": "/DAS_logs/trajectoryData/_q",
       "ROCK": "/DAS_logs/sampleAngle/softPosition"
     }
@@ -289,14 +293,23 @@
         //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
         var treeinfo = finfo_to_tree(fileinfo, path);
         console.log(treeinfo);
-        $("#filebrowser").jstree({
+        var jstree = $("#filebrowser").jstree({
           "plugins": ["checkbox", "changed"],
           "checkbox" : {
-            "two_state": true
+            "three_state": true,
+            //"cascade": "down",
+            "tie_selection": false,
+            "whole_node": false
           }, 
           "core": {"data": treeinfo}
         });
-        $("#filebrowser").on("changed.jstree", handleChecked);
+        $("#filebrowser").on("check_node.jstree", handleChecked)
+          .on("uncheck_node.jstree", handleChecked);
+        $("#filebrowser").on("click", "a", function(e) {
+          if (!(e.target.classList.contains("jstree-checkbox"))) {
+            $("#filebrowser").jstree().toggle_node(e.currentTarget.id);
+          }
+        });
         console.log(new Date() - t0);
         
       })
@@ -308,8 +321,9 @@
     
     var handleChecked = function() {
       var jstree = $("#filebrowser").jstree(true);
-      var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
-      var plotnodes = selected_nodes.filter(function(n) {return n.li_attr.path != null});
+      //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
+      var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
+      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
       var plot_entry_ids = plotnodes.map(function(n) { 
         return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
       });
@@ -347,19 +361,19 @@
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
             var buttons = $("<div />", {class: "buttons"});
-            //var clear_all = $("<button />", {
-            //    text: "clear all"
+            var clear_all = $("<button />", {
+                text: "clear all"
+            });
+            clear_all.click(function() {$("#"+target_id + " #filebrowser").jstree("uncheck_all"); handleChecked()});
+            //var download_all = $("<button />", {
+            //    text: "download selected"
             //});
-            //clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
-            var download_all = $("<button />", {
-                text: "download selected"
-            });
-            download_all.click(function() {
-                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
-            });
+            //download_all.click(function() {
+            //    $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            //});
             buttons
-              //.append(clear_all)
-              .append(download_all);
+              .append(clear_all)
+              //.append(download_all);
         
             var files = dirdata.files,
                 metadata = dirdata.files_metadata;
@@ -399,7 +413,7 @@
             });
             var filebrowser = document.createElement('div');
             filebrowser.id = "filebrowser";
-            filebrowser.classList.add("tablesorter");
+            //filebrowser.classList.add("tablesorter");
             
             
             $('#' + target_id).empty()
@@ -604,9 +618,17 @@
     }
     #plotdiv {
       height: 100%;
-      margin-bottom: 50px;
     }
-    .ui-layout-south {
+    #controls {
+      position: absolute;
+      margin: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    .ui-layout-center {
+      /* adding padding to hold controls */
+      padding-bottom: 30px;
       text-align: center;
     }
     
@@ -620,7 +642,18 @@
 <div id="navigation" class="ui-layout-wrapper ui-layout-west">
 </div>
 <div id="bottom_panel" class="ui-layout-south">
-<div id="controls">
+
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="statusline">Reflectometry reduction</span>
+        <span id="instrument_name" class="instrument-name"></span>
+    </div>
+</div>
+ 
+<div id="centerpane" class="ui-layout-center">
+  <div id="plotdiv"></div>
+  <div id="controls">
 <!--    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>-->
     <label>x-axis</label>
     <select id="xscale">
@@ -637,16 +670,6 @@
 <!--    <select id="ynormalize">-->
 <!--    </select>-->
   </div>
-</div>
-<div id="top_panel" class="ui-layout-north">
-    <div id="status">
-        <span id="statusline">Reflectometry reduction</span>
-        <span id="instrument_name" class="instrument-name"></span>
-    </div>
-</div>
- 
-<div id="centerpane" class="ui-layout-center">
-  <div id="plotdiv"></div>
 </div>
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
