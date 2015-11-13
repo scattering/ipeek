@@ -169,8 +169,11 @@
       var entry_names = f.groupnames();
       entry_names.forEach(function(entry) {
           sout[entry] = sout[entry] || {};
-          sout[entry].samplename = f.get(entry + "/sample/name").getValue()[0][0];
-          sout[entry].scantype = f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
+          var samplename = f.get(entry + "/sample/name");
+          if (samplename == null) samplename = f.get(entry + "/DAS_logs/sample/name")
+          sout[entry].samplename = (samplename == null) ? "noname" : samplename.getValue()[0][0];
+          var scantype = f.get(entry + "/DAS_logs/trajectoryData/_scanType");
+          sout[entry].scantype = (scantype == null) ? "uncategorized" : scantype.getValue()[0][0];
           sout[entry].counts = f.get(entry + "/DAS_logs/counter/liveROI").getValue().reduce(function(a, b) {return a.concat(b)});
           //var x = f.get(entry + "/data/x").getValue(),
           var x = f.get(entry + primary_axis[sout[entry].scantype]);
@@ -265,7 +268,7 @@
       var tree_entries = [],
           file_names = {},
           fileinfo = {};
-      var datafiles = files.filter(function(x) {return (/\.nxz\.pbr$/.test(x) && (/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
+      var datafiles = files.filter(function(x) {return (NEXUS_ZIP_REGEXP.test(x) && (/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
       var sequence = Promise.resolve();
       datafiles.forEach(function(j) { 
         sequence = sequence.then(function() { 
