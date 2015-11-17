@@ -42,17 +42,21 @@
         header_lines = [],
         body_lines = [],
         footer_lines = [];
-      var line, h=0, b=0, f=0, in_header=true;
+      var line, h=0, b=0, f=0, in_header=true, in_footer=false;
       for (var i=0; i<lines.length; i++) {
         line = lines[i];
-        if (line[0] == "#") {
-          if (in_header) {
-            header_lines[h++] = line;
-          } else {
-            footer_lines[f++] = line;
-          }
-        } else {
+        if (in_header) {
+          header_lines[h++] = line;
+        }
+        if (/^#Columns/.test(line) == true) {
           in_header = false;
+        }
+        else if (!in_header && line[0] == "#") {
+          in_footer = true;
+        }
+        if (in_footer) {
+          footer_lines[f++] = line;
+        } else {
           body_lines[b++] = line;
         }
       }
