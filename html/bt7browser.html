@@ -47,17 +47,19 @@
         line = lines[i];
         if (in_header) {
           header_lines[h++] = line;
+          if (/^#Columns/.test(line) == true) {
+            in_header = false;
+          }
         }
-        if (/^#Columns/.test(line) == true) {
-          in_header = false;
-        }
-        else if (!in_header && line[0] == "#") {
-          in_footer = true;
-        }
-        if (in_footer) {
-          footer_lines[f++] = line;
-        } else {
-          body_lines[b++] = line;
+        else {
+          if (line[0] == "#") {
+            in_footer = true;
+          }
+          if (in_footer) {
+            footer_lines[f++] = line;
+          } else {
+            body_lines[b++] = line;
+          }
         }
       }
       column_names = header_lines[h-1].split(/\s+/).slice(1);
