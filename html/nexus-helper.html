@@ -1,0 +1,528 @@
+<!doctype html>
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>NeXuS-zip data reader</title>
+  <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
+  <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="js/zip/zip.js"></script>
+  <script src="js/zip/deflate.js"></script>
+  <script src="js/zip/inflate.js"></script>
+  <script src="js/zip/zip-fs.js"></script>
+  <script src="js/DataStream.js"></script>
+  <script src="js/nexus-zip.js"></script>
+  <script src="js/jquery.layout-latest.js"></script>
+  <script src="js/jquery.tablesorter.min.js"></script>
+  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
+  
+    <script src="js/geturlvars.js"></script>
+<!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
+  <script>
+    exports = {}; // compatibility with node scripts
+  </script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script>
+  $(function() {
+    NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+    dirHelper = "http://localhost:8001";
+    zip.useWebWorkers = false;
+    data_path = ["ncnrdata"];
+    datasets = [];
+    
+    getUrlVars = function(){
+      var vars = [], hash;
+      var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+      for(var i = 0; i < hashes.length; i++) {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+      }
+      return vars;
+    }
+    
+    var parseICP = function(text) {
+      var ICP = new ICPParser();
+      ICP.read(text);
+      return ICP
+    }
+       
+    var makeXY = function(dataset, xcol, ycol, ynormcol) {
+      var data_array = [], x, y, ynorm;
+      for (var i=0; i<dataset.points; i++){
+        x = parseFloat(dataset.column[xcol][i]);
+        y = parseFloat(dataset.column[ycol][i]);
+        if (ynormcol == "1" || ynormcol == null) {
+          ynorm = y;
+        } 
+        else {
+          ynorm = y / parseFloat(dataset.column[ynormcol][i]);
+        }
+        data_array[i] = [x, ynorm];
+      }
+      return data_array;
+    }
+    
+    var filelist_to_tree = function(filelist) {
+      var data = [];
+      // {'core': {'data': []}}
+      filelist.filter(function(fn) {return (/\.attrs$/.test(fn) == false && /\.link$/.test(fn) == false)})
+        .forEach(function(fn,i) {
+          var datum = {};
+          if (fn.slice(-1) != "/") {datum.icon = false};
+          datum.id = fn;
+          var parent = dirname(fn);
+          if (parent == "") { parent = "#" }
+          else { parent += "/" }
+          datum.parent = parent;
+          datum.text = rstrip(fn, "/").split("/").slice(-1)[0];
+          data[i] = datum;
+        });
+      return data;
+    }
+    
+    var getNexusZip = function(path, filename) {
+      var req = new XMLHttpRequest();
+      req.open('GET', path + filename);
+      req.responseType = 'blob'
+      req.onload = function() {
+      	zip.createReader(new zip.BlobReader(req.response), function(reader) {
+          // get all entries from the zip
+          reader.getEntries(function(entries) {
+            f = new nz.File().init(filename, entries);
+            var filelist = Object.keys(f.zipfiles);
+            tree = filelist_to_tree(filelist);
+            if ($("#treediv").jstree()) { $("#treediv").jstree().destroy() }
+            $("#treediv").jstree({
+              plugins: ["sort"],
+              sort: function(a,b) { 
+                var a_isdir = (a.slice(-1) == "/"),
+                    b_isdir = (b.slice(-1) == "/");
+                if (a_isdir && !b_isdir) {return -1}
+                else if (b_isdir && !a_isdir) {return 1}
+                else {return ((a > b) ? 1 : -1)}
+              },
+              core: {data: filelist_to_tree(filelist)}
+            });
+            $("#fileid").html(filename);
+            $("#treediv").bind("select_node.jstree", function (e, data) {
+              var id = $(data.node).attr("id");
+              var isdir = (id.slice(-1) == "/");
+              f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
+              if (!isdir) {
+                f.get(id).then(nz.getValue).then(function(v) {
+                    $("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
+                });    
+              } else {
+                $("#device_values").html("<pre>Group</pre>")
+                data.instance.toggle_node(data.node); 
+              }
+            });
+        		//console.log(filelist_to_tree(filelist));
+          });
+        });
+			}
+      req.send(); 
+    };
+    //var fileinput = document.getElementById('sansfile');
+    
+    function compactDateTime(date) {
+        var outstring = '';
+        outstring += date.getHours().toFixed(0) + ":";
+        outstring += ("00" + date.getMinutes().toFixed(0)).slice(-2) + ":";
+        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + "&nbsp;";
+        outstring += date.getMonth().toFixed(0) + "/";
+        outstring += date.getDay().toFixed(0) + "/";
+        outstring += date.getFullYear().toFixed(0);
+        return outstring
+    }
+    
+    function isBlacklisted(filename, blacklist) {
+        for (var i=0; i<blacklist.length; i++) {
+            if (filename.indexOf(blacklist[i]) > -1) { return true; }
+        }
+        return false;
+    }
+    
+    function getCurrentPath() {
+      var path = "";
+      $(".patheditor span").each(function(i,v) {
+        path += $(v).text();
+      });
+      return path;      
+    }
+    
+    function updateFileBrowserPane(target_id, pathlist) {
+        function handler(dirdata) {
+            var buttons = $("<div />", {class: "buttons"});
+            //var clear_all = $("<button />", {
+            //    text: "clear all"
+            //});
+            //clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
+            var download_all = $("<button />", {
+                text: "download selected"
+            });
+            download_all.click(function() {
+                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            });
+            buttons
+              //.append(clear_all)
+              .append(download_all);
+        
+            var files = dirdata.files;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+            
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
+            var subdiritem, dirlink, new_pathlist;
+            if (pathlist.length > 0) {               
+                var new_pathlist = $.extend(true, [], pathlist);
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/";
+                    dirlink.onclick = function() {
+                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
+                        //$.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                        $.jsonRPC.request('get_file_metadata', {
+                          params: [new_pathlist.slice(0, index+1)],
+                          success: function(result) {
+                            metadata = JSON.parse(result.result);
+                            updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1))(metadata);
+                          }, 
+                          error: function(result) {console.log('error: ', result)}
+                        });
+                    }
+                    patheditor.appendChild(dirlink);
+                });
+            }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
+            dirdata.subdirs.reverse();
+            $.each(dirdata.subdirs, function(index, subdir) {
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "(dir) " + subdir;
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.push(subdir);
+                subdiritem.onclick = function() {
+                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
+                    $.jsonRPC.request('get_file_metadata', {
+                        params: [new_pathlist],
+                        success: function(result) {
+                            metadata = JSON.parse(result.result);
+                            updateFileBrowserPane("navigation", new_pathlist)(metadata);
+                        }, 
+                        error: function(result) {console.log('error: ', result)}
+                    });
+                    //$.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                dirbrowser.appendChild(subdiritem);
+            });
+            var filebrowser = document.createElement('table');
+            filebrowser.classList.add("tablesorter");
+            filebrowser.id = "filebrowser";
+            var browser_body = filebrowser.createTBody();
+            
+            $.each(files, function(index, filename) {
+                if (NEXUS_ZIP_REGEXP.test(filename)) {
+                    var tr = filebrowser.insertRow();
+                    var chb = document.createElement('input');
+                    chb.setAttribute("type", "checkbox");
+                    chb.setAttribute("filename", filename);
+                    chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
+                    //chb.onchange = handleChecked;
+                    var check_td = tr.insertCell();
+                    check_td.appendChild(chb)
+                    
+                    var filelabel = document.createElement('label');
+                    var timestamp = dirdata.files_metadata[filename].mtime * 1000;
+                    var filedate = new Date(timestamp);
+                    //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
+                    filelabel.textContent = filename;
+                    //filelabel.textContent = (filename + ' ' + filedate.toLocaleString());
+                    filelabel.setAttribute("for", "checkbox_" + filename);
+                    var label_td = tr.insertCell();
+                    label_td.appendChild(filelabel);
+                    var mtime_td = tr.insertCell();
+                    mtime_td.innerHTML = filedate.toLocaleString();
+                    mtime_td.setAttribute("mtime", timestamp);
+                    var download_td = tr.insertCell();
+                    var download_a = document.createElement("a")
+                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+                    download_a.setAttribute("download", filename);
+                    var download_link = document.createElement("span");
+                    download_link.innerHTML = "";
+                    download_a.appendChild(download_link);
+                    download_td.appendChild(download_a);
+                    
+                    
+                    
+                    //fileitem.appendChild(filelabel);
+                    //filebrowser.appendChild(fileitem);
+                }
+            });
+            var thead = filebrowser.createTHead();
+            var tr = thead.insertRow();
+            var th = document.createElement("th");
+            th.innerHTML = "x";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "filename";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "date";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "";
+            tr.appendChild(th);
+            $('#' + target_id).empty()
+              .append(buttons)
+              .append(patheditor)
+              .append(dirbrowser)
+              .append(filebrowser);
+            $(browser_body).selectable({
+                filter:'td', 
+                stop: handleSelection
+            });
+            $(filebrowser).tablesorter();
+        }   
+        return handler
+    }
+    
+    get_file_data = function(path, mtime){
+        $.jsonRPC.request('refl_load', {
+          async: true,
+          params: [[{"path": path, "mtime": mtime}]],
+          success: function(result) {
+              mydata = result.result;
+              console.log(result.result);
+          }, 
+          error: function(result) {console.log('error: ', result)}
+      });
+    }
+    
+    var handleSelection = function() {
+      var selected = $("#navigation .ui-selected");
+      // remove selection class but check all the boxes:
+      selected.removeClass("ui-selected").parent().find("input").prop("checked", true);
+      if (selected.length > 0) {
+        var selection = selected.first();
+        var path = '/pub/' + getCurrentPath();
+        getNexusZip(path, selection.parent().find('input').attr("filename"));
+      }
+    }
+    var handleChecked = function() {
+      
+    }
+    $("#navigation").on("change", "input", handleChecked);
+    window.onpopstate = function(e) {
+      var start_path = $.extend(true, [], data_path),
+          url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+          start_path = url_vars.pathlist.split("+");
+      }
+      //$.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+      $.jsonRPC.request('get_file_metadata', {
+          async: true,
+          params: [start_path],
+          success: function(result) {
+              metadata = JSON.parse(result.result);
+              updateFileBrowserPane("navigation", start_path)(metadata);
+          }, 
+          error: function(result) {console.log('error: ', result)}
+      });
+    }
+    
+    $.jsonRPC.setup({
+      //endPoint: 'http://localhost:' + rpc_port + '/RPC2',
+      endPoint: "http://localhost:8001/RPC2",
+      namespace: '',
+      cache: false
+    });
+    window.onpopstate(); // call it on first load, too!
+    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleChecked);    
+   
+  });
+  window.onload = function() {
+      var layout = $('body').layout({
+          west__size:			350
+        ,	east__size:			300
+        ,   south__size:        "auto"
+          // RESIZE Accordion widget when panes resize
+        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+      });
+      $("#filebrowser").tablesorter(); 
+    
+  }
+  </script>
+</head>
+<style>
+.patheditor { 
+    color: blue;
+    cursor: pointer;
+}
+li.subdiritem { 
+    list-style-type: none; 
+    cursor: pointer;
+    color: blue;
+}
+li.fileitem {
+    cursor: pointer;
+    color: blue;
+    text-decoration: none;
+}
+div.treediv { 
+    height: 100%;
+    margin-bottom: 50px;
+    margin-right: 75px;
+    margin-left: 25px;
+}
+#filebrowser .ui-selecting { background: #FECA40; }
+#filebrowser .ui-selected { background: #F39814; color: white; }
+#filebrowser { list-style-type: none; margin: 0; padding: 0; }
+#filebrowser { white-space: nowrap; }
+#filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+#dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+#dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+</style>
+<style type="text/css">
+svg,
+canvas {
+  position: absolute;
+  image-rendering: optimizeSpeed;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: optimize-contrast;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+.axis-label {
+  font-size: 18px;
+}
+
+.axis .tick text {
+  font-size: 14px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+}
+.grid path {
+      stroke-width: 0;
+}
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+    shape-rendering: crispEdges;
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+ 
+.grid path {
+    stroke-width: 0;
+    fill: none;
+}
+ 
+
+ 
+.axis .axis-label {
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+
+.legend, .tick {
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+     
+    .line {
+        fill: none;
+        stroke-width: 1.5px;
+    }
+    
+    .highlight {
+        stroke-width: 4.5px;
+    }
+     
+    .dot {
+        /* consider the stroke-with the mouse detect radius? */
+        stroke: transparent;
+        stroke-width: 10px;  
+        cursor: pointer;
+    }
+     
+    .dot:hover {
+        stroke: rgba(68, 127, 255, 0.3);
+    }
+    
+    rect {
+      fill: none;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+
+    rect.zoom {
+      stroke: steelblue;
+      fill-opacity: 0.5;
+    }
+    .ui-layout-north {
+      background-color: #FFA500;
+    }
+    #treediv {
+      margin-bottom: 50px;
+    }
+    .ui-layout-south {
+      text-align: center;
+    }
+</style>
+<body>
+
+<div id="navigation" class="ui-layout-wrapper ui-layout-west">
+</div>
+<div id="bottom_panel" class="ui-layout-south">
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="statusline">NeXuS-zip file viewer</span>
+        <span id="instrument_name" class="instrument-name"></span>
+    </div>
+</div>
+ 
+<div id="centerpane" class="ui-layout-center">
+  <div id="fileid"></div>
+  <div id="treediv"></div>
+</div>
+<div id="right" class="ui-layout-east">
+  <div id="device_values"></div>
+  <div id="device_attrs"></div>
+</div>
+
+</body>
+</html>
+
