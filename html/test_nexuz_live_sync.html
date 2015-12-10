@@ -334,6 +334,7 @@
       mychart = new xyChart(plotdata.options);
       d3.selectAll("#plotdiv svg").remove();
       d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
+      mychart.zoomRect(true);
     }
     
     caching_worker = new Worker('js/cache_db_worker.js');

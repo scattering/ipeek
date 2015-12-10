@@ -162,6 +162,7 @@
         d3.select("#plotdiv")
             .data([xys])
             .call(chart);
+        chart.zoomRect(true);
       });
     };
     //var fileinput = document.getElementById('sansfile');
