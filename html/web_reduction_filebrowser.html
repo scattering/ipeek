@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
   <script src="js/Dexie.js"></script>
   <script type="text/javascript">
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
@@ -187,6 +188,27 @@
       return sout;
     }
     
+    function get_refl_info(refl_obj) {
+      var f = refl_obj, sout = {};
+      refl_obj.forEach(function(entry_obj) {
+        var samplename = entry_obj['sample']['name']
+        var entry = entry_obj['name'] + entry_obj['polarization']
+        sout[entry] = sout[entry] || {};
+        sout[entry].samplename = (samplename == null) ? "noname" : samplename;
+        var scantype = entry_obj['intent'];
+        sout[entry].scantype = (scantype == null) ? "uncategorized" : scantype;
+        sout[entry].counts = entry_obj['detector']['counts'];
+        //var x = f.get(entry + "/data/x").getValue(),
+        var x = entry_obj['Qz_target']
+        if (x) {
+          extent = d3.extent(x);
+          sout[entry].min_x = extent[0];
+          sout[entry].max_x = extent[1];
+        }        
+      });
+      return sout;
+    }
+    
     var rejectAB = function(error) {
       console.error("Failed!", error);
     };
@@ -195,6 +217,7 @@
       var out = [], sample_names = {};
       for (var fn in finfo) {
         var fn_info = finfo[fn];
+        var short_fn = fn.split("/").slice(-1)[0];
         for (var entry in fn_info) {
           var info = fn_info[entry];        
           var samplename = info.samplename,
@@ -202,11 +225,12 @@
           sample_names[samplename] = sample_names[samplename] || {};
           sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
           // min_x and max_x for a file are grabbed from the first entry that pops up:
-          sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {min_x: info.min_x, max_x: info.max_x};
+          sample_names[samplename][scantype][short_fn] = sample_names[samplename][scantype][short_fn] || {min_x: info.min_x, max_x: info.max_x};
           out.push({
-            "id": fn+":"+entry, 
-            "parent": fn, 
-            "text": fn + ":" + entry, 
+            "id": short_fn+":"+entry, 
+            "parent": short_fn, 
+            //"text": fn + ":" + entry, 
+            "text": entry,
             "icon": false, 
             "li_attr": {"path": path, "min_x": info.min_x, "max_x": info.max_x} 
           });
@@ -236,7 +260,7 @@
       }
       return out;
     }
-    
+        
     function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
       var icon_width = 75;
       var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
@@ -267,32 +291,46 @@
       var t0 = new Date();
       var tree_entries = [],
           file_names = {},
-          fileinfo = {};
-      var datafiles = files.filter(function(x) {return (NEXUS_ZIP_REGEXP.test(x) && (/^(fp_)/.test(x) == false) && (/^rapidscan/.test(x) == false))});
-      var sequence = Promise.resolve();
-      datafiles.forEach(function(j) { 
-        sequence = sequence.then(function() { 
-          return db.filenames.where("url").equals(path + "/" + j).first(function(c) {
-            if (c == undefined) { return getArrayBuffer(path, j, files_metadata[j].mtime).then(handleAB, rejectAB)  } //.then(function(s) {fileinfo[j] = s}) 
-            else { // load from cached version in db:
-              var url = path + "/" + j;
-              var f = new nz.File().init(url, c.data, c.data);
-              f.mtime = files_metadata[j].mtime;
-              //nexus_objs[url.split("/").slice(-1)] = f;
-              nexus_objs[url] = f;
-              return 
-            }
-          })
-        })
-      });
+          refl_promises = [];
+      refl_objs = {};
+      fileinfo = {};
+      var datafiles = files.filter(function(x) {return (
+        NEXUS_ZIP_REGEXP.test(x) && 
+        (/^(fp_)/.test(x) == false) && 
+        (/^rapidscan/.test(x) == false) &&
+        (/^scripted_findpeak/.test(x) == false)
+        )});
       datafiles.forEach(function(j) {
-        sequence = sequence.then(function() {
-          //console.log(path + "/" + j, nexus_objs);
-          
-          fileinfo[j] = get_info(nexus_objs[path + "/" + j]);
-        })
+        console.log(path + "/" + j, files_metadata[j].mtime);
+        refl_promises.push(load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
       });
-      sequence.then(function() { 
+      mypromises = refl_promises;
+      Promise.all(refl_promises).then(function(results) {
+        for (var fn in refl_objs) {
+          fileinfo[fn] = get_refl_info(refl_objs[fn]);
+        }
+        var treeinfo = finfo_to_tree(fileinfo, path);
+        console.log(treeinfo);
+        var jstree = $("#filebrowser").jstree({
+          "plugins": ["checkbox", "changed"],
+          "checkbox" : {
+            "three_state": true,
+            //"cascade": "down",
+            "tie_selection": false,
+            "whole_node": false
+          }, 
+          "core": {"data": treeinfo}
+        });
+        $("#filebrowser").on("check_node.jstree", handleChecked)
+          .on("uncheck_node.jstree", handleChecked);
+        $("#filebrowser").on("click", "a", function(e) {
+          if (!(e.target.classList.contains("jstree-checkbox"))) {
+            $("#filebrowser").jstree().toggle_node(e.currentTarget.id);
+          }
+        });
+        console.log(new Date() - t0);
+      });
+      /*sequence.then(function() { 
         //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
         var treeinfo = finfo_to_tree(fileinfo, path);
         console.log(treeinfo);
@@ -316,10 +354,35 @@
         console.log(new Date() - t0);
         
       })
-        .then(function() {
-        webworker_cache_objs(datafiles, files_metadata, path);
-      })
-      
+      */      
+    }
+    
+    load_refl = function(path, mtime, db){
+      var promise = new Promise(function(resolve, reject) { 
+        var template = {
+          "name": "loader_template",
+          "description": "ReflData remote loader",
+          "modules": [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}],
+          "wires": [],
+          "instrument": "ncnr.magik",
+          "version": "0.0"
+        }
+        var config = {"0": {"files": [{"path": path, "mtime": mtime}]}}
+            module_id = 0,
+            terminal_id = "output";
+            
+        $.jsonRPC.request('calc_dict', {
+          async: true,
+          params: [template, config, module_id, terminal_id],
+          success: function(result) {
+              if (db) { db[path] = result.result; }
+              console.log(result.result);
+              resolve(result.result);
+          }, 
+          error: function(result) {console.log('error: ', result); reject(result);}
+        });
+      });
+      return promise;
     }
     
     var handleChecked = function() {
@@ -411,7 +474,15 @@
                 new_pathlist.push(subdir);
                 subdiritem.onclick = function() {
                     history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
-                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                    $.jsonRPC.request('get_file_metadata', {
+                        params: [new_pathlist],
+                        success: function(result) {
+                            metadata = JSON.parse(result.result);
+                            updateFileBrowserPane("navigation", new_pathlist)(metadata);
+                        }, 
+                        error: function(result) {console.log('error: ', result)}
+                    });
+                    //$.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
                 }
                 dirbrowser.appendChild(subdiritem);
             });
@@ -426,7 +497,7 @@
               .append(dirbrowser)
               .append(filebrowser);
             
-            categorize_files(files, metadata, "/pub/" + pathlist.join("/"));
+            categorize_files(files, metadata, pathlist.join("/"));
             
             //$(dirbrowser).selectable({
             //    filter:'td', 
@@ -496,9 +567,24 @@
       if (url_vars.pathlist && url_vars.pathlist.length) {
           start_path = url_vars.pathlist.split("+");
       }
-      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+      $.jsonRPC.request('get_file_metadata', {
+          async: true,
+          params: [start_path],
+          success: function(result) {
+              metadata = JSON.parse(result.result);
+              updateFileBrowserPane("navigation", start_path)(metadata);
+          }, 
+          error: function(result) {console.log('error: ', result)}
+      });
+      //$.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
     }
     
+    $.jsonRPC.setup({
+      //endPoint: 'http://localhost:' + rpc_port + '/RPC2',
+      endPoint: "http://localhost:8001/RPC2",
+      namespace: '',
+      cache: false
+    });
     window.onpopstate(); // call it on first load, too!
         
     window.onload = function() {

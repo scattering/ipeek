@@ -175,8 +175,9 @@
             buttons
               //.append(clear_all)
               .append(download_all);
-        
-            var files = dirdata.files;
+            // var files = dirdata.files
+            files = dirdata.files;
+            files_metadata = dirdata.files_metadata;
             files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
             // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
             
@@ -307,6 +308,30 @@
               console.log(result.result);
           }, 
           error: function(result) {console.log('error: ', result)}
+      });
+    }
+    
+    load_refl = function(path, mtime){
+      var template = {
+        "name": "loader_template",
+        "description": "ReflData remote loader",
+        "modules": [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}],
+        "wires": [],
+        "instrument": "ncnr.magik",
+        "version": "0.0"
+      }
+      var config = {"0": {"files": [{"path": path, "mtime": mtime}]}}
+          module_id = 0,
+          terminal_id = "output";
+          
+      $.jsonRPC.request('calc_dict', {
+        async: true,
+        params: [template, config, module_id, terminal_id],
+        success: function(result) {
+            mydata = result.result;
+            console.log(result.result);
+        }, 
+        error: function(result) {console.log('error: ', result)}
       });
     }
     
