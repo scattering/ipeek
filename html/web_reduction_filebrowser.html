@@ -292,6 +292,7 @@
       var tree_entries = [],
           file_names = {},
           refl_promises = [];
+      // some globals, because I'm a lazy/bad programmer:
       refl_objs = {};
       fileinfo = {};
       var datafiles = files.filter(function(x) {return (
@@ -312,7 +313,7 @@
         var treeinfo = finfo_to_tree(fileinfo, path);
         console.log(treeinfo);
         var jstree = $("#filebrowser").jstree({
-          "plugins": ["checkbox", "changed"],
+          "plugins": ["checkbox", "changed", "sort"],
           "checkbox" : {
             "three_state": true,
             //"cascade": "down",
@@ -457,7 +458,15 @@
                     dirlink.textContent = pathitem + "/";
                     dirlink.onclick = function() {
                         history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
-                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                        $.jsonRPC.request('get_file_metadata', {
+                            params: [new_pathlist.slice(0, index+1)],
+                            success: function(result) {
+                                metadata = JSON.parse(result.result);
+                                updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1))(metadata);
+                            }, 
+                            error: function(result) {console.log('error: ', result)}
+                        });
+                        //$.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
                     }
                     patheditor.appendChild(dirlink);
                 });
@@ -520,40 +529,27 @@
       };
       var datas = [];
       entry_ids.forEach(function(eid) {
-        var nf = nexus_objs[eid.path + "/" + eid.filename];
-        var entry = nf.get(eid.entryname);
-        //var ycol_link = "y";
-        //var xcol_link = "x";
-        var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
-        var xcol, ycol, ynormcol, xdata, ydata, ynormdata;
-        if (ycols.length > 0) {
-          xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
-          ycol = ycols[0][0];
-          ynormcol = "control/monitor_counts";
-          ydata = ycols[0][1].getValue();
-          xdata = entry.get("DAS_logs/" + xcol);
-          if (xdata.getValue) {
-            xdata = xdata.getValue();
-          } else {
-            //get the primary axis if it's a device:
-            if ('primary' in xdata.getAttrs()) {
-              xdata = xdata.get(xdata.getAttrs().primary).getValue();
-            }
-          }
-          ynormdata = entry.get(ynormcol).getValue();
-        }
+        var refl = refl_objs[eid.path + '/' + eid.filename];
+        var entry = refl.filter(function(e) {return ((e.name + e.polarization) == eid.entryname)});
+        if (entry.length < 1) { return }
+        else {entry = entry[0]};
+        var ydata = entry['detector']['counts'];
+        var xdata = entry['Qz_target'];
+        console.log(entry, ydata, xdata);
         var xydata = [], x, y, ynorm;
-        for (var i=0; i<xdata.length || i<ydata.length || i<ynormdata.length; i++) {
-          x = (i<xdata.length) ? xdata[i][0] : x; // use last value
-          y = (i<ydata.length) ? ydata[i][0] : y; // use last value
-          ynorm = (i<ynormdata.length) ? ynormdata[i][0] : ynorm; // use last value
-          xydata[i] = [x,y/ynorm];
+        for (var i=0; i<xdata.length || i<ydata.length; i++) {
+          x = (i<xdata.length) ? xdata[i] : x; // use last value
+          y = (i<ydata.length) ? ydata[i] : y; // use last value
+          //ynorm = (i<ynormdata.length) ? ynormdata[i][0] : ynorm; // use last value
+          //xydata[i] = [x,y/ynorm];
           //xydata[i] = xdata[i].concat(ydata[i]);
+          xydata[i] = [x, y];
         }
+        console.log(xydata);
         datas.push(xydata);
         options.series.push({label: eid.filename + ":" + eid.entryname});
-        options.axes.xaxis.label = xcol.replace("/", ".");
-        options.axes.yaxis.label = ycol.replace("/", ".") + "/monitor";
+        options.axes.xaxis.label = "Qz (target)";
+        options.axes.yaxis.label = "counts";
         options.xtransform = $("#xscale").val();
         options.ytransform = $("#yscale").val();
       });
