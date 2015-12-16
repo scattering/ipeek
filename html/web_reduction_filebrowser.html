@@ -442,7 +442,7 @@
       var remote_source_count = $("#navigation div.remote_filebrowser").length;
       var new_id = "remote_source_" + (remote_source_count + 1).toFixed();
       var new_div = $("<div />", {"id": new_id})
-      $("#navigation").append(new_div);
+      $("#processed_data").before(new_div);
       $.jsonRPC.request('get_file_metadata', {
           async: true,
           params: [path],
@@ -552,6 +552,27 @@
                 }
                 dirbrowser.appendChild(subdiritem);
             });
+            
+            var deadtime_choose = document.createElement('div');
+            deadtime_choose.classList.add("deadtime-chooser");
+            var deadtime_text = document.createElement('span');
+            deadtime_text.textContent = "deadtime correct:";
+            deadtime_choose.appendChild(deadtime_text);
+            var deadtime_detector = document.createElement('label');
+            deadtime_detector.textContent = "det";
+            var deadtime_detector_select = document.createElement('input');
+            deadtime_detector_select.type = "checkbox";
+            deadtime_detector_select.checked = true;
+            deadtime_detector.appendChild(deadtime_detector_select);
+            deadtime_choose.appendChild(deadtime_detector);
+            var deadtime_monitor = document.createElement('label');
+            deadtime_monitor.textContent = "mon";
+            var deadtime_monitor_select = document.createElement('input');
+            deadtime_monitor_select.type = "checkbox";
+            deadtime_monitor_select.checked = true;
+            deadtime_monitor.appendChild(deadtime_monitor_select);
+            deadtime_choose.appendChild(deadtime_monitor);
+            
             var filebrowser = document.createElement('div');
             //filebrowser.id = "filebrowser";
             filebrowser.classList.add("remote_filebrowser");
@@ -561,6 +582,7 @@
             $('#' + target_id).empty()
               .append(buttons)
               .append(patheditor)
+              .append(deadtime_choose)
               .append(dirbrowser)
               .append(filebrowser);
             
@@ -792,7 +814,8 @@
 </head>
 <body>
 <div id="navigation" class="ui-layout-wrapper ui-layout-west">
-  <div id="remote_source_1"></div>
+  <div id="remote_source_1" class="source-data"></div>
+  <div id="processed_data" class="processed-data">Processed</div>
 </div>
 <div id="bottom_panel" class="ui-layout-south">
 
