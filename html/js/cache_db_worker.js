@@ -1,4 +1,4 @@
-importScripts('Dexie.js', 'zip/jszip.min.js', 'DataStream.js', 'nexus-jszip.js', '//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js');
+importScripts('Dexie.js', 'zip/jszip.min.js', 'DataStream.js', 'nexus-jszip.js', 'https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js');
 
 var db = new Dexie("NexusDatafiles");
 db.version(nz.version)
