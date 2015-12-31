@@ -284,8 +284,8 @@
       });
 
     db.open();
-    //db.filenames.put({url: "http://ncnr.nist.gov/pub/ncnrdata...", mtime: 12323452343, data: {}});
-    //db.filenames.where("url").equalsIgnoreCase("http://ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
+    //db.filenames.put({url: "//ncnr.nist.gov/pub/ncnrdata...", mtime: 12323452343, data: {}});
+    //db.filenames.where("url").equalsIgnoreCase("//ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
     // .each returns a Promise, resolved with "undefined" after last iteration is complete.
 
     function categorize_files(files, files_metadata, path, target_id) {
@@ -649,8 +649,8 @@
     }
 
     $.jsonRPC.setup({
-      //endPoint: 'http://localhost:' + rpc_port + '/RPC2',
-      endPoint: "http://localhost:8001/RPC2",
+      //endPoint: '//localhost:' + rpc_port + '/RPC2',
+      endPoint: "//localhost:8001/RPC2",
       namespace: '',
       cache: false
     });
