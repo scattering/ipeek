@@ -650,7 +650,7 @@
 
     $.jsonRPC.setup({
       //endPoint: '//localhost:' + rpc_port + '/RPC2',
-      endPoint: "//localhost:8001/RPC2",
+      endPoint: "http://" + window.location.hostname + ":8001/RPC2",
       namespace: '',
       cache: false
     });
