@@ -657,11 +657,13 @@
 
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
-      if (e.state) {
+      //if (e.state) {
         get_file_metadata();
-      }
+      //}
     }
-
+    
+    window.onpopstate();
+    
     window.onload = function() {
       var layout = $('body').layout({
           west__size:			350
