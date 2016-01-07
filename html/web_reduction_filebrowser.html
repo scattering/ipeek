@@ -14,6 +14,7 @@
   <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/dataflow-editor-streamline.js"></script>
   <script type="text/javascript" src="js/jquery.jsonrpc.js"></script>
   <script src="js/Dexie.js"></script>
   <script type="text/javascript">
@@ -512,7 +513,7 @@
                 var new_pathlist = $.extend(true, [], pathlist);
                 $.each(new_pathlist, function(index, pathitem) {
                     dirlink = document.createElement('span');
-                    dirlink.textContent = pathitem + "/";
+                    dirlink.textContent = pathitem; // + "/";
                     dirlink.onclick = function() {
                         history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
                         $.jsonRPC.request('get_file_metadata', {
@@ -526,6 +527,7 @@
                         //$.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane(target_id, new_pathlist.slice(0, index+1)));
                     }
                     patheditor.appendChild(dirlink);
+                    patheditor.appendChild(document.createTextNode("/"));
                 });
             }
             
@@ -535,7 +537,11 @@
             $.each(dirdata.subdirs, function(index, subdir) {
                 subdiritem = document.createElement('li');
                 subdiritem.classList.add('subdiritem');
-                subdiritem.textContent = "(dir) " + subdir;
+                subdiritem.appendChild(document.createTextNode("(dir) "));
+                //subdiritem.textContent = "(dir) " + subdir;
+                subdirlink = document.createElement("span");
+                subdirlink.textContent = subdir;
+                subdiritem.appendChild(subdirlink);
                 var new_pathlist = $.extend(true, [], pathlist);
                 new_pathlist.push(subdir);
                 subdiritem.onclick = function() {
@@ -626,7 +632,6 @@
         var ydata = get_refl_item(entry, ycol);
         var xdata = get_refl_item(entry, xcol);
         var ynormdata = get_refl_item(entry, ynormcol);
-        console.log(entry, ydata, xdata);
         var xydata = [], x, y, ynorm;
         for (var i=0; i<xdata.length || i<ydata.length; i++) {
           x = (i<xdata.length) ? xdata[i] : x; // use last value
@@ -674,7 +679,7 @@
       var layout = $('body').layout({
           west__size:			350
         ,	east__size:			0
-        ,   south__size:        "auto"
+        , south__size:    150
           // RESIZE Accordion widget when panes resize
         ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
         ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
@@ -685,7 +690,129 @@
       //$("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
       //$("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
       $("#xscale, #yscale").change(handleChecked);
-      //sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
+      var x0 = 10,
+          y0 = 10, 
+          dx = 135,
+          dy = 40;
+
+      var module_opts = [
+        {
+          title: "load spec",
+          inputs: [],
+          outputs: ["out"],
+          x: x0,
+          y: y0
+        },
+        {
+          title: "load bg",
+          inputs: [],
+          outputs: ["out"],
+          x: x0,
+          y: y0 + dy
+        },
+        {
+          title: "load slit",
+          inputs: [],
+          outputs: ["out"],
+          x: x0,
+          y: y0 + 2*dy
+        },
+        {
+          title: "mask",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + dx,
+          y: y0
+        },
+        {
+          title: "mask",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + dx,
+          y: y0 + dy
+        },
+        {
+          title: "mask",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + dx,
+          y: y0 + 2*dy
+        },
+        {
+          title: "join",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + 2*dx,
+          y: y0
+        },
+        {
+          title: "join",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + 2*dx,
+          y: y0 + dy
+        },
+        {
+          title: "attenuate",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + 2*dx,
+          y: y0 + 2*dy
+        },
+        {
+          title: "join",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + 3*dx,
+          y: y0 + 2*dy
+        },
+        {
+          title: "subtract",
+          inputs: ["subtrahend", "minuend"],
+          outputs: ["out"],
+          x: x0 + 3*dx,
+          y: y0
+        },
+        {
+          title: "normalize",
+          inputs: ["numerator", "denominator"],
+          outputs: ["out"],
+          x: x0 + 4*dx,
+          y: y0 + dy
+        },
+        {
+          title: "footprint",
+          inputs: ["in"],
+          outputs: ["out"],
+          x: x0 + 5*dx,
+          y: y0 + dy
+        },
+        
+      ];
+
+      opts = {
+          modules: module_opts,
+          wires: [
+              {src: "0:out", tgt: "3:in"},
+              {src: "1:out", tgt: "4:in"},
+              {src: "2:out", tgt: "5:in"},
+              {src: "3:out", tgt: "6:in"},
+              {src: "4:out", tgt: "7:in"},
+              {src: "5:out", tgt: "8:in"},
+              {src: "8:out", tgt: "9:in"},
+              {src: "6:out", tgt: "10:subtrahend"},
+              {src: "7:out", tgt: "10:minuend"},
+              {src: "10:out", tgt: "11:numerator"},
+              {src: "9:out", tgt: "11:denominator"},
+              {src: "11:out", tgt: "12:in"}
+          ]
+      }
+
+      e = new dataflow.editor();
+      e.data([opts]);
+      d3.select("#bottom_panel").call(e);
+      d3.selectAll(".module").classed("draggable wireable", false);
+            //sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
     }  
     
   </script>
@@ -698,6 +825,17 @@
       image-rendering: -webkit-optimize-contrast;
       image-rendering: optimize-contrast;
       -ms-interpolation-mode: nearest-neighbor;
+    }
+    svg.editor {
+      width: 100%;
+      height: 100%;
+      float: left;
+      margin-right: -1px;
+      margin-bottom: -1px;
+    }
+    
+    .output.label, .input.label {
+      display: none
     }
     
     a svg, a span {
@@ -808,6 +946,17 @@
     
     .jstree > ul > li > a > .jstree-checkbox {
       display: none !important;
+    }
+    
+    #dirbrowser, li.subdiritem {
+        list-style-type: none;
+        margin-left: 0px;
+        padding-left: 5px;
+    }
+    .subdiritem span, .patheditor span {
+      color: blue;
+      text-decoration: underline;
+      cursor: pointer;     
     }
     
 </style>
