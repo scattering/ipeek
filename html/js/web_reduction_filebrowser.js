@@ -1,9 +1,15 @@
 (function filebrowser() {
-     "use strict";
+     //"use strict";
 
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
+    statusline_log = function(message) {
+      var statusline = $("#statusline");
+      if (statusline && statusline.html) {
+        statusline.html(message);
+      }
+    }
 
     //zip.workerScripts = {
     //  deflater: ['js/zip/z-worker.js', 'js/zip/zlib.js', 'js/zip/zlib-asm/codecs.js'],
@@ -302,7 +308,8 @@
         (/^scripted_findpeak/.test(x) == false)
         )});
       datafiles.forEach(function(j) {
-        console.log(path + "/" + j, files_metadata[j].mtime);
+        //console.log(path + "/" + j, files_metadata[j].mtime);
+        statusline_log("found file: " +  path + "/" + j + ", " + files_metadata[j].mtime);
         refl_promises.push(load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
       });
       Promise.all(refl_promises).then(function(results) {
@@ -378,7 +385,8 @@
           params: [template, config, module_id, terminal_id],
           success: function(result) {
               if (db) { db[path] = result.result; }
-              console.log(result.result);
+              //console.log(result.result);
+              statusline_log("loaded: " + path);
               resolve(result.result);
           },
           error: function(result) {console.log('error: ', result); reject(result);}
@@ -469,7 +477,6 @@
     }
 
     function updateFileBrowserPane(target_id, pathlist) {
-      console.log(target_id, $("#" + target_id));
         function handler(dirdata) {
             var buttons = $("<div />", {class: "buttons"});
             var clear_all = $("<button />", {
