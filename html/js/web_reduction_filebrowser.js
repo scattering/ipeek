@@ -1,10 +1,10 @@
 (function filebrowser() {
-     //"use strict";
-
+     "use strict";
+    
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
-    statusline_log = function(message) {
+    var statusline_log = function(message) {
       var statusline = $("#statusline");
       if (statusline && statusline.html) {
         statusline.html(message);
@@ -675,7 +675,7 @@
       var layout = $('body').layout({
           west__size:			350
         ,	east__size:			0
-        , south__size:    150
+        , south__size:    200
           // RESIZE Accordion widget when panes resize
         ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
         ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
@@ -691,123 +691,22 @@
           dx = 135,
           dy = 40;
 
-      var module_opts = [
-        {
-          title: "load spec",
-          inputs: [],
-          outputs: ["out"],
-          x: x0,
-          y: y0
-        },
-        {
-          title: "load bg",
-          inputs: [],
-          outputs: ["out"],
-          x: x0,
-          y: y0 + dy
-        },
-        {
-          title: "load slit",
-          inputs: [],
-          outputs: ["out"],
-          x: x0,
-          y: y0 + 2*dy
-        },
-        {
-          title: "mask",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + dx,
-          y: y0
-        },
-        {
-          title: "mask",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + dx,
-          y: y0 + dy
-        },
-        {
-          title: "mask",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + dx,
-          y: y0 + 2*dy
-        },
-        {
-          title: "join",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + 2*dx,
-          y: y0
-        },
-        {
-          title: "join",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + 2*dx,
-          y: y0 + dy
-        },
-        {
-          title: "attenuate",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + 2*dx,
-          y: y0 + 2*dy
-        },
-        {
-          title: "join",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + 3*dx,
-          y: y0 + 2*dy
-        },
-        {
-          title: "subtract",
-          inputs: ["subtrahend", "minuend"],
-          outputs: ["out"],
-          x: x0 + 3*dx,
-          y: y0
-        },
-        {
-          title: "normalize",
-          inputs: ["numerator", "denominator"],
-          outputs: ["out"],
-          x: x0 + 4*dx,
-          y: y0 + dy
-        },
-        {
-          title: "footprint",
-          inputs: ["in"],
-          outputs: ["out"],
-          x: x0 + 5*dx,
-          y: y0 + dy
-        },
-        
-      ];
-
-      var opts = {
-          modules: module_opts,
-          wires: [
-              {src: "0:out", tgt: "3:in"},
-              {src: "1:out", tgt: "4:in"},
-              {src: "2:out", tgt: "5:in"},
-              {src: "3:out", tgt: "6:in"},
-              {src: "4:out", tgt: "7:in"},
-              {src: "5:out", tgt: "8:in"},
-              {src: "8:out", tgt: "9:in"},
-              {src: "6:out", tgt: "10:subtrahend"},
-              {src: "7:out", tgt: "10:minuend"},
-              {src: "10:out", tgt: "11:numerator"},
-              {src: "9:out", tgt: "11:denominator"},
-              {src: "11:out", tgt: "12:in"}
-          ]
-      }
+      
+      
 
       var e = new dataflow.editor();
-      e.data([opts]);
+      e.data([templates.ncnr.refl.specular_plusminus_background]);
       d3.select("#bottom_panel").call(e);
       d3.selectAll(".module").classed("draggable wireable", false);
+
+      d3.selectAll(".module .terminal").on("click", function() {
+        d3.selectAll(".module .selected").classed("selected", false);
+        d3.select(this).classed('selected', true);
+      });
+      d3.selectAll(".module g.title").on("click", function() {
+        d3.selectAll(".module .selected").classed("selected", false);
+        d3.select(this).select("rect.title").classed("selected", true);
+      })
     }
 
 })();
