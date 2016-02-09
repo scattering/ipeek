@@ -371,12 +371,12 @@
         var template = {
           "name": "loader_template",
           "description": "ReflData remote loader",
-          "modules": [{"module": "ncnr.refl.load", "version": "0.1", "config": {}}],
+          "modules": [{"module": "ncnr.refl.super_load", "version": "0.1", "config": {}}],
           "wires": [],
           "instrument": "ncnr.magik",
           "version": "0.0"
         }
-        var config = {"0": {"files": [{"path": path, "mtime": mtime}]}},
+        var config = {"0": {"filelist": [{"path": path, "mtime": mtime}]}},
             module_id = 0,
             terminal_id = "output";
 
