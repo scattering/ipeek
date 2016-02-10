@@ -371,16 +371,19 @@
         var template = {
           "name": "loader_template",
           "description": "ReflData remote loader",
-          "modules": [{"module": "ncnr.refl.super_load", "version": "0.1", "config": {}}],
-          "wires": [],
+          "modules": [
+            {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}},
+            {"module": "ncnr.refl.nop", "version": "0.1", "config": {}}
+          ],
+          "wires": [{"source": [0,"output"], "target": [1,"data"]}],
           "instrument": "ncnr.magik",
           "version": "0.0"
         }
         var config = {"0": {"filelist": [{"path": path, "mtime": mtime}]}},
-            module_id = 0,
+            module_id = 1,
             terminal_id = "output";
 
-        $.jsonRPC.request('calc_dict', {
+        $.jsonRPC.request('calc_terminal', {
           async: true,
           params: [template, config, module_id, terminal_id],
           success: function(result) {
