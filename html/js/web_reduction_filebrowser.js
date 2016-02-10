@@ -386,10 +386,10 @@
           async: true,
           params: [template, config, module_id, terminal_id],
           success: function(result) {
-              if (db) { db[path] = result.result; }
+              if (db) { db[path] = result.result.values; }
               //console.log(result.result);
               statusline_log("loaded: " + path);
-              resolve(result.result);
+              resolve(result.result.values);
           },
           error: function(result) {console.log('error: ', result); reject(result);}
         });
