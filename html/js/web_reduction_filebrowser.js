@@ -372,10 +372,8 @@
           "name": "loader_template",
           "description": "ReflData remote loader",
           "modules": [
-            {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}},
-            //{"module": "ncnr.refl.nop", "version": "0.1", "config": {}}
+            {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}}
           ],
-          //"wires": [{"source": [0,"output"], "target": [1,"data"]}],
           "wires": [],
           "instrument": "ncnr.magik",
           "version": "0.0"
@@ -388,10 +386,10 @@
           async: true,
           params: [template, config, module_id, terminal_id],
           success: function(result) {
-              if (db) { db[path] = result.result; }
+              if (db) { db[path] = result.result.values; }
               //console.log(result.result);
               statusline_log("loaded: " + path);
-              resolve(result.result);
+              resolve(result.result.values);
           },
           error: function(result) {console.log('error: ', result); reject(result);}
         });
