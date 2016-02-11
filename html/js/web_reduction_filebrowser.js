@@ -373,14 +373,15 @@
           "description": "ReflData remote loader",
           "modules": [
             {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}},
-            {"module": "ncnr.refl.nop", "version": "0.1", "config": {}}
+            //{"module": "ncnr.refl.nop", "version": "0.1", "config": {}}
           ],
-          "wires": [{"source": [0,"output"], "target": [1,"data"]}],
+          //"wires": [{"source": [0,"output"], "target": [1,"data"]}],
+          "wires": [],
           "instrument": "ncnr.magik",
           "version": "0.0"
         }
         var config = {"0": {"filelist": [{"path": path, "mtime": mtime}]}},
-            module_id = 1,
+            module_id = 0,
             terminal_id = "output";
 
         $.jsonRPC.request('calc_terminal', {

@@ -123,7 +123,8 @@ templates.ncnr.refl = templates.ncnr.refl || {};
     "modules": [
       {
         title: "load spec",
-        name: "ncnr.refl.load",
+        module: "ncnr.refl.super_load",
+        config: {"intent": "specular"},
         inputs: [],
         outputs: ["output"],
         x: x0,
