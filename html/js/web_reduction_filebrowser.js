@@ -1,5 +1,5 @@
 (function filebrowser() {
-     "use strict";
+     //"use strict";
     
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
@@ -697,8 +697,24 @@
       
 
       var e = new dataflow.editor();
-      e.data([templates.ncnr.refl.specular_plusminus_background]);
-      d3.select("#bottom_panel").call(e);
+      $.jsonRPC.request('get_instrument', {
+          async: true,
+          params: [],
+          success: function(result) {
+              instrument_def = result.result;
+              if ('modules' in instrument_def) {
+                for (var i=0; i<instrument_def.modules.length; i++) {
+                  var m = instrument_def.modules[i];
+                  dataflow.module_defs[m.id] = m;
+                }
+              }
+              e.data([instrument_def.templates[0]]);
+              d3.select("#bottom_panel").call(e);
+          },
+          error: function(result) {console.log('error: ', result)}
+      });
+      //$.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("remote_source_1", start_path));
+      
       d3.selectAll(".module").classed("draggable wireable", false);
 
       d3.selectAll(".module .terminal").on("click", function() {
