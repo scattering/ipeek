@@ -1,6 +1,10 @@
 (function filebrowser() {
      //"use strict";
     
+    active_reduction = {
+      "config": {},
+      "template": {}
+    }
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
@@ -434,7 +438,7 @@
 
     }
 
-    function add_remote_source(path) {
+    add_remote_source = function(path) {
       var remote_source_count = $("#navigation div.remote_filebrowser").length;
       var new_id = "remote_source_" + (remote_source_count + 1).toFixed();
       var new_div = $("<div />", {"id": new_id})
@@ -468,7 +472,7 @@
       }
     }
 
-    function getCurrentPath(target_id) {
+    getCurrentPath = function(target_id) {
       // get the path from a specified path browser element
       var target_id = (target_id == null) ? "body" : target_id;
       var path = "";
@@ -676,14 +680,16 @@
     window.onload = function() {
       var layout = $('body').layout({
           west__size:			350
-        ,	east__size:			0
+        ,	east__size:			200
         , south__size:    200
           // RESIZE Accordion widget when panes resize
         ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
         ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
         ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+        , center__onresize:   handleChecked
 		  });
-		
+		  
+		  layout.toggle('east');
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
       //$("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
       //$("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
@@ -695,6 +701,17 @@
 
       
       
+      var handle_module_clicked = function() {
+        // module group is 2 levels above module title in DOM
+        var index = d3.select(d3.select(".module .selected").node().parentNode.parentNode).attr("index");
+        console.log(index, active_reduction.config[index], active_reduction.template.modules[index].config);
+      }
+      
+      var handle_terminal_clicked = function() {
+        var index = d3.select(d3.select(".module .selected").node().parentNode.parentNode).attr("index");
+        var terminal_id = d3.select(".module .selected").attr("terminal_id");
+        console.log(index, terminal_id);
+      }
 
       var e = new dataflow.editor();
       $.jsonRPC.request('get_instrument', {
@@ -709,22 +726,27 @@
                 }
               }
               e.data([instrument_def.templates[0]]);
+              active_reduction.template = instrument_def.templates[0];
               d3.select("#bottom_panel").call(e);
+              
+              d3.selectAll(".module").classed("draggable wireable", false);
+
+              d3.selectAll(".module .terminal").on("click", function() {
+                d3.selectAll(".module .selected").classed("selected", false);
+                d3.select(this).classed('selected', true);
+                handle_terminal_clicked();
+              });
+              d3.selectAll(".module g.title").on("click", function() {
+                d3.selectAll(".module .selected").classed("selected", false);
+                d3.select(this).select("rect.title").classed("selected", true);
+                handle_module_clicked();
+              })
           },
           error: function(result) {console.log('error: ', result)}
       });
       //$.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("remote_source_1", start_path));
       
-      d3.selectAll(".module").classed("draggable wireable", false);
-
-      d3.selectAll(".module .terminal").on("click", function() {
-        d3.selectAll(".module .selected").classed("selected", false);
-        d3.select(this).classed('selected', true);
-      });
-      d3.selectAll(".module g.title").on("click", function() {
-        d3.selectAll(".module .selected").classed("selected", false);
-        d3.select(this).select("rect.title").classed("selected", true);
-      })
+      
     }
 
 })();
