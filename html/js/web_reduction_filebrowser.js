@@ -471,7 +471,7 @@
         db.filenames.put({url: url, mtime: nxz.mtime, data: nz.cacheAll(nxz)});
       }
     }
-
+    /*
     getCurrentPath = function(target_id) {
       // get the path from a specified path browser element
       var target_id = (target_id == null) ? "body" : target_id;
@@ -481,7 +481,7 @@
       });
       return path;
     }
-
+  
     function updateFileBrowserPane(target_id, pathlist) {
         function handler(dirdata) {
             var buttons = $("<div />", {class: "buttons"});
@@ -595,6 +595,7 @@
         }
         return handler
     }
+    */
 
     function handleSelection() {console.log(selection)};
 
@@ -654,7 +655,7 @@
           params: [start_path],
           success: function(result) {
               var metadata = JSON.parse(result.result);
-              updateFileBrowserPane("remote_source_1", start_path)(metadata);
+              updateFileBrowserPane("remote_source_1", start_path, server_api)(metadata);
           },
           error: function(result) {console.log('error: ', result)}
       });
@@ -667,11 +668,33 @@
       namespace: '',
       cache: false
     });
+    
+    server_api = {};
+    server_api.get_file_metadata = function(pathlist) {
+      var r = new Promise(function(resolve, reject) {
+        $.jsonRPC.request('get_file_metadata', {
+          async: true,
+          params: [pathlist],
+          success: function(result) {
+              var metadata = JSON.parse(result.result);
+              resolve(metadata);
+          },
+          error: function(result) {console.log('error: ', result)}
+      });
+      })
+      return r;
+    }
 
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
       //if (e.state) {
-        get_file_metadata();
+      var start_path = $.extend(true, [], data_path),
+        url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+        start_path = url_vars.pathlist.split("+");
+      }
+      server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane("remote_source_1", start_path, server_api))
+        //get_file_metadata();
       //}
     }
     
@@ -704,8 +727,15 @@
       var handle_module_clicked = function() {
         // module group is 2 levels above module title in DOM
         var index = d3.select(d3.select(".module .selected").node().parentNode.parentNode).attr("index");
-        console.log(index, active_reduction.config[index], active_reduction.template.modules[index].config);
+        var active_module = active_reduction.template.modules[index];
+        var module_def = instrument_def.modules.filter(function(m) { return (m.id === active_module.module )})[0] || {};
+        var fields = module_def.fields || [];
+        console.log(index, active_reduction.config[index], active_module, module_def.fields);
       }
+      // need to make field-datatype-specific client actions... for example, the super_load
+      // module has fields with datatypes 'fileinfo', 'bool', 'bool', ...
+      // for the fileinfo field, want to interact with the file chooser on the left panel
+      // for the boolean inputs, want checkboxes.
       
       var handle_terminal_clicked = function() {
         var index = d3.select(d3.select(".module .selected").node().parentNode.parentNode).attr("index");
