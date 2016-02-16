@@ -1,0 +1,708 @@
+<html>
+<head>
+  <script src="js/zip/jszip.min.js"></script>
+  <script src="js/zip/jszip-utils.min.js"></script>
+  <script src="js/DataStream.js"></script>
+  <script src="js/nexus-jszip.js"></script>
+  <script src="js/sha1.js"></script>
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script>
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="js/jquery.layout-latest.js"></script>
+  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script src="js/Dexie.js"></script>
+  <script type="text/javascript">
+    NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+    dirHelper = "listftpfiles.php";
+    data_path = ["ncnrdata"];
+    
+    //zip.workerScripts = {
+    //  deflater: ['js/zip/z-worker.js', 'js/zip/zlib.js', 'js/zip/zlib-asm/codecs.js'],
+    //  inflater: ['js/zip/z-worker.js', 'js/zip/zlib.js', 'js/zip/zlib-asm/codecs.js']
+    //};
+    //zip.workerScriptsPath = "js/zip/";
+    getUrlVars = function(){
+      var vars = [], hash;
+      var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+      for(var i = 0; i < hashes.length; i++) {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+      }
+      return vars;
+    }
+    
+    var start_time = (new Date()).getTime();
+    var fileinfo;
+    function getArrayBuffer(base_url, filename, mtime) {
+      // Return a new promise.
+      var url = base_url + "/" + filename;
+      return new Promise(function(resolve, reject) {
+        // Do the usual XHR stuff
+        var req = new XMLHttpRequest();
+        req.open('GET', url);
+        req.responseType = 'arraybuffer'
+
+        req.onload = function() {
+          // This is called even on 404 etc
+          // so check the status
+          if (req.status == 200) {
+            // Resolve the promise with the response text
+            resolve([req.response, url, mtime]);
+          }
+          else {
+            // Otherwise reject with the status text
+            // which will hopefully be a meaningful error
+            reject(Error(req.statusText));
+          }
+        };
+
+        // Handle network errors
+        req.onerror = function() {
+          reject(Error("Network Error"));
+        };
+
+        // Make the request
+        req.send();
+      });
+    }
+    
+    
+    function getTextData(entry) {
+      return new Promise(function(resolve, reject) {
+        if (entry == null) { resolve(null); return }
+        else {
+          entry.getData(new zip.TextWriter(), function(text) { resolve(text) });
+        }
+      });
+    }
+    
+    function getJSONData(entry) {
+      return new Promise(function(resolve, reject) {
+        if (entry == null) { resolve(null); return }
+        else {
+          entry.getData(new zip.TextWriter(), function(text) { resolve(JSON.parse(text)) });
+        }
+      });
+    }
+    
+    var primary_axis_pattern = {
+      "SPEC": /trajectoryData\/_q$/,
+      "BG": /trajectoryData\/_q$/,
+      "BGP": /trajectoryData\/_q$/,
+      "BGM": /trajectoryData\/_q$/,
+      "SLIT": /trajectoryData\/_q$/,
+      "ROCK": /sampleAngle\/softPosition$/
+    }
+    
+    var primary_axis = {
+      "SPEC": "/DAS_logs/trajectoryData/_q",
+      "BG": "/DAS_logs/trajectoryData/_q",
+      "BGP": "/DAS_logs/trajectoryData/_q",
+      "BGM": "/DAS_logs/trajectoryData/_q",
+      "SLIT": "/DAS_logs/trajectoryData/_q",
+      "ROCK": "/DAS_logs/sampleAngle/softPosition"
+    }
+    
+    function readData(entries, path) {
+      // first, get the attributes:
+      var attrs_file = path + ".attrs";
+      var attrs_entry = entries.filter(function(e,i,a) { return (e.filename == attrs_file) })
+      if (attrs_entry.length < 1) { throw "key error: " + attrs_file }
+      getTextData(attrs_entry[0]).then(function(a) { 
+        var attrs = JSON.parse(a);
+        if (attrs.binary) {
+          console.log("binary read not implemented yet");
+          return Promise.resolve(null);
+        }
+        else {
+          
+        }
+      });
+    }
+
+    function flatten(array) {
+      if (array.constructor.name == "Array") {
+        return flatten(array[0]);
+      }
+      else {
+        return array;
+      }
+    }
+    var nexus_objs = {};
+    
+    function handleZip(url, zip) {
+      var sout = {};
+      var f = new nz.File().init(url, f.files);
+      //nexus_objs[url.split("/").slice(-1)] = f;
+      nexus_objs[url] = f;
+      var entry_names = f.groupnames();
+      entry_names.forEach(function(entry) {
+          sout[entry] = sout[entry] || {};
+          sout[entry].samplename =  f.get(entry + "/sample/name").getValue()[0][0];
+          sout[entry].scantype =  f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
+        
+      });
+      console.log(entry_names);
+      return sout;
+    }
+    function handleAB(args) {
+      var url = args[1],
+          ab = args[0],
+          mtime = args[2];
+      
+      var zip = new JSZip(ab);
+      //console.log(zip);
+      var f = new nz.File().init(url, zip.files);
+      f.mtime = mtime;
+      //nexus_objs[url.split("/").slice(-1)] = f;
+      nexus_objs[url] = f;
+      console.log(url);
+    }
+    
+    function get_info(nz_obj, fields) {
+      // fields is an ordered pairs of [["fieldname", "lookup_path"], ...]}
+      // to grab specific fields from files
+      var f = nz_obj, sout = {};
+      var entry_names = f.groupnames();
+      entry_names.forEach(function(entry) {
+          sout[entry] = sout[entry] || {};
+          for (var i=0; i<fields.length; i++) {
+            var fieldname = fields[i][0];
+            var path = fields[i][1];
+            var fieldval = f.get(entry + path);
+            if (fieldval && fieldval.getValue) {
+              sout[entry][fieldname] = fieldval.getValue();
+            }
+          }
+      });
+      return sout;
+    }
+    
+    var rejectAB = function(error) {
+      console.error("Failed!", error);
+    };
+    
+    function fill_info(
+    
+    function finfo_to_tree(finfo, path, fields){
+      var out = [], fields_obj = {};
+      
+      for (var fn in finfo) {
+        var fn_info = finfo[fn];
+        for (var entry in fn_info) {
+          var info = fn_info[entry];
+          
+          for (var i=0; i<fields.length; i++) {
+            var fieldname = fields[i][0];
+            fields[obj];
+          }        
+          var samplename = info.samplename,
+              scantype = info.scantype;
+          sample_names[samplename] = sample_names[samplename] || {};
+          sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
+          // min_x and max_x for a file are grabbed from the first entry that pops up:
+          sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {min_x: info.min_x, max_x: info.max_x};
+          out.push({
+            "id": fn+":"+entry, 
+            "parent": fn, 
+            "text": fn + ":" + entry, 
+            "icon": false, 
+            "li_attr": {"path": path, "min_x": info.min_x, "max_x": info.max_x} 
+          });
+        }
+      }
+      for (var sn in sample_names) {
+        out.push({"id": sn, "parent": "#", "text": sn});
+        var sample_obj = sample_names[sn];
+        for (var t in sample_obj) {
+          var type_obj = sample_obj[t];
+          var global_min_x = Infinity,
+              global_max_x = -Infinity;          
+          for (var fn in type_obj) {
+            // once through to get max and min...
+            var f_obj = type_obj[fn];
+            if (f_obj.x) {
+              var extent = d3.extent(f_obj.x),
+                min_x = extent[0][0],
+                max_x = extent[0][1];
+              global_min_x = Math.min(min_x, global_min_x);
+              global_max_x = Math.max(max_x, global_max_x);
+            }
+          }
+          for (var fn in type_obj) {
+            // and again to make the range icon.
+            var f_obj = type_obj[fn],
+              min_x, max_x;
+            if (f_obj.x) {
+              var extent = d3.extent(f_obj.x);
+              min_x = extent[0][0],
+              max_x = extent[0][1];
+            }
+            var range_icon = make_range_icon(global_min_x, global_max_x, min_x, max_x);
+            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": min_x, "max_x": max_x, "class": "datafile"}});
+          }
+          out.push({"id": sn + ":" + t, "parent": sn, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
+        }
+      }
+      return out;
+    }
+    
+    function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
+      var icon_width = 75;
+      var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
+      var width = icon_width * rel_width;
+      var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
+      var x = icon_width * rel_x;
+      var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
+      output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
+      output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
+      output += "</svg>"
+      return output
+    }
+    
+    // Dexie:  
+    
+    var db = new Dexie("NexusDatafiles");
+    db.version(nz.version)
+      .stores({
+        filenames: 'url,mtime,data'
+      });
+    
+    db.open();
+    //db.filenames.put({url: "http://ncnr.nist.gov/pub/ncnrdata...", mtime: 12323452343, data: {}});
+    //db.filenames.where("url").equalsIgnoreCase("http://ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
+    // .each returns a Promise, resolved with "undefined" after last iteration is complete.
+
+    function categorize_files(files, files_metadata, path) {
+      var t0 = new Date();
+      var tree_entries = [],
+          file_names = {},
+          fileinfo = {};
+      var fields = [
+            ["samplename", "/sample/name"], 
+            ["scantype", "/DAS_logs/trajectoryData/_scanType"],
+            ["counts", "/data/y"], 
+            ["x", "/data/x"]
+          ]
+      var datafiles = files.filter(function(x) {return (NEXUS_ZIP_REGEXP.test(x) )});
+      var sequence = Promise.resolve();
+      datafiles.forEach(function(j) { 
+        sequence = sequence.then(function() { 
+          return db.filenames.where("url").equals(path + "/" + j).first(function(c) {
+            if (c == undefined) { return getArrayBuffer(path, j, files_metadata[j].mtime).then(handleAB, rejectAB)  } //.then(function(s) {fileinfo[j] = s}) 
+            else { // load from cached version in db:
+              var url = path + "/" + j;
+              var f = new nz.File().init(url, c.data, c.data);
+              f.mtime = files_metadata[j].mtime;
+              //nexus_objs[url.split("/").slice(-1)] = f;
+              nexus_objs[url] = f;
+              return 
+            }
+          })
+        })
+      });
+      datafiles.forEach(function(j) {
+        sequence = sequence.then(function() {
+          //console.log(path + "/" + j, nexus_objs);
+          
+          fileinfo[j] = get_info(nexus_objs[path + "/" + j], fields);
+        })
+      });
+      sequence.then(function() { 
+        //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
+        var treeinfo = finfo_to_tree(fileinfo, path, fields);
+        console.log(treeinfo);
+        var jstree = $("#filebrowser").jstree({
+          "plugins": ["checkbox", "changed"],
+          "checkbox" : {
+            "three_state": true,
+            //"cascade": "down",
+            "tie_selection": false,
+            "whole_node": false
+          }, 
+          "core": {"data": treeinfo}
+        });
+        $("#filebrowser").on("check_node.jstree", handleChecked)
+          .on("uncheck_node.jstree", handleChecked);
+        $("#filebrowser").on("click", "a", function(e) {
+          if (!(e.target.classList.contains("jstree-checkbox"))) {
+            $("#filebrowser").jstree().toggle_node(e.currentTarget.id);
+          }
+        });
+        console.log(new Date() - t0);
+        
+      })
+        .then(function() {
+        webworker_cache_objs(datafiles, files_metadata, path);
+      })
+      
+    }
+    
+    var handleChecked = function() {
+      var jstree = $("#filebrowser").jstree(true);
+      //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
+      var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
+      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
+      var plot_entry_ids = plotnodes.map(function(n) { 
+        return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+      });
+      var plotdata = plot(plot_entry_ids);
+      mychart = new xyChart(plotdata.options);
+      d3.selectAll("#plotdiv svg").remove();
+      d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
+      mychart.zoomRect(true);
+    }
+    
+    caching_worker = new Worker('js/cache_db_worker.js');
+    //caching_worker.onmessage = function(x) { console.log(x) };
+    
+    function webworker_cache_objs(files, metadata, path) {
+      var mtimes = files.map(function(fn) { return metadata[fn].mtime });
+      var data = {filenames: files, mtimes: mtimes, path: path};
+      caching_worker.postMessage(data);
+    }
+    
+    function cache_nexus_objs(nzobjs) {
+      // deprecated
+      for (var url in nzobjs) {
+        var nxz = nzobjs[url];
+        db.filenames.put({url: url, mtime: nxz.mtime, data: nz.cacheAll(nxz)});
+      }
+    }
+    
+    function getCurrentPath() {
+      var path = "";
+      $(".patheditor span").each(function(i,v) {
+        path += $(v).text();
+      });
+      return path;      
+    }
+    
+    function updateFileBrowserPane(target_id, pathlist) {
+        function handler(dirdata) {
+            var buttons = $("<div />", {class: "buttons"});
+            var clear_all = $("<button />", {
+                text: "clear all"
+            });
+            clear_all.click(function() {$("#"+target_id + " #filebrowser").jstree("uncheck_all"); handleChecked()});
+            //var download_all = $("<button />", {
+            //    text: "download selected"
+            //});
+            //download_all.click(function() {
+            //    $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            //});
+            buttons
+              .append(clear_all)
+              //.append(download_all);
+        
+            var files = dirdata.files,
+                metadata = dirdata.files_metadata;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+            
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
+            var subdiritem, dirlink, new_pathlist;
+            if (pathlist.length > 0) {               
+                var new_pathlist = $.extend(true, [], pathlist);
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/";
+                    dirlink.onclick = function() {
+                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                    }
+                    patheditor.appendChild(dirlink);
+                });
+            }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
+            dirdata.subdirs.reverse();
+            $.each(dirdata.subdirs, function(index, subdir) {
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "(dir) " + subdir;
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.push(subdir);
+                subdiritem.onclick = function() {
+                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                dirbrowser.appendChild(subdiritem);
+            });
+            var filebrowser = document.createElement('div');
+            filebrowser.id = "filebrowser";
+            //filebrowser.classList.add("tablesorter");
+            
+            
+            $('#' + target_id).empty()
+              .append(buttons)
+              .append(patheditor)
+              .append(dirbrowser)
+              .append(filebrowser);
+            
+            categorize_files(files, metadata, "/pub/" + pathlist.join("/"));
+            
+            //$(dirbrowser).selectable({
+            //    filter:'td', 
+            //    stop: handleSelection
+            //});
+            //$(filebrowser).tablesorter();
+        }   
+        return handler
+    }
+    
+    function handleSelection() {console.log(selection)};
+    
+    function plot(entry_ids) {
+      // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
+      var series = new Array();
+      var options = {
+        series: series, 
+        legend: {show: true, left: 150},
+        axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}} 
+      };
+      var datas = [];
+      entry_ids.forEach(function(eid) {
+        var nf = nexus_objs[eid.path + "/" + eid.filename];
+        var entry = nf.get(eid.entryname);
+        //var ycol_link = "y";
+        //var xcol_link = "x";
+        var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
+        var xcol, ycol, ynormcol, xdata, ydata, ynormdata;
+        if (ycols.length > 0) {
+          xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
+          ycol = ycols[0][0];
+          ynormcol = "control/monitor_counts";
+          ydata = ycols[0][1].getValue();
+          xdata = entry.get("DAS_logs/" + xcol);
+          if (xdata.getValue) {
+            xdata = xdata.getValue();
+          } else {
+            //get the primary axis if it's a device:
+            if ('primary' in xdata.getAttrs()) {
+              xdata = xdata.get(xdata.getAttrs().primary).getValue();
+            }
+          }
+          ynormdata = entry.get(ynormcol).getValue();
+        }
+        var xydata = [], x, y, ynorm;
+        for (var i=0; i<xdata.length || i<ydata.length || i<ynormdata.length; i++) {
+          x = (i<xdata.length) ? xdata[i][0] : x; // use last value
+          y = (i<ydata.length) ? ydata[i][0] : y; // use last value
+          ynorm = (i<ynormdata.length) ? ynormdata[i][0] : ynorm; // use last value
+          xydata[i] = [x,y/ynorm];
+          //xydata[i] = xdata[i].concat(ydata[i]);
+        }
+        datas.push(xydata);
+        options.series.push({label: eid.filename + ":" + eid.entryname});
+        options.axes.xaxis.label = xcol.replace("/", ".");
+        options.axes.yaxis.label = ycol.replace("/", ".") + "/monitor";
+        options.xtransform = $("#xscale").val();
+        options.ytransform = $("#yscale").val();
+      });
+    
+      return {options: options, data: datas};
+    }
+    
+    window.onpopstate = function(e) {
+      var start_path = $.extend(true, [], data_path),
+          url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+          start_path = url_vars.pathlist.split("+");
+      }
+      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+    }
+    
+    window.onpopstate(); // call it on first load, too!
+        
+    window.onload = function() {
+      var layout = $('body').layout({
+          west__size:			350
+        ,	east__size:			0
+        ,   south__size:        "auto"
+          // RESIZE Accordion widget when panes resize
+        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+		  });
+		
+      //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
+      //$("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
+      //$("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
+      $("#xscale, #yscale").change(handleChecked);
+      //sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
+    }  
+    
+  </script>
+  <style type="text/css">
+    canvas {
+      position: absolute;
+      image-rendering: optimizeSpeed;
+      image-rendering: crisp-edges;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: optimize-contrast;
+      -ms-interpolation-mode: nearest-neighbor;
+    }
+    
+    a svg, a span {
+      vertical-align: middle;
+      position: relative;
+    }
+
+    .axis-label {
+      font-size: 18px;
+    }
+
+    .axis .tick text {
+      font-size: 14px;
+    }
+
+    .axis path,
+    .axis line {
+      fill: none;
+      stroke: #000;
+      shape-rendering: crispEdges;
+    }
+
+
+    .grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+    }
+    .grid path {
+          stroke-width: 0;
+    }
+    .grid .tick {
+        stroke: lightgrey;
+        opacity: 0.7;
+        shape-rendering: crispEdges;
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+     
+    .grid path {
+        stroke-width: 0;
+        fill: none;
+    }
+     
+
+     
+    .axis .axis-label {
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+
+    .legend, .tick {
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+    }
+     
+    .line {
+        fill: none;
+        stroke-width: 1.5px;
+    }
+    
+    .highlight {
+        stroke-width: 4.5px;
+    }
+     
+    .dot {
+        /* consider the stroke-with the mouse detect radius? */
+        stroke: transparent;
+        stroke-width: 10px;  
+        cursor: pointer;
+    }
+     
+    .dot:hover {
+        stroke: rgba(68, 127, 255, 0.3);
+    }
+    
+    .mainview rect {
+      fill: none;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+
+    rect.zoom {
+      stroke: steelblue;
+      fill-opacity: 0.5;
+    }
+    .ui-layout-north {
+      background-color: yellow;
+    }
+    #plotdiv {
+      height: 100%;
+    }
+    #controls {
+      position: absolute;
+      margin: auto;
+      bottom: 0;
+      left: 0;
+      right: 0;
+    }
+    .ui-layout-center {
+      /* adding padding to hold controls */
+      padding-bottom: 30px;
+      text-align: center;
+    }
+    
+    .jstree > ul > li > a > .jstree-checkbox {
+      display: none !important;
+    }
+    
+</style>
+</head>
+<body>
+<div id="navigation" class="ui-layout-wrapper ui-layout-west">
+</div>
+<div id="bottom_panel" class="ui-layout-south">
+
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="statusline">Reflectometry reduction</span>
+        <span id="instrument_name" class="instrument-name"></span>
+    </div>
+</div>
+ 
+<div id="centerpane" class="ui-layout-center">
+  <div id="plotdiv"></div>
+  <div id="controls">
+<!--    <span class="axis-select-label">x-axis:</span><select id="xcol" ></select>-->
+    <label>x-axis</label>
+    <select id="xscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+<!--    <span class="axis-select-label">y-axis:</span><select id="ycol" ></select>-->
+    <label>y-axis</label>
+    <select id="yscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+<!--    <span class="axis-select-label">divide by:</span>-->
+<!--    <select id="ynormalize">-->
+<!--    </select>-->
+  </div>
+</div>
+<div id="right" class="ui-layout-east">
+  <div id="device_values"></div>
+  <div id="device_attrs"></div>
+</div>
+
+</body>
+</html>
+
+
