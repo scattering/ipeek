@@ -17,7 +17,7 @@
   <script src="js/Dexie.js"></script>
   <script type="text/javascript">
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-    dirHelper = "listftpfiles.php";
+    dirHelper = "http://ncnr.nist.gov/ipeek/listftpfiles.php";
     data_path = ["ncnrdata"];
     
     //zip.workerScripts = {
@@ -135,21 +135,7 @@
     }
     var nexus_objs = {};
     
-    function handleZip(url, zip) {
-      var sout = {};
-      var f = new nz.File().init(url, f.files);
-      //nexus_objs[url.split("/").slice(-1)] = f;
-      nexus_objs[url] = f;
-      var entry_names = f.groupnames();
-      entry_names.forEach(function(entry) {
-          sout[entry] = sout[entry] || {};
-          sout[entry].samplename =  f.get(entry + "/sample/name").getValue()[0][0];
-          sout[entry].scantype =  f.get(entry + "/DAS_logs/trajectoryData/_scanType").getValue()[0][0];
-        
-      });
-      console.log(entry_names);
-      return sout;
-    }
+    
     function handleAB(args) {
       var url = args[1],
           ab = args[0],
@@ -187,38 +173,40 @@
       console.error("Failed!", error);
     };
     
-    function fill_info(
+
     
-    function finfo_to_tree(finfo, path, fields){
-      var out = [], fields_obj = {};
-      
+    function finfo_to_tree(finfo, path, categories){
+      var out = [], categories_obj = {};
       for (var fn in finfo) {
         var fn_info = finfo[fn];
         for (var entry in fn_info) {
           var info = fn_info[entry];
-          
-          for (var i=0; i<fields.length; i++) {
-            var fieldname = fields[i][0];
-            fields[obj];
+          var sobj = categories_obj;
+          for (var i=0; i<categories.length; i++) {
+            var fieldname = categories[i];
+            var fieldval = info[fieldname];
+            sobj[fieldval] = sobj[fieldval] || {};
+            sobj = sobj[fieldval];
           }        
-          var samplename = info.samplename,
-              scantype = info.scantype;
-          sample_names[samplename] = sample_names[samplename] || {};
-          sample_names[samplename][scantype] = sample_names[samplename][scantype] || {};
+          
           // min_x and max_x for a file are grabbed from the first entry that pops up:
-          sample_names[samplename][scantype][fn] = sample_names[samplename][scantype][fn] || {min_x: info.min_x, max_x: info.max_x};
+          var extent = d3.extent(info.x),
+            min_x = extent[0][0],
+            max_x = extent[1][0];
+          sobj[fn] = sobj[fn] || {min_x: min_x, max_x: max_x};
           out.push({
             "id": fn+":"+entry, 
             "parent": fn, 
             "text": fn + ":" + entry, 
             "icon": false, 
-            "li_attr": {"path": path, "min_x": info.min_x, "max_x": info.max_x} 
+            "li_attr": {"path": path, "min_x": min_x, "max_x": max_x} 
           });
         }
       }
-      for (var sn in sample_names) {
+      console.log(categories_obj);
+      for (var sn in categories_obj) {
         out.push({"id": sn, "parent": "#", "text": sn});
-        var sample_obj = sample_names[sn];
+        var sample_obj = categories_obj[sn];
         for (var t in sample_obj) {
           var type_obj = sample_obj[t];
           var global_min_x = Infinity,
@@ -226,25 +214,14 @@
           for (var fn in type_obj) {
             // once through to get max and min...
             var f_obj = type_obj[fn];
-            if (f_obj.x) {
-              var extent = d3.extent(f_obj.x),
-                min_x = extent[0][0],
-                max_x = extent[0][1];
-              global_min_x = Math.min(min_x, global_min_x);
-              global_max_x = Math.max(max_x, global_max_x);
-            }
+            global_min_x = Math.min(f_obj.min_x, global_min_x);
+            global_max_x = Math.max(f_obj.max_x, global_max_x);
           }
           for (var fn in type_obj) {
             // and again to make the range icon.
-            var f_obj = type_obj[fn],
-              min_x, max_x;
-            if (f_obj.x) {
-              var extent = d3.extent(f_obj.x);
-              min_x = extent[0][0],
-              max_x = extent[0][1];
-            }
-            var range_icon = make_range_icon(global_min_x, global_max_x, min_x, max_x);
-            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": min_x, "max_x": max_x, "class": "datafile"}});
+            var f_obj = type_obj[fn];
+            var range_icon = make_range_icon(global_min_x, global_max_x, f_obj.min_x, f_obj.max_x);
+            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
           }
           out.push({"id": sn + ":" + t, "parent": sn, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
         }
@@ -281,7 +258,7 @@
     function categorize_files(files, files_metadata, path) {
       var t0 = new Date();
       var tree_entries = [],
-          file_names = {},
+          file_names = {};
           fileinfo = {};
       var fields = [
             ["samplename", "/sample/name"], 
@@ -289,20 +266,29 @@
             ["counts", "/data/y"], 
             ["x", "/data/x"]
           ]
+          
+      var categories = ["samplename", "scantype"];
       var datafiles = files.filter(function(x) {return (NEXUS_ZIP_REGEXP.test(x) )});
       var sequence = Promise.resolve();
       datafiles.forEach(function(j) { 
         sequence = sequence.then(function() { 
-          return db.filenames.where("url").equals(path + "/" + j).first(function(c) {
-            if (c == undefined) { return getArrayBuffer(path, j, files_metadata[j].mtime).then(handleAB, rejectAB)  } //.then(function(s) {fileinfo[j] = s}) 
-            else { // load from cached version in db:
-              var url = path + "/" + j;
-              var f = new nz.File().init(url, c.data, c.data);
-              f.mtime = files_metadata[j].mtime;
-              //nexus_objs[url.split("/").slice(-1)] = f;
-              nexus_objs[url] = f;
-              return 
-            }
+          return db.filenames.where("url").equals(path + "/" + j)
+            .and(function(d) {console.log(d.mtime,files_metadata[j].mtime); return d.mtime != files_metadata[j].mtime})
+            .delete()
+            .then(function() {
+            return db.filenames.where("url").equals(path + "/" + j)
+              .and(function(d) {return d.mtime == files_metadata[j].mtime})
+              .first(function(c) {
+                  if (c == undefined) { return getArrayBuffer(path, j, files_metadata[j].mtime).then(handleAB, rejectAB)  }
+                  else { // load from cached version in db:
+                    var url = path + "/" + j;
+                    var f = new nz.File().init(url, c.data, c.data);
+                    f.mtime = files_metadata[j].mtime;
+                    //nexus_objs[url.split("/").slice(-1)] = f;
+                    nexus_objs[url] = f;
+                    return 
+              }
+            })
           })
         })
       });
@@ -315,7 +301,7 @@
       });
       sequence.then(function() { 
         //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
-        var treeinfo = finfo_to_tree(fileinfo, path, fields);
+        var treeinfo = finfo_to_tree(fileinfo, path, categories);
         console.log(treeinfo);
         var jstree = $("#filebrowser").jstree({
           "plugins": ["checkbox", "changed"],
@@ -447,7 +433,7 @@
               .append(dirbrowser)
               .append(filebrowser);
             
-            categorize_files(files, metadata, "/pub/" + pathlist.join("/"));
+            categorize_files(files, metadata, "http://ncnr.nist.gov/pub/" + pathlist.join("/"));
             
             //$(dirbrowser).selectable({
             //    filter:'td', 
