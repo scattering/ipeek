@@ -151,18 +151,16 @@
     }
     
     function get_info(nz_obj, fields) {
-      // fields is an ordered pairs of [["fieldname", "lookup_path"], ...]}
-      // to grab specific fields from files
+      // fields is a list of paths to read
       var f = nz_obj, sout = {};
       var entry_names = f.groupnames();
       entry_names.forEach(function(entry) {
           sout[entry] = sout[entry] || {};
           for (var i=0; i<fields.length; i++) {
-            var fieldname = fields[i][0];
-            var path = fields[i][1];
+            var path = fields[i];
             var fieldval = f.get(entry + path);
             if (fieldval && fieldval.getValue) {
-              sout[entry][fieldname] = fieldval.getValue();
+              sout[entry][path] = fieldval.getValue();
             }
           }
       });
@@ -190,9 +188,9 @@
           }        
           
           // min_x and max_x for a file are grabbed from the first entry that pops up:
-          var extent = d3.extent(info.x),
-            min_x = extent[0][0],
-            max_x = extent[1][0];
+          var extent = d3.extent(d3.merge(info['/data/x'])),
+            min_x = extent[0],
+            max_x = extent[1];
           sobj[fn] = sobj[fn] || {min_x: min_x, max_x: max_x};
           out.push({
             "id": fn+":"+entry, 
@@ -203,10 +201,10 @@
           });
         }
       }
-      console.log(categories_obj);
-      for (var sn in categories_obj) {
-        out.push({"id": sn, "parent": "#", "text": sn});
-        var sample_obj = categories_obj[sn];
+
+      for (var category in categories_obj) {
+        out.push({"id": category, "parent": "#", "text": category});
+        var sample_obj = categories_obj[category];
         for (var t in sample_obj) {
           var type_obj = sample_obj[t];
           var global_min_x = Infinity,
@@ -221,9 +219,9 @@
             // and again to make the range icon.
             var f_obj = type_obj[fn];
             var range_icon = make_range_icon(global_min_x, global_max_x, f_obj.min_x, f_obj.max_x);
-            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
+            out.push({"id": fn, "parent": category + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
           }
-          out.push({"id": sn + ":" + t, "parent": sn, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
+          out.push({"id": category + ":" + t, "parent": category, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
         }
       }
       return out;
@@ -260,14 +258,7 @@
       var tree_entries = [],
           file_names = {};
           fileinfo = {};
-      var fields = [
-            ["samplename", "/sample/name"], 
-            ["scantype", "/DAS_logs/trajectoryData/_scanType"],
-            ["counts", "/data/y"], 
-            ["x", "/data/x"]
-          ]
-          
-      var categories = ["samplename", "scantype"];
+      var categories = ["/sample/name", "/DAS_logs/trajectoryData/_scanType"];
       var datafiles = files.filter(function(x) {return (NEXUS_ZIP_REGEXP.test(x) )});
       var sequence = Promise.resolve();
       datafiles.forEach(function(j) { 
@@ -296,7 +287,7 @@
         sequence = sequence.then(function() {
           //console.log(path + "/" + j, nexus_objs);
           
-          fileinfo[j] = get_info(nexus_objs[path + "/" + j], fields);
+          fileinfo[j] = get_info(nexus_objs[path + "/" + j], categories.concat(['/data/x', '/data/y']));
         })
       });
       sequence.then(function() { 

@@ -5,6 +5,8 @@
       "config": {},
       "template": {}
     }
+    current_instrument = "ncnr.refl";
+    server_api = {};
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
@@ -448,7 +450,7 @@
           params: [path],
           success: function(result) {
               metadata = JSON.parse(result.result);
-              updateFileBrowserPane(new_id, path)(metadata);
+              updateFileBrowserPane(new_id, path, server_api, current_instrument)(metadata);
           },
           error: function(result) {console.log('error: ', result)}
       });
@@ -655,7 +657,7 @@
           params: [start_path],
           success: function(result) {
               var metadata = JSON.parse(result.result);
-              updateFileBrowserPane("remote_source_1", start_path, server_api)(metadata);
+              updateFileBrowserPane("remote_source_1", start_path, server_api, current_instrument)(metadata);
           },
           error: function(result) {console.log('error: ', result)}
       });
@@ -669,15 +671,15 @@
       cache: false
     });
     
-    server_api = {};
+    
     server_api.get_file_metadata = function(pathlist) {
       var r = new Promise(function(resolve, reject) {
         $.jsonRPC.request('get_file_metadata', {
           async: true,
           params: [pathlist],
           success: function(result) {
-              var metadata = JSON.parse(result.result);
-              resolve(metadata);
+              //var metadata = JSON.parse(result.result);
+              resolve(result.result);
           },
           error: function(result) {console.log('error: ', result)}
       });
@@ -693,7 +695,7 @@
       if (url_vars.pathlist && url_vars.pathlist.length) {
         start_path = url_vars.pathlist.split("+");
       }
-      server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane("remote_source_1", start_path, server_api))
+      server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane("remote_source_1", start_path, server_api, current_instrument))
         //get_file_metadata();
       //}
     }
