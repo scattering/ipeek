@@ -1,6 +1,7 @@
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-  function categorizeFiles(files, files_metadata, path, target_id, server_api) {
+  
+  function categorizeReflFiles(files, files_metadata, path, target_id, server_api) {
     var t0 = new Date();
     var tree_entries = [],
         file_names = {},
@@ -54,7 +55,7 @@
     return path;
   }
 
-  function updateFileBrowserPane(target_id, pathlist, server_api) {
+  function updateFileBrowserPane(target_id, pathlist, server_api, instrument_id) {
       function handler(dirdata) {
         var buttons = $("<div />", {class: "buttons"});
         var clear_all = $("<button />", {text: "clear all"});
@@ -79,7 +80,7 @@
               history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
               server_api.get_file_metadata(new_pathlist.slice(0, index+1))
               .then( function (metadata) {
-                 updateFileBrowserPane(target_id, new_pathlist.slice(0, index+1), server_api)(metadata);
+                 updateFileBrowserPane(target_id, new_pathlist.slice(0, index+1), server_api, instrument_id)(metadata);
               })
             }
             patheditor.appendChild(dirlink);
@@ -99,7 +100,7 @@
             history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
             server_api.get_file_metadata(new_pathlist)
               .then( function (metadata) {
-                 updateFileBrowserPane(target_id, new_pathlist, server_api)(metadata);
+                 updateFileBrowserPane(target_id, new_pathlist, server_api, instrument_id)(metadata);
               }) 
           }
           dirbrowser.appendChild(subdiritem);
@@ -138,7 +139,8 @@
           .append(dirbrowser)
           .append(filebrowser);
 
-        categorizeFiles(files, metadata, pathlist.join("/"), target_id);
+        // instrument-specific categorizers 
+        webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
 
         //$(dirbrowser).selectable({
         //    filter:'td',
@@ -151,5 +153,8 @@
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
   webreduce.getCurrentPath = getCurrentPath;
+  webreduce.instruments = webreduce.instruments || {};
+  webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
+  webreduce.instruments['ncnr.refl'].categorizeFiles = categorizeReflFiles;
 
 })();
