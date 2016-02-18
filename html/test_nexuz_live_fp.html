@@ -150,19 +150,35 @@
       console.log(url);
     }
     
-    function get_info(nz_obj, fields) {
-      // fields is an ordered pairs of [["fieldname", "lookup_path"], ...]}
-      // to grab specific fields from files
+    function get_info(nz_obj, categories) {
+      // fields is a list of paths to read
       var f = nz_obj, sout = {};
       var entry_names = f.groupnames();
       entry_names.forEach(function(entry) {
-          sout[entry] = sout[entry] || {};
-          for (var i=0; i<fields.length; i++) {
-            var fieldname = fields[i][0];
-            var path = fields[i][1];
-            var fieldval = f.get(entry + path);
-            if (fieldval && fieldval.getValue) {
-              sout[entry][fieldname] = fieldval.getValue();
+          sout[entry] = sout[entry] || [];
+          for (var i=0; i<categories.length; i++) {
+            var category = categories[i];
+            var type = category.type || 'fieldValue',
+                path = category.path;
+            sout[entry][i] = undefined; // default value, overwrite below:
+            if (type == 'fieldValue') {
+              var fieldval = f.get(entry + path);
+              if (fieldval && fieldval.getValue) {
+                sout[entry][i] = fieldval.getValue();
+              }
+            }
+            else if (type == 'linkTarget') {
+              var linktarget = f.getLink(entry + path);
+              if (linktarget && linktarget.target) {
+                // remove the entry name from the target (generic)
+                var target = linktarget.target;
+                target = target.split("/").slice(2).join("/");
+                sout[entry][i] = path + '->' + target;
+              }
+            }
+            else {
+              // no other category types supported yet,
+              // could add minValue, maxValue, etc.
             }
           }
       });
@@ -176,57 +192,74 @@
 
     
     function finfo_to_tree(finfo, path, categories){
-      var out = [], categories_obj = {};
+      var out = [], categories_obj = {}, out2 = [];
       for (var fn in finfo) {
         var fn_info = finfo[fn];
         for (var entry in fn_info) {
           var info = fn_info[entry];
-          var sobj = categories_obj;
+          var sobj = categories_obj,
+              fieldval,
+              parent = "#";
           for (var i=0; i<categories.length; i++) {
-            var fieldname = categories[i];
-            var fieldval = info[fieldname];
-            sobj[fieldval] = sobj[fieldval] || {};
+            //var fieldname = categories[i];
+            fieldval = String(info[i]);
+            var id = parent + ":" + fieldval;
+            if (!(fieldval in sobj)) {
+              sobj[fieldval] = {};
+              
+              out2.push({'id': id, text: fieldval, parent: parent});
+            }
+            parent = id;
+            //sobj[fieldval] = sobj[fieldval] || {};
             sobj = sobj[fieldval];
-          }        
+          }
+          
           
           // min_x and max_x for a file are grabbed from the first entry that pops up:
-          var extent = d3.extent(info.x),
-            min_x = extent[0][0],
-            max_x = extent[1][0];
-          sobj[fn] = sobj[fn] || {min_x: min_x, max_x: max_x};
-          out.push({
+          var extent = d3.extent(d3.merge(info[info.length - 2])), // '/data/x'])),
+            min_x = extent[0],
+            max_x = extent[1]
+            x_target = info[info.length-3];
+          out2.push({id: fn, "icon": false, text: fn, parent: parent});
+          sobj[fn] = {fn: fn, x_target: x_target, min_x: min_x, max_x: max_x};
+          out2.push({
             "id": fn+":"+entry, 
             "parent": fn, 
-            "text": fn + ":" + entry, 
+            "text": entry, 
             "icon": false, 
             "li_attr": {"path": path, "min_x": min_x, "max_x": max_x} 
           });
         }
       }
+      console.log(out2);
       console.log(categories_obj);
-      for (var sn in categories_obj) {
-        out.push({"id": sn, "parent": "#", "text": sn});
-        var sample_obj = categories_obj[sn];
+      var parent = "#";
+      
+      for (var category in categories_obj) {
+        out.push({"id": category, "parent": "#", "text": category});
+        
+        var sample_obj = categories_obj[category];
         for (var t in sample_obj) {
           var type_obj = sample_obj[t];
+          // adding a group by x-axis
           var global_min_x = Infinity,
               global_max_x = -Infinity;          
-          for (var fn in type_obj) {
+          for (var n in type_obj) {
             // once through to get max and min...
-            var f_obj = type_obj[fn];
+            var f_obj = type_obj[n];
             global_min_x = Math.min(f_obj.min_x, global_min_x);
             global_max_x = Math.max(f_obj.max_x, global_max_x);
           }
-          for (var fn in type_obj) {
+          for (var n in type_obj) {
             // and again to make the range icon.
-            var f_obj = type_obj[fn];
+            var f_obj = type_obj[n];
             var range_icon = make_range_icon(global_min_x, global_max_x, f_obj.min_x, f_obj.max_x);
-            out.push({"id": fn, "parent": sn + ":" + t, "text": "<span>"+fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
+            out.push({"id": f_obj.fn, "parent": category + ":" + t, "text": "<span>"+f_obj.fn+"</span>" + range_icon, "icon": false, "li_attr": {"min_x": f_obj.min_x, "max_x": f_obj.max_x, "class": "datafile"}});
           }
-          out.push({"id": sn + ":" + t, "parent": sn, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
+          out.push({"id": category + ":" + t, "parent": category, "text": t, "li_attr": {"min_x": global_min_x, "max_x": global_max_x}});
         }
       }
-      return out;
+      return out2;
     }
     
     function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
@@ -255,19 +288,13 @@
     //db.filenames.where("url").equalsIgnoreCase("http://ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
     // .each returns a Promise, resolved with "undefined" after last iteration is complete.
 
-    function categorize_files(files, files_metadata, path) {
+    function categorize_files(files, files_metadata, path, target_id) {
       var t0 = new Date();
       var tree_entries = [],
           file_names = {};
           fileinfo = {};
-      var fields = [
-            ["samplename", "/sample/name"], 
-            ["scantype", "/DAS_logs/trajectoryData/_scanType"],
-            ["counts", "/data/y"], 
-            ["x", "/data/x"]
-          ]
-          
-      var categories = ["samplename", "scantype"];
+      //var categories = [{path: "/sample/name"}, {path: "/DAS_logs/trajectoryData/_scanType"}];
+      var categories = [{path: "/sample/name"}, {path: "/DAS_logs/trajectoryData/_scanType"}, {type: "linkTarget", path: "/data/x"}];
       var datafiles = files.filter(function(x) {return (NEXUS_ZIP_REGEXP.test(x) )});
       var sequence = Promise.resolve();
       datafiles.forEach(function(j) { 
@@ -296,14 +323,14 @@
         sequence = sequence.then(function() {
           //console.log(path + "/" + j, nexus_objs);
           
-          fileinfo[j] = get_info(nexus_objs[path + "/" + j], fields);
+          fileinfo[j] = get_info(nexus_objs[path + "/" + j], categories.concat([{type: 'linkTarget', path: '/data/x'}, {path: '/data/x'}, {path: '/data/y'}]));
         })
       });
       sequence.then(function() { 
         //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
         var treeinfo = finfo_to_tree(fileinfo, path, categories);
         console.log(treeinfo);
-        var jstree = $("#filebrowser").jstree({
+        var jstree = $("#"+target_id + " .remote_filebrowser").jstree({
           "plugins": ["checkbox", "changed"],
           "checkbox" : {
             "three_state": true,
@@ -313,13 +340,14 @@
           }, 
           "core": {"data": treeinfo}
         });
-        $("#filebrowser").on("check_node.jstree", handleChecked)
+        $("#"+target_id + " .remote_filebrowser").on("check_node.jstree", handleChecked)
           .on("uncheck_node.jstree", handleChecked);
-        $("#filebrowser").on("click", "a", function(e) {
+        $("#"+target_id + " .remote_filebrowser").on("click", "a", function(e) {
           if (!(e.target.classList.contains("jstree-checkbox"))) {
-            $("#filebrowser").jstree().toggle_node(e.currentTarget.id);
+            $("#" + target_id + " .remote_filebrowser").jstree().toggle_node(e.currentTarget.id);
           }
         });
+        
         console.log(new Date() - t0);
         
       })
@@ -330,19 +358,45 @@
     }
     
     var handleChecked = function() {
-      var jstree = $("#filebrowser").jstree(true);
-      //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
-      var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
-      var plot_entry_ids = plotnodes.map(function(n) { 
-        return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+      $(".remote_filebrowser").each(function() {
+        var jstree = $(this).jstree(true);
+        //var jstree = $("#filebrowser").jstree(true);
+        //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
+        var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
+        var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
+        var plot_entry_ids = plotnodes.map(function(n) { 
+          return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+        });
+        var plotdata = plot(plot_entry_ids);
+        mychart = new xyChart(plotdata.options);
+        d3.selectAll("#plotdiv svg").remove();
+        d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
+        mychart.zoomRect(true);
       });
-      var plotdata = plot(plot_entry_ids);
-      mychart = new xyChart(plotdata.options);
-      d3.selectAll("#plotdiv svg").remove();
-      d3.selectAll("#plotdiv").data([plotdata.data]).call(mychart);
-      mychart.zoomRect(true);
     }
+    
+    function get_plot_svg() {
+      var dsvg = $("svg.mainplot").clone();
+      dsvg.css("font-family", "sans-serif").css("font-size", "14px");
+      dsvg.find("line").css("fill", "none");
+      dsvg.find("path").css("fill", "none");
+      dsvg.find(".mainview>rect").css("fill", "none");
+      dsvg.find("clippath rect").css("fill", "none");
+      dsvg.find(".axis-label").css("font-size", "18px");
+      dsvg.find(".axis path,line").css("stroke", "black"); //.css("stroke-width", "1.5px");
+      dsvg.find(".grid .tick").css("stroke", "lightgrey").css("opacity", "0.7");
+      dsvg.find(".grid path").css("stroke-width", "0");                  
+      return dsvg[0]; // user outerHTML of this
+    }
+    
+    function print_plot() {
+      var svg = get_plot_svg();
+      var serializer = new XMLSerializer();
+      var svg_blob = new Blob([serializer.serializeToString(svg)],
+                            {'type': "image/svg+xml"});
+      var url = URL.createObjectURL(svg_blob);
+      var svg_win = window.open(url, "svg_win");  
+    }  
     
     caching_worker = new Worker('js/cache_db_worker.js');
     //caching_worker.onmessage = function(x) { console.log(x) };
@@ -375,7 +429,7 @@
             var clear_all = $("<button />", {
                 text: "clear all"
             });
-            clear_all.click(function() {$("#"+target_id + " #filebrowser").jstree("uncheck_all"); handleChecked()});
+            clear_all.click(function() {$("#"+target_id + " .remote_filebrowser").jstree("uncheck_all"); handleChecked()});
             //var download_all = $("<button />", {
             //    text: "download selected"
             //});
@@ -401,7 +455,7 @@
                     dirlink.textContent = pathitem + "/";
                     dirlink.onclick = function() {
                         history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
-                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane(target_id, new_pathlist.slice(0, index+1)));
                     }
                     patheditor.appendChild(dirlink);
                 });
@@ -418,12 +472,13 @@
                 new_pathlist.push(subdir);
                 subdiritem.onclick = function() {
                     history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
-                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane(target_id, new_pathlist));
                 }
                 dirbrowser.appendChild(subdiritem);
             });
             var filebrowser = document.createElement('div');
-            filebrowser.id = "filebrowser";
+            filebrowser.classList.add("remote_filebrowser");
+            //filebrowser.id = "filebrowser";
             //filebrowser.classList.add("tablesorter");
             
             
@@ -433,7 +488,7 @@
               .append(dirbrowser)
               .append(filebrowser);
             
-            categorize_files(files, metadata, "http://ncnr.nist.gov/pub/" + pathlist.join("/"));
+            categorize_files(files, metadata, "http://ncnr.nist.gov/pub/" + pathlist.join("/"), target_id);
             
             //$(dirbrowser).selectable({
             //    filter:'td', 
@@ -523,6 +578,7 @@
       //$("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
       //$("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
       $("#xscale, #yscale").change(handleChecked);
+      
       //sequence.then(function() {console.log(fileinfo.length, (new Date()).getTime() - start_time)})
     }  
     
