@@ -35,6 +35,7 @@
     zip.useWebWorkers = false;
     data_path = ["ncnrdata"];
     datasets = [];
+    selected_node = "";
     
     getUrlVars = function(){
       var vars = [], hash;
@@ -99,7 +100,7 @@
             var filelist = Object.keys(f.zipfiles);
             tree = filelist_to_tree(filelist);
             if ($("#treediv").jstree()) { $("#treediv").jstree().destroy() }
-            $("#treediv").jstree({
+            var jst = $("#treediv").jstree({
               plugins: ["sort"],
               sort: function(a,b) { 
                 var a_isdir = (a.slice(-1) == "/"),
@@ -110,9 +111,11 @@
               },
               core: {data: filelist_to_tree(filelist)}
             });
+            if (selected_node) {jst.activate_node(selected_node)};
             $("#fileid").html(filename);
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
+              selected_node = id;
               var isdir = (id.slice(-1) == "/");
               f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               if (!isdir) {
