@@ -686,6 +686,8 @@
       })
       return r;
     }
+    
+    server_api.load_refl = load_refl;
 
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
