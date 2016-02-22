@@ -1,47 +1,7 @@
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
   
-  function categorizeReflFiles(files, files_metadata, path, target_id, server_api) {
-    var refl_promises = [];
-    var fileinfo = {};
-    var datafiles = files.filter(function(x) {return (
-      NEXUS_ZIP_REGEXP.test(x) &&
-      (/^(fp_)/.test(x) == false) &&
-      (/^rapidscan/.test(x) == false) &&
-      (/^scripted_findpeak/.test(x) == false)
-      )});
-    datafiles.forEach(function(j) {
-      //statusline_log("found file: " +  path + "/" + j + ", " + files_metadata[j].mtime);
-      refl_promises.push(server_api.load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
-    });
-    Promise.all(refl_promises).then(function(results) {
-      for (var i in datafiles) {
-        var fn = path + "/" + datafiles[i];
-        fileinfo[fn] = get_refl_info(refl_objs[fn]);
-      }
-      var treeinfo = finfo_to_tree(fileinfo, path);
-      console.log(treeinfo);
-      var jstree = $("#"+target_id + " .remote_filebrowser").jstree({
-        "plugins": ["checkbox", "changed", "sort"],
-        "checkbox" : {
-          "three_state": true,
-          //"cascade": "down",
-          "tie_selection": false,
-          "whole_node": false
-        },
-        "core": {"data": treeinfo}
-      });
-      $("#"+target_id + " .remote_filebrowser").on("check_node.jstree", handleChecked)
-        .on("uncheck_node.jstree", handleChecked);
-      $("#"+target_id + " .remote_filebrowser").on("click", "a", function(e) {
-        if (!(e.target.classList.contains("jstree-checkbox"))) {
-          $("#" + target_id + " .remote_filebrowser").jstree().toggle_node(e.currentTarget.id);
-        }
-      });
-    });
-  }
-  
-  function categorizeFiles(files, files_metadata, path, target_id, instrument_id, server_api) {
+  function categorizeFiles(files, files_metadata, path, target_id, instrument_id) {
     var refl_promises = [];
     var fileinfo = {};
     var refl_objs = {};
@@ -51,9 +11,11 @@
       (/^rapidscan/.test(x) == false) &&
       (/^scripted_findpeak/.test(x) == false)
       )});
+    var loader = webreduce.instruments[instrument_id].load_file;
     datafiles.forEach(function(j) {
       //statusline_log("found file: " +  path + "/" + j + ", " + files_metadata[j].mtime);
-      refl_promises.push(server_api.load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
+      //refl_promises.push(server_api.load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
+      refl_promises.push(loader(path + "/" + j, files_metadata[j].mtime, refl_objs));
     });
     Promise.all(refl_promises).then(function(results) {
       var categorizers = webreduce.instruments[instrument_id].categorizers;
@@ -106,6 +68,7 @@
     return out
   }
   
+  /*
   function finfo_to_tree(finfo, path, categorizers){
       var out = [], sample_names = {};
       console.log(Object.keys(finfo));
@@ -157,6 +120,7 @@
       }
       return out;
     }
+  */
   
   var getCurrentPath = function(target_id) {
     // get the path from a specified path browser element
@@ -254,7 +218,7 @@
 
         // instrument-specific categorizers 
         // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
-        categorizeFiles(files, metadata, pathlist.join("/"), target_id, instrument_id, server_api);
+        categorizeFiles(files, metadata, pathlist.join("/"), target_id, instrument_id);
 
         //$(dirbrowser).selectable({
         //    filter:'td',
@@ -267,14 +231,5 @@
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
   webreduce.getCurrentPath = getCurrentPath;
-  webreduce.instruments = webreduce.instruments || {};
-  webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
-  webreduce.instruments['ncnr.refl'].categorizeFiles = categorizeReflFiles;
-  webreduce.instruments['ncnr.refl'].categorizers = [
-    function(info) { return info.sample.name },
-    function(info) { return info.intent || "unknown" },
-    function(info) { return info.name },
-    function(info) { return info.polarization || "unpolarized" }
-  ];
 
 })();

@@ -6,7 +6,6 @@
       "template": {}
     }
     current_instrument = "ncnr.refl";
-    server_api = {};
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
@@ -372,36 +371,7 @@
       */
     }
 
-    function load_refl(path, mtime, db){
-      var promise = new Promise(function(resolve, reject) {
-        var template = {
-          "name": "loader_template",
-          "description": "ReflData remote loader",
-          "modules": [
-            {"module": "ncnr.refl.super_load", "version": "0.1", "config": {}}
-          ],
-          "wires": [],
-          "instrument": "ncnr.magik",
-          "version": "0.0"
-        }
-        var config = {"0": {"filelist": [{"path": path, "mtime": mtime}]}},
-            module_id = 0,
-            terminal_id = "output";
-
-        $.jsonRPC.request('calc_terminal', {
-          async: true,
-          params: [template, config, module_id, terminal_id],
-          success: function(result) {
-              if (db) { db[path] = result.result.values; }
-              //console.log(result.result);
-              statusline_log("loaded: " + path);
-              resolve(result.result.values);
-          },
-          error: function(result) {console.log('error: ', result); reject(result);}
-        });
-      });
-      return promise;
-    }
+    
 
     function handleChecked() {
       var xcol,
@@ -445,15 +415,19 @@
       var new_id = "remote_source_" + (remote_source_count + 1).toFixed();
       var new_div = $("<div />", {"id": new_id})
       $("#processed_data").before(new_div);
-      $.jsonRPC.request('get_file_metadata', {
-          async: true,
-          params: [path],
-          success: function(result) {
-              metadata = JSON.parse(result.result);
-              updateFileBrowserPane(new_id, path, server_api, current_instrument)(metadata);
-          },
-          error: function(result) {console.log('error: ', result)}
+      server_api.get_file_metadata(path).then(function(result) {
+        metadata = JSON.parse(result.result);
+        webreduce.updateFileBrowserPane(new_id, path, server_api, current_instrument)(metadata);
       });
+      //$.jsonRPC.request('get_file_metadata', {
+      //    async: true,
+      //    params: [path],
+      //    success: function(result) {
+      //        metadata = JSON.parse(result.result);
+      //        updateFileBrowserPane(new_id, path, server_api, current_instrument)(metadata);
+      //    },
+      //    error: function(result) {console.log('error: ', result)}
+      //});
 
     }
 
@@ -646,6 +620,7 @@
       return {xcol: xcol, ycol: ycol, series: series, data: datas};
     }
 
+    /*
     function get_file_metadata(e) {
       var start_path = $.extend(true, [], data_path),
           url_vars = getUrlVars();
@@ -656,38 +631,18 @@
           async: true,
           params: [start_path],
           success: function(result) {
-              var metadata = JSON.parse(result.result);
+              var metadata = result.result;
               updateFileBrowserPane("remote_source_1", start_path, server_api, current_instrument)(metadata);
           },
           error: function(result) {console.log('error: ', result)}
       });
       //$.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("remote_source_1", start_path));
     }
-
-    $.jsonRPC.setup({
-      //endPoint: '//localhost:' + rpc_port + '/RPC2',
-      endPoint: "http://" + window.location.hostname + ":8001/RPC2",
-      namespace: '',
-      cache: false
-    });
+    */
     
     
-    server_api.get_file_metadata = function(pathlist) {
-      var r = new Promise(function(resolve, reject) {
-        $.jsonRPC.request('get_file_metadata', {
-          async: true,
-          params: [pathlist],
-          success: function(result) {
-              //var metadata = JSON.parse(result.result);
-              resolve(result.result);
-          },
-          error: function(result) {console.log('error: ', result)}
-      });
-      })
-      return r;
-    }
     
-    server_api.load_refl = load_refl;
+    
 
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
@@ -697,6 +652,7 @@
       if (url_vars.pathlist && url_vars.pathlist.length) {
         start_path = url_vars.pathlist.split("+");
       }
+      console.log('popstate:', start_path);
       server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane("remote_source_1", start_path, server_api, current_instrument))
         //get_file_metadata();
       //}
@@ -748,35 +704,30 @@
       }
 
       var e = new dataflow.editor();
-      $.jsonRPC.request('get_instrument', {
-          async: true,
-          params: [],
-          success: function(result) {
-              instrument_def = result.result;
-              if ('modules' in instrument_def) {
-                for (var i=0; i<instrument_def.modules.length; i++) {
-                  var m = instrument_def.modules[i];
-                  dataflow.module_defs[m.id] = m;
-                }
-              }
-              e.data([instrument_def.templates[0]]);
-              active_reduction.template = instrument_def.templates[0];
-              d3.select("#bottom_panel").call(e);
-              
-              d3.selectAll(".module").classed("draggable wireable", false);
+      server_api.get_instrument().then(function(result) {
+        instrument_def = result;
+        if ('modules' in instrument_def) {
+          for (var i=0; i<instrument_def.modules.length; i++) {
+            var m = instrument_def.modules[i];
+            dataflow.module_defs[m.id] = m;
+          }
+        }
+        e.data([instrument_def.templates[0]]);
+        active_reduction.template = instrument_def.templates[0];
+        d3.select("#bottom_panel").call(e);
+        
+        d3.selectAll(".module").classed("draggable wireable", false);
 
-              d3.selectAll(".module .terminal").on("click", function() {
-                d3.selectAll(".module .selected").classed("selected", false);
-                d3.select(this).classed('selected', true);
-                handle_terminal_clicked();
-              });
-              d3.selectAll(".module g.title").on("click", function() {
-                d3.selectAll(".module .selected").classed("selected", false);
-                d3.select(this).select("rect.title").classed("selected", true);
-                handle_module_clicked();
-              })
-          },
-          error: function(result) {console.log('error: ', result)}
+        d3.selectAll(".module .terminal").on("click", function() {
+          d3.selectAll(".module .selected").classed("selected", false);
+          d3.select(this).classed('selected', true);
+          handle_terminal_clicked();
+        });
+        d3.selectAll(".module g.title").on("click", function() {
+          d3.selectAll(".module .selected").classed("selected", false);
+          d3.select(this).select("rect.title").classed("selected", true);
+          handle_module_clicked();
+        })
       });
       //$.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("remote_source_1", start_path));
       
