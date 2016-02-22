@@ -89,9 +89,10 @@
     }
     
     var getNexusZip = function(path, filename) {
+      var autoscroll = false; // trigger a scroll for autoselected items.
       var req = new XMLHttpRequest();
       req.open('GET', path + filename);
-      req.responseType = 'blob'
+      req.responseType = 'blob';
       req.onload = function() {
       	zip.createReader(new zip.BlobReader(req.response), function(reader) {
           // get all entries from the zip
@@ -111,7 +112,7 @@
               },
               core: {data: filelist_to_tree(filelist)}
             });        
-            $("#fileid").html(filename);
+            $("#active_file").text(filename);
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
               selected_node = id;
@@ -126,8 +127,17 @@
                 data.instance.toggle_node(data.node); 
               }
             });
+            $("#treediv").bind("activate_node.jstree", function() {
+              if (autoscroll) {
+                $(this).parent().scrollTop($(document.getElementById(selected_node)).offset().top);
+                autoscroll = false;
+              }
+            });
             $("#treediv").bind("ready.jstree", function() {
-                if (selected_node) {$(this).jstree(true).activate_node(selected_node)};
+              if (selected_node) {
+                autoscroll = true;
+                $(this).jstree(true).activate_node(selected_node);
+              };
             });
         		//console.log(filelist_to_tree(filelist));
           });
@@ -356,6 +366,13 @@ div.treediv {
 #filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
 #dirbrowser { list-style-type: none; margin: 0; padding: 0; }
 #dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+#status {text-align: center;}
+#statusline {float: left;}
+#active_file {
+    font-family: arial;
+    font-size: 1.2em;
+    font-weight: bold;
+}
 </style>
 <style type="text/css">
 svg,
@@ -470,6 +487,7 @@ canvas {
 <div id="top_panel" class="ui-layout-north">
     <div id="status">
         <span id="statusline">NeXuS-zip file viewer</span>
+        <span id="active_file"></span>
         <span id="instrument_name" class="instrument-name"></span>
     </div>
 </div>
