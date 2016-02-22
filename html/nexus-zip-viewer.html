@@ -100,7 +100,7 @@
             var filelist = Object.keys(f.zipfiles);
             tree = filelist_to_tree(filelist);
             if ($("#treediv").jstree()) { $("#treediv").jstree().destroy() }
-            var jst = $("#treediv").jstree({
+            $("#treediv").jstree({
               plugins: ["sort"],
               sort: function(a,b) { 
                 var a_isdir = (a.slice(-1) == "/"),
@@ -110,8 +110,7 @@
                 else {return ((a > b) ? 1 : -1)}
               },
               core: {data: filelist_to_tree(filelist)}
-            });
-            if (selected_node) {jst.activate_node(selected_node)};
+            });        
             $("#fileid").html(filename);
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
@@ -126,6 +125,9 @@
                 $("#device_values").html("<pre>Group</pre>")
                 data.instance.toggle_node(data.node); 
               }
+            });
+            $("#treediv").bind("ready.jstree", function() {
+                if (selected_node) {$(this).jstree(true).activate_node(selected_node)};
             });
         		//console.log(filelist_to_tree(filelist));
           });
