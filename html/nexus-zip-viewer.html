@@ -127,9 +127,12 @@
                 data.instance.toggle_node(data.node); 
               }
             });
-            $("#treediv").bind("activate_node.jstree", function() {
+            $("#treediv").bind("activate_node.jstree", function(a,b) {
               if (autoscroll) {
-                $(this).parent().scrollTop($(document.getElementById(selected_node)).offset().top);
+                // jquery doesn't like front-slash in id, so don't use for this:
+                if (document.getElementById(selected_node)) {
+                  document.getElementById(selected_node).scrollIntoView();
+                }
                 autoscroll = false;
               }
             });
