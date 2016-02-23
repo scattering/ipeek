@@ -29,6 +29,27 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     })
   }
   
+  var primary_axis = {
+    "specular": "Qz_target",
+    "background+": "Qz_target",
+    "background-": "Qz_target",
+    "slit": "Qz_target",
+    "intensity": "Qz_target", // what slit scans are called in refldata
+    "rock qx": "Qx_target", // curve with fixed Qz
+    "rock sample": "sample/angle_x", // Rocking curve with fixed detector angle
+    "rock detector": "detector/angle_x" //Rocking curve with fixed sample angle
+  }
+  
+  var get_refl_item = function(obj, path) {
+    var result = obj,
+        keylist = path.split("/");
+    while (keylist.length > 0) {
+      result = result[keylist.splice(0,1)];
+    }
+    return result;
+  }
+
+    
   function plot(file_objs, entry_ids) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
@@ -41,10 +62,8 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var ycol = "detector/counts";
     var ynormcol = "monitor/counts";
     entry_ids.forEach(function(eid) {
-      var refl = file_objs[eid.path + '/' + eid.filename];
-      var entry = refl.filter(function(e) {return ((e.name + e.polarization) == eid.entryname)});
-      if (entry.length < 1) { return }
-      else {entry = entry[0]};
+      var refl = file_objs[eid.file_obj]
+      var entry = refl[eid.entryname];
       var intent = entry['intent'];
       var new_xcol = primary_axis[intent];
       if (xcol != null && new_xcol != xcol) {

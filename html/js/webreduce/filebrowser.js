@@ -64,8 +64,8 @@
           parent = id;
           cobj = cobj[category]; // walk the tree...
         }
-        // modify the last entry to include path
-        out[out.length-1]['li_attr'] = {"path": path};
+        // modify the last entry to include key of file_obj
+        out[out.length-1]['li_attr'] = {"file_entry": p + ":" + e};
       }
     }
     return out
@@ -80,16 +80,6 @@
       metadata = JSON.parse(result.result);
       webreduce.updateFileBrowserPane(new_id, path, current_instrument)(metadata);
     });
-    //$.jsonRPC.request('get_file_metadata', {
-    //    async: true,
-    //    params: [path],
-    //    success: function(result) {
-    //        metadata = JSON.parse(result.result);
-    //        updateFileBrowserPane(new_id, path, server_api, current_instrument)(metadata);
-    //    },
-    //    error: function(result) {console.log('error: ', result)}
-    //});
-
   }
 
   /*
@@ -264,9 +254,13 @@
       var jstree = $(this).jstree(true);
       //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
       var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
+      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.file_entry != null});
       var plot_entry_ids = plotnodes.map(function(n) {
-        return {path: n.li_attr.path, filename: n.id.split(":").slice(-2,-1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+        var file_entry = n.li_attr.file_entry,
+            file_obj = file_entry.split(":").slice(0,1).join(""),
+            filename = file_obj.split("/").slice(-1).join(""),
+            entryname = file_entry.split(":").slice(-1).join("");
+        return {file_obj: file_obj, filename: filename, entryname: entryname}
       });
       var new_plotdata = webreduce.instruments[instrument_id].plot(file_objs, plot_entry_ids);
       options.series = options.series.concat(new_plotdata.series);

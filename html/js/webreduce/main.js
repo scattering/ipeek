@@ -1,6 +1,6 @@
 webreduce = window.webreduce || {};
 
-(function filebrowser() {
+(function webreduction() {
      //"use strict";
     
     active_reduction = {
@@ -34,60 +34,7 @@ webreduce = window.webreduce || {};
     var refl_objs = {};
     var start_time = (new Date()).getTime();
     var fileinfo;
-
-    var primary_axis_pattern = {
-      "SPEC": /trajectoryData\/_q$/,
-      "BG": /trajectoryData\/_q$/,
-      "BGP": /trajectoryData\/_q$/,
-      "BGM": /trajectoryData\/_q$/,
-      "SLIT": /trajectoryData\/_q$/,
-      "ROCK": /sampleAngle\/softPosition$/
-    }
-
-    var primary_axis = {
-      "specular": "Qz_target",
-      "background+": "Qz_target",
-      "background-": "Qz_target",
-      "slit": "Qz_target",
-      "intensity": "Qz_target", // what slit scans are called in refldata
-      "rock qx": "Qx_target", // curve with fixed Qz
-      "rock sample": "sample/angle_x", // Rocking curve with fixed detector angle
-      "rock detector": "detector/angle_x" //Rocking curve with fixed sample angle
-    }
-
-    var get_refl_item = function(obj, path) {
-      var result = obj,
-          keylist = path.split("/");
-      while (keylist.length > 0) {
-        result = result[keylist.splice(0,1)];
-      }
-      return result;
-    }
-
     var nexus_objs = {};
-
-    function get_info(nz_obj) {
-      var f = nz_obj, sout = {};
-      var entry_names = f.groupnames();
-      entry_names.forEach(function(entry) {
-          sout[entry] = sout[entry] || {};
-          var samplename = f.get(entry + "/sample/name");
-          if (samplename == null) samplename = f.get(entry + "/DAS_logs/sample/name")
-          sout[entry].samplename = (samplename == null) ? "noname" : samplename.getValue()[0][0];
-          var scantype = f.get(entry + "/DAS_logs/trajectoryData/_scanType");
-          sout[entry].scantype = (scantype == null) ? "uncategorized" : scantype.getValue()[0][0];
-          sout[entry].counts = f.get(entry + "/DAS_logs/counter/liveROI").getValue().reduce(function(a, b) {return a.concat(b)});
-          //var x = f.get(entry + "/data/x").getValue(),
-          var x = f.get(entry + primary_axis[sout[entry].scantype]);
-          if (x) {
-            var xvals = x.getValue(),
-              extent = d3.extent(xvals);
-            sout[entry].min_x = extent[0][0];
-            sout[entry].max_x = extent[1][0];
-          }
-      });
-      return sout;
-    }
 
     function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
       var icon_width = 75;
@@ -115,81 +62,8 @@ webreduce = window.webreduce || {};
     //db.filenames.where("url").equalsIgnoreCase("//ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
     // .each returns a Promise, resolved with "undefined" after last iteration is complete.
 
-    // DEPRECATED
-    function categorize_files(files, files_metadata, path, target_id) {
-      var t0 = new Date();
-      var tree_entries = [],
-          file_names = {},
-          refl_promises = [];
-      // some globals, because I'm a lazy/bad programmer:
-      var fileinfo = {};
-      var datafiles = files.filter(function(x) {return (
-        NEXUS_ZIP_REGEXP.test(x) &&
-        (/^(fp_)/.test(x) == false) &&
-        (/^rapidscan/.test(x) == false) &&
-        (/^scripted_findpeak/.test(x) == false)
-        )});
-      datafiles.forEach(function(j) {
-        //console.log(path + "/" + j, files_metadata[j].mtime);
-        statusline_log("found file: " +  path + "/" + j + ", " + files_metadata[j].mtime);
-        refl_promises.push(load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
-      });
-      Promise.all(refl_promises).then(function(results) {
-        //for (var fn in refl_objs) {
-        for (var i in datafiles) {
-          var fn = path + "/" + datafiles[i];
-          fileinfo[fn] = get_refl_info(refl_objs[fn]);
-        }
-        var treeinfo = finfo_to_tree(fileinfo, path);
-        console.log(treeinfo);
-        var jstree = $("#"+target_id + " .remote_filebrowser").jstree({
-          "plugins": ["checkbox", "changed", "sort"],
-          "checkbox" : {
-            "three_state": true,
-            //"cascade": "down",
-            "tie_selection": false,
-            "whole_node": false
-          },
-          "core": {"data": treeinfo}
-        });
-        $("#"+target_id + " .remote_filebrowser").on("check_node.jstree", handleChecked)
-          .on("uncheck_node.jstree", handleChecked);
-        $("#"+target_id + " .remote_filebrowser").on("click", "a", function(e) {
-          if (!(e.target.classList.contains("jstree-checkbox"))) {
-            $("#" + target_id + " .remote_filebrowser").jstree().toggle_node(e.currentTarget.id);
-          }
-        });
-        console.log(new Date() - t0);
-      });
-      /*sequence.then(function() {
-        //$("#result pre").html(JSON.stringify(fileinfo, null, 2));
-        var treeinfo = finfo_to_tree(fileinfo, path);
-        console.log(treeinfo);
-        var jstree = $("#filebrowser").jstree({
-          "plugins": ["checkbox", "changed"],
-          "checkbox" : {
-            "three_state": true,
-            //"cascade": "down",
-            "tie_selection": false,
-            "whole_node": false
-          },
-          "core": {"data": treeinfo}
-        });
-        $("#filebrowser").on("check_node.jstree", handleChecked)
-          .on("uncheck_node.jstree", handleChecked);
-        $("#filebrowser").on("click", "a", function(e) {
-          if (!(e.target.classList.contains("jstree-checkbox"))) {
-            $("#filebrowser").jstree().toggle_node(e.currentTarget.id);
-          }
-        });
-        console.log(new Date() - t0);
-
-      })
-      */
-    }
-
     
-
+    // DEPRECATED
     function handleChecked() {
       var xcol,
           datas = [],
