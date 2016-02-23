@@ -1,5 +1,7 @@
-// require(jsonRPC)
-// wrap the jsonRPC server in a generic API interface
+// require(jQuery.jsonRPC)
+//
+// defines webreduce.server_api for json-rpc
+// (wrap the jsonRPC server in a generic API interface)
 
 webreduce = window.webreduce || {};
 webreduce.server_api = webreduce.server_api || {};
@@ -28,7 +30,7 @@ $.jsonRPC.setup({
           success: function(result) {
             resolve(result.result);
           },
-          error: function(result) {console.log('error in ' + method_name, 'params: ', params, 'caller: ', caller, result); reject(result);}
+          error: function(result) {console.log('error in ' + method_name, 'params: ', params, 'caller: ', wrapped.caller, result); reject(result);}
         });
       });
       return r

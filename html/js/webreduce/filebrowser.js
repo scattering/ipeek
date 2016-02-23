@@ -3,10 +3,25 @@
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
   
+  function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
+    var icon_width = 75;
+    var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
+    var width = icon_width * rel_width;
+    var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
+    var x = icon_width * rel_x;
+    var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
+    output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
+    output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
+    output += "</svg>"
+    return output
+  }
+  
   function categorizeFiles(files, files_metadata, path, target_id, instrument_id) {
     var load_promises = [];
     var fileinfo = {};
     var file_objs = {};
+    webreduce.editor._file_objs = webreduce.editor._file_objs || {};
+    webreduce.editor._file_objs[target_id] = file_objs;
     var datafiles = files.filter(function(x) {return (
       NEXUS_ZIP_REGEXP.test(x) &&
       (/^(fp_)/.test(x) == false) &&
@@ -19,7 +34,7 @@
     });
     Promise.all(load_promises).then(function(results) {
       var categorizers = webreduce.instruments[instrument_id].categorizers;
-      var treeinfo = file_objs_to_tree(file_objs, path, categorizers);
+      var treeinfo = file_objs_to_tree(file_objs, categorizers);
       console.log(treeinfo);
       var jstree = $("#"+target_id + " .remote_filebrowser").jstree({
         "plugins": ["checkbox", "changed", "sort"],
@@ -43,15 +58,16 @@
   }
   
   // categorizers are callbacks that take an info object and return category string
-  function file_objs_to_tree(file_objs, path, categorizers) {
+  function file_objs_to_tree(file_objs, categorizers) {
     // file_obj should always be a list of entries
     var out = [], categories_obj = {}, file_obj;
+    
+    //var out = [], categories_obj = {}, file_obj;
     for (var p in file_objs) {
       file_obj = file_objs[p];
       for (var e=0; e<file_obj.length; e++) {
         var entry = file_obj[e];
-        console.log(entry);
-        var parent = "#",
+        var parent = "root",
             cobj = categories_obj,
             category, id;
         for (var c=0; c<categorizers.length; c++) {
@@ -59,15 +75,18 @@
           id = parent + ":" + category;
           if (!(category in cobj)) {
             cobj[category] = {};
-            out.push({'id': id, text: category, parent: parent, "icon": false});
+            var leaf = {'id': id, text: category, parent: parent, "icon": false};
+            out.push(leaf);
           }
           parent = id;
           cobj = cobj[category]; // walk the tree...
         }
         // modify the last entry to include key of file_obj
-        out[out.length-1]['li_attr'] = {"file_entry": p + ":" + e};
+        leaf['li_attr'] = {"file_entry": p + ":" + e};
       }
     }
+    // if not empty, push in the root node:
+    if (out.length > 0) { out.push({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
     return out
   }
   
@@ -77,8 +96,8 @@
     var new_div = $("<div />", {"id": new_id})
     $("#" + target_id + " #processed_data").before(new_div);
     webreduce.server_api.get_file_metadata(path).then(function(result) {
-      metadata = JSON.parse(result.result);
-      webreduce.updateFileBrowserPane(new_id, path, current_instrument)(metadata);
+      //metadata = JSON.parse(result.result);
+      webreduce.updateFileBrowserPane(new_id, path, current_instrument)(result);
     });
   }
 
@@ -181,6 +200,7 @@
 
         var dirbrowser = document.createElement('ul');
         dirbrowser.id = "dirbrowser";
+        dirbrowser.setAttribute("style", "margin-bottom:0px;");
         dirdata.subdirs.reverse();
         $.each(dirdata.subdirs, function(index, subdir) {
           subdiritem = document.createElement('li');
@@ -198,25 +218,25 @@
           dirbrowser.appendChild(subdiritem);
         });
 
-        var deadtime_choose = document.createElement('div');
-        deadtime_choose.classList.add("deadtime-chooser");
-        var deadtime_text = document.createElement('span');
-        deadtime_text.textContent = "deadtime correct:";
-        deadtime_choose.appendChild(deadtime_text);
-        var deadtime_detector = document.createElement('label');
-        deadtime_detector.textContent = "det";
-        var deadtime_detector_select = document.createElement('input');
-        deadtime_detector_select.type = "checkbox";
-        deadtime_detector_select.checked = true;
-        deadtime_detector.appendChild(deadtime_detector_select);
-        deadtime_choose.appendChild(deadtime_detector);
-        var deadtime_monitor = document.createElement('label');
-        deadtime_monitor.textContent = "mon";
-        var deadtime_monitor_select = document.createElement('input');
-        deadtime_monitor_select.type = "checkbox";
-        deadtime_monitor_select.checked = true;
-        deadtime_monitor.appendChild(deadtime_monitor_select);
-        deadtime_choose.appendChild(deadtime_monitor);
+        //var deadtime_choose = document.createElement('div');
+        //deadtime_choose.classList.add("deadtime-chooser");
+        //var deadtime_text = document.createElement('span');
+        //deadtime_text.textContent = "deadtime correct:";
+        //deadtime_choose.appendChild(deadtime_text);
+        //var deadtime_detector = document.createElement('label');
+        //deadtime_detector.textContent = "det";
+        //var deadtime_detector_select = document.createElement('input');
+        //deadtime_detector_select.type = "checkbox";
+        //deadtime_detector_select.checked = true;
+        //deadtime_detector.appendChild(deadtime_detector_select);
+        //deadtime_choose.appendChild(deadtime_detector);
+        //var deadtime_monitor = document.createElement('label');
+        //deadtime_monitor.textContent = "mon";
+        //var deadtime_monitor_select = document.createElement('input');
+        //deadtime_monitor_select.type = "checkbox";
+        //deadtime_monitor_select.checked = true;
+        //deadtime_monitor.appendChild(deadtime_monitor_select);
+        //deadtime_choose.appendChild(deadtime_monitor);
 
         var filebrowser = document.createElement('div');
         //filebrowser.id = "filebrowser";
@@ -227,7 +247,7 @@
         $('#' + target_id).empty()
           .append(buttons)
           .append(patheditor)
-          .append(deadtime_choose)
+          //.append(deadtime_choose)
           .append(dirbrowser)
           .append(filebrowser);
 
@@ -245,13 +265,13 @@
   }
   
   function handleChecked(event) {
-    var instrument_id = event.data.instrument_id,
-        file_objs = event.data.file_objs;
+    var instrument_id = webreduce.editor._instrument_id;
     var xcol,
         datas = [],
         options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
     $(".remote_filebrowser").each(function() {
       var jstree = $(this).jstree(true);
+      var file_objs = webreduce.editor._file_objs[this.parentNode.id] || {};
       //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
       var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
       var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.file_entry != null});
@@ -280,6 +300,11 @@
     var mychart = new xyChart(options);
     d3.selectAll("#plotdiv svg").remove();
     d3.selectAll("#plotdiv").data([datas]).call(mychart);
+    $("#xscale, #yscale").change(handleChecked);
+      var x0 = 10,
+          y0 = 10, 
+          dx = 135,
+          dy = 40;
     mychart.zoomRect(true);
   }
   webreduce = window.webreduce || {};

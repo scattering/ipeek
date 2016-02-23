@@ -1,4 +1,5 @@
 webreduce = window.webreduce || {};
+webreduce.instruments = webreduce.instruments || {};
 
 (function webreduction() {
      //"use strict";
@@ -8,6 +9,7 @@ webreduce = window.webreduce || {};
       "template": {}
     }
     current_instrument = "ncnr.refl";
+    
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
@@ -31,120 +33,9 @@ webreduce = window.webreduce || {};
       return vars;
     }
 
-    var refl_objs = {};
-    var start_time = (new Date()).getTime();
-    var fileinfo;
-    var nexus_objs = {};
-
-    function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
-      var icon_width = 75;
-      var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
-      var width = icon_width * rel_width;
-      var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
-      var x = icon_width * rel_x;
-      var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
-      output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
-      output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
-      output += "</svg>"
-      return output
-    }
-    webreduce.make_range_icon = make_range_icon;
-    // Dexie:
-
-    var db = new Dexie("NexusDatafiles");
-    db.version(nz.version)
-      .stores({
-        filenames: 'url,mtime,data'
-      });
-
-    db.open();
-    //db.filenames.put({url: "//ncnr.nist.gov/pub/ncnrdata...", mtime: 12323452343, data: {}});
-    //db.filenames.where("url").equalsIgnoreCase("//ncnr.nist.gov/pub" ).and("mtime").equals(1232145).each(function(item,cursor) {...})
-    // .each returns a Promise, resolved with "undefined" after last iteration is complete.
-
+    webreduce.hooks = {};
+    webreduce.hooks.resize_center = null;
     
-    // DEPRECATED
-    function handleChecked() {
-      var xcol,
-          datas = [],
-          options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
-      $(".remote_filebrowser").each(function() {
-        var jstree = $(this).jstree(true);
-        //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
-        var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-        var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
-        var plot_entry_ids = plotnodes.map(function(n) {
-          return {path: n.li_attr.path, filename: n.id.split(":").slice(0,1).join(""), entryname: n.id.split(":").slice(-1).join("")}
-        });
-        var new_plotdata = plot(plot_entry_ids);
-        options.series = options.series.concat(new_plotdata.series);
-        datas = datas.concat(new_plotdata.data);
-        if (xcol != null && new_plotdata.xcol != xcol) {
-          throw "mismatched x axes in selection: " + xcol.toString() + " and " + new_plotdata.xcol.toString();
-        }
-        else {
-          xcol = new_plotdata.xcol;
-        }
-      });
-      //options.axes.xaxis.label = "Qz (target)";
-      options.axes.xaxis.label = xcol;
-      options.axes.yaxis.label = "counts/monitor";
-      options.xtransform = $("#xscale").val();
-      options.ytransform = $("#yscale").val();
-      var mychart = new xyChart(options);
-      d3.selectAll("#plotdiv svg").remove();
-      d3.selectAll("#plotdiv").data([datas]).call(mychart);
-      mychart.zoomRect(true);
-    }
-
-    
-    function handleSelection() {console.log(selection)};
-
-    function plot(entry_ids) {
-      // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
-      var series = new Array();
-      var options = {
-        series: series,
-        legend: {show: true, left: 150},
-        axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
-      };
-      var datas = [], xcol;
-      var ycol = "detector/counts";
-      var ynormcol = "monitor/counts";
-      entry_ids.forEach(function(eid) {
-        var refl = refl_objs[eid.path + '/' + eid.filename];
-        var entry = refl.filter(function(e) {return ((e.name + e.polarization) == eid.entryname)});
-        if (entry.length < 1) { return }
-        else {entry = entry[0]};
-        var intent = entry['intent'];
-        var new_xcol = primary_axis[intent];
-        if (xcol != null && new_xcol != xcol) {
-          throw "mismatched x axes in selection: " + xcol.toString() + " and " + new_xcol.toString();
-        }
-        else {
-          xcol = new_xcol;
-        }
-        var ydata = get_refl_item(entry, ycol);
-        var xdata = get_refl_item(entry, xcol);
-        var ynormdata = get_refl_item(entry, ynormcol);
-        console.log(entry, ydata, xdata);
-        var xydata = [], x, y, ynorm;
-        for (var i=0; i<xdata.length || i<ydata.length; i++) {
-          x = (i<xdata.length) ? xdata[i] : x; // use last value
-          y = (i<ydata.length) ? ydata[i] : y; // use last value
-          ynorm = (i<ynormdata.length) ? ynormdata[i] : ynorm; // use last value
-          xydata[i] = [x,y/ynorm];
-        }
-        datas.push(xydata);
-        series.push({label: eid.filename + ":" + eid.entryname});
-
-      });
-      ycol = "detector/counts";
-      ynormcol = "monitor/counts";
-
-      return {xcol: xcol, ycol: ycol, series: series, data: datas};
-    } 
-
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
       //if (e.state) {
@@ -160,25 +51,20 @@ webreduce = window.webreduce || {};
     
     window.onload = function() {
       var layout = $('body').layout({
-          west__size:			350
-        ,	east__size:			200
-        , south__size:    200
+           west__size:          350
+        ,  east__size:          300
+        ,  south__size:         200
           // RESIZE Accordion widget when panes resize
-        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
-        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
-        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
-        , center__onresize:   handleChecked
-		  });
+        ,  west__onresize:	    $.layout.callbacks.resizePaneAccordions
+        ,  east__onresize:	    $.layout.callbacks.resizePaneAccordions
+        ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
+        ,  center__onresize:    webreduce.hooks.resize_center
+      });
 		  
 		  layout.toggle('east');
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
-      //$("#filebrowser").on("changed.jstree", function (e, data) { console.log(this, e, data)});
-      //$("#filebrowser").bind("check_node.jstree", function (e, data) { console.log(this, e, data)});
-      $("#xscale, #yscale").change(handleChecked);
-      var x0 = 10,
-          y0 = 10, 
-          dx = 135,
-          dy = 40;
+      
+      
 
       
       
@@ -201,32 +87,130 @@ webreduce = window.webreduce || {};
         console.log(index, terminal_id);
       }
 
-      var e = new dataflow.editor();
-      webreduce.server_api.get_instrument().then(function(result) {
-        instrument_def = result;
-        if ('modules' in instrument_def) {
-          for (var i=0; i<instrument_def.modules.length; i++) {
-            var m = instrument_def.modules[i];
-            dataflow.module_defs[m.id] = m;
-          }
+      // require(d3, dataflow)
+      webreduce.editor = {};
+      webreduce.editor.create_instance = function(target_id) {
+        // create an instance of the dataflow editor in
+        // the html element referenced by target_id
+        this._instance = new dataflow.editor();
+        this._target_id = target_id;
+      }
+      webreduce.editor.handle_module_clicked = function() {
+        // module group is 2 levels above module title in DOM
+        var target = d3.select("#" + this._target_id);
+        var index = d3.select(target.select(".module .selected").node().parentNode.parentNode).attr("index");
+        var active_module = this._active_template.modules[index];
+        var module_def = this._module_defs[active_module.module];
+        var fields = module_def.fields || [];
+        fields_dict = {};
+        fields.forEach(function(f) {
+          fields_dict[f.id] = f.default}
+        );
+        jQuery.extend(true, fields_dict, active_module.config);
+        layout.open("east");
+        webreduce.editor.make_form(fields, active_module);
+      }
+      webreduce.editor.handle_terminal_clicked = function() {
+        var target = d3.select("#" + this._target_id);
+        var selected = target.select(".module .selected");
+        var index = d3.select(selected.node().parentNode.parentNode).attr("index");
+        var terminal_id = selected.attr("terminal_id");
+        console.log(index, terminal_id);
+      }
+      
+      webreduce.editor.make_form = function(fields, active_module) {
+        var data = [];
+        var conversions = {
+          'bool': 'checkbox', 
+          'float': 'number',
+          'str': 'text'
         }
-        e.data([instrument_def.templates[0]]);
-        active_reduction.template = instrument_def.templates[0];
-        d3.select("#bottom_panel").call(e);
-        
-        d3.selectAll(".module").classed("draggable wireable", false);
+        for (var i=0; i<fields.length; i++) {
+          var field = fields[i];
+          var dt = field.datatype.split(":"),
+              datatype = dt[0],
+              units = dt[1];
+          if (units === "") {units = "unitless"}
+          if (datatype in conversions) {
+            var value = (active_module.config && active_module.config[field.id])? active_module.config[field.id] : field.default;
+            data.push({
+              'type': conversions[field.datatype],
+              'value': value, 
+              'checked': (value) ? true : false,
+              'label': field.label + ((units === undefined) ? "" : "(" + units + ")"),
+              'id': field.id
+            });
+          }
+        } 
+        console.log(data);
+        var target = d3.select(".ui-layout-pane-east");
+        target.select("div.form").remove();
+        var forms = target.selectAll("div.form")
+        .data([data]).enter()
+        .append("div")
+        .classed("form", true)
+        .style("list-style", "none");
 
-        d3.selectAll(".module .terminal").on("click", function() {
-          d3.selectAll(".module .selected").classed("selected", false);
+        forms.selectAll("li")
+          .data(function(d) {return d})
+          .enter()
+          .append("li")
+          .append("label")
+          .text(function(d) {return d.label})
+          .append("input")
+          .attr("type", function(d) {return d.type})
+          .attr("field_id", function(d) {return d.id})
+          .attr("value", function(d) {return d.value})
+          .property("checked", function(d) {return d.value})
+          .on("change", function() {
+            active_module.config = active_module.config || {};
+            active_module.config[d3.select(this).attr('field_id')] = this.value;
+          })
+      }
+      
+      webreduce.editor.load_instrument = function(instrument_id) {
+        var editor = this;
+        editor._instrument_id = instrument_id;
+        return webreduce.server_api.get_instrument(instrument_id)
+          .then(function(instrument_def) {
+            editor._instrument_def = instrument_def;
+            editor._module_defs = {};
+            if ('modules' in instrument_def) {
+              for (var i=0; i<instrument_def.modules.length; i++) {
+                var m = instrument_def.modules[i];
+                editor._module_defs[m.id] = m;
+              }
+            }
+            // load into the editor instance
+            editor._instance.module_defs(editor._module_defs);
+            // pass it through:
+            return instrument_def;
+          }) 
+      }
+      webreduce.editor.load_template = function(template_def) {
+        this._instance.data([template_def]);
+        this._active_template = template_def;
+        var target = d3.select("#" + this._target_id);
+        
+        target.call(this._instance);
+        
+        target.selectAll(".module").classed("draggable wireable", false);
+
+        target.selectAll(".module .terminal").on("click", function() {
+          target.selectAll(".module .selected").classed("selected", false);
           d3.select(this).classed('selected', true);
-          handle_terminal_clicked();
+          webreduce.editor.handle_terminal_clicked();
         });
-        d3.selectAll(".module g.title").on("click", function() {
-          d3.selectAll(".module .selected").classed("selected", false);
+        target.selectAll(".module g.title").on("click", function() {
+          target.selectAll(".module .selected").classed("selected", false);
           d3.select(this).select("rect.title").classed("selected", true);
-          handle_module_clicked();
-        })
-      });       
-    }
+          webreduce.editor.handle_module_clicked();
+        });        
+      }
+      
+      webreduce.editor.create_instance("bottom_panel");
+      webreduce.editor.load_instrument(current_instrument)
+        .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
+  }
 
 })();
