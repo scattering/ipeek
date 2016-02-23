@@ -1,7 +1,8 @@
 // require(jsonRPC)
 // wrap the jsonRPC server in a generic API interface
 
-server_api = window.server_api || {};
+webreduce = window.webreduce || {};
+webreduce.server_api = webreduce.server_api || {};
 
 $.jsonRPC.setup({
   //endPoint: '//localhost:' + rpc_port + '/RPC2',
@@ -40,6 +41,6 @@ $.jsonRPC.setup({
     var method_name = toWrap[i];
     server_api[method_name] = wrap_jsonRPC(method_name);
   }
-})(server_api);
+})(webreduce.server_api);
 
 

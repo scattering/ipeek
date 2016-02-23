@@ -1,10 +1,12 @@
+// require(jstree, webreduce.server_api)
+
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
   
   function categorizeFiles(files, files_metadata, path, target_id, instrument_id) {
-    var refl_promises = [];
+    var load_promises = [];
     var fileinfo = {};
-    var refl_objs = {};
+    var file_objs = {};
     var datafiles = files.filter(function(x) {return (
       NEXUS_ZIP_REGEXP.test(x) &&
       (/^(fp_)/.test(x) == false) &&
@@ -13,13 +15,11 @@
       )});
     var loader = webreduce.instruments[instrument_id].load_file;
     datafiles.forEach(function(j) {
-      //statusline_log("found file: " +  path + "/" + j + ", " + files_metadata[j].mtime);
-      //refl_promises.push(server_api.load_refl(path + "/" + j, files_metadata[j].mtime, refl_objs));
-      refl_promises.push(loader(path + "/" + j, files_metadata[j].mtime, refl_objs));
+      load_promises.push(loader(path + "/" + j, files_metadata[j].mtime, file_objs));
     });
-    Promise.all(refl_promises).then(function(results) {
+    Promise.all(load_promises).then(function(results) {
       var categorizers = webreduce.instruments[instrument_id].categorizers;
-      var treeinfo = file_objs_to_tree(refl_objs, path, categorizers);
+      var treeinfo = file_objs_to_tree(file_objs, path, categorizers);
       console.log(treeinfo);
       var jstree = $("#"+target_id + " .remote_filebrowser").jstree({
         "plugins": ["checkbox", "changed", "sort"],
@@ -31,8 +31,9 @@
         },
         "core": {"data": treeinfo}
       });
-      $("#"+target_id + " .remote_filebrowser").on("check_node.jstree", handleChecked)
-        .on("uncheck_node.jstree", handleChecked);
+      $("#"+target_id + " .remote_filebrowser")
+        .on("check_node.jstree", {file_objs: file_objs, instrument_id: instrument_id}, handleChecked)
+        .on("uncheck_node.jstree", {file_objs: file_objs, instrument_id: instrument_id}, handleChecked);
       $("#"+target_id + " .remote_filebrowser").on("click", "a", function(e) {
         if (!(e.target.classList.contains("jstree-checkbox"))) {
           $("#" + target_id + " .remote_filebrowser").jstree().toggle_node(e.currentTarget.id);
@@ -63,11 +64,34 @@
           parent = id;
           cobj = cobj[category]; // walk the tree...
         }
+        // modify the last entry to include path
+        out[out.length-1]['li_attr'] = {"path": path};
       }
     }
     return out
   }
   
+  var add_remote_source = function(target_id, path) {
+    var remote_source_count = $("#" + target_id + " div.remote_filebrowser").length;
+    var new_id = "remote_source_" + (remote_source_count + 1).toFixed();
+    var new_div = $("<div />", {"id": new_id})
+    $("#" + target_id + " #processed_data").before(new_div);
+    webreduce.server_api.get_file_metadata(path).then(function(result) {
+      metadata = JSON.parse(result.result);
+      webreduce.updateFileBrowserPane(new_id, path, current_instrument)(metadata);
+    });
+    //$.jsonRPC.request('get_file_metadata', {
+    //    async: true,
+    //    params: [path],
+    //    success: function(result) {
+    //        metadata = JSON.parse(result.result);
+    //        updateFileBrowserPane(new_id, path, server_api, current_instrument)(metadata);
+    //    },
+    //    error: function(result) {console.log('error: ', result)}
+    //});
+
+  }
+
   /*
   function finfo_to_tree(finfo, path, categorizers){
       var out = [], sample_names = {};
@@ -132,11 +156,12 @@
     return path;
   }
 
-  function updateFileBrowserPane(target_id, pathlist, server_api, instrument_id) {
+  function updateFileBrowserPane(target_id, pathlist, instrument_id) {
       function handler(dirdata) {
         var buttons = $("<div />", {class: "buttons"});
         var clear_all = $("<button />", {text: "clear all"});
-        clear_all.click(function() {$("#"+target_id + " .remote_filebrowser").jstree("uncheck_all"); handleChecked()});
+        clear_all.click(function() {$("#"+target_id + " .remote_filebrowser")
+          .jstree("uncheck_all"); handleChecked({data: {instrument_id: instrument_id}})});
         buttons
           .append(clear_all)
 
@@ -155,9 +180,9 @@
             dirlink.textContent = pathitem + "/";
             dirlink.onclick = function() {
               history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
-              server_api.get_file_metadata(new_pathlist.slice(0, index+1))
+              webreduce.server_api.get_file_metadata(new_pathlist.slice(0, index+1))
               .then( function (metadata) {
-                 updateFileBrowserPane(target_id, new_pathlist.slice(0, index+1), server_api, instrument_id)(metadata);
+                 updateFileBrowserPane(target_id, new_pathlist.slice(0, index+1), instrument_id)(metadata);
               })
             }
             patheditor.appendChild(dirlink);
@@ -175,9 +200,9 @@
           new_pathlist.push(subdir);
           subdiritem.onclick = function() {
             history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
-            server_api.get_file_metadata(new_pathlist)
+            webreduce.server_api.get_file_metadata(new_pathlist)
               .then( function (metadata) {
-                 updateFileBrowserPane(target_id, new_pathlist, server_api, instrument_id)(metadata);
+                 updateFileBrowserPane(target_id, new_pathlist, instrument_id)(metadata);
               }) 
           }
           dirbrowser.appendChild(subdiritem);
@@ -228,8 +253,44 @@
       }
       return handler
   }
+  
+  function handleChecked(event) {
+    var instrument_id = event.data.instrument_id,
+        file_objs = event.data.file_objs;
+    var xcol,
+        datas = [],
+        options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
+    $(".remote_filebrowser").each(function() {
+      var jstree = $(this).jstree(true);
+      //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
+      var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
+      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.path != null});
+      var plot_entry_ids = plotnodes.map(function(n) {
+        return {path: n.li_attr.path, filename: n.id.split(":").slice(-2,-1).join(""), entryname: n.id.split(":").slice(-1).join("")}
+      });
+      var new_plotdata = webreduce.instruments[instrument_id].plot(file_objs, plot_entry_ids);
+      options.series = options.series.concat(new_plotdata.series);
+      datas = datas.concat(new_plotdata.data);
+      if (xcol != null && new_plotdata.xcol != xcol) {
+        throw "mismatched x axes in selection: " + xcol.toString() + " and " + new_plotdata.xcol.toString();
+      }
+      else {
+        xcol = new_plotdata.xcol;
+      }
+    });
+    //options.axes.xaxis.label = "Qz (target)";
+    options.axes.xaxis.label = xcol;
+    options.axes.yaxis.label = "counts/monitor";
+    options.xtransform = $("#xscale").val();
+    options.ytransform = $("#yscale").val();
+    var mychart = new xyChart(options);
+    d3.selectAll("#plotdiv svg").remove();
+    d3.selectAll("#plotdiv").data([datas]).call(mychart);
+    mychart.zoomRect(true);
+  }
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
   webreduce.getCurrentPath = getCurrentPath;
+  webreduce.add_remote_source = add_remote_source;
 
 })();
