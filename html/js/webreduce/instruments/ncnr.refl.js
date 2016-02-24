@@ -63,7 +63,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     var ynormcol = "monitor/counts";
     entry_ids.forEach(function(eid) {
       var refl = file_objs[eid.file_obj]
-      var entry = refl[eid.entryname];
+      var entry = refl.filter(function(r) {return r.entry == eid.entryname})[0]
       var intent = entry['intent'];
       var new_xcol = primary_axis[intent];
       if (xcol != null && new_xcol != xcol) {

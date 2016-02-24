@@ -47,8 +47,8 @@
         "core": {"data": treeinfo}
       });
       $("#"+target_id + " .remote_filebrowser")
-        .on("check_node.jstree", {file_objs: file_objs, instrument_id: instrument_id}, handleChecked)
-        .on("uncheck_node.jstree", {file_objs: file_objs, instrument_id: instrument_id}, handleChecked);
+        .on("check_node.jstree", handleChecked)
+        .on("uncheck_node.jstree", handleChecked);
       $("#"+target_id + " .remote_filebrowser").on("click", "a", function(e) {
         if (!(e.target.classList.contains("jstree-checkbox"))) {
           $("#" + target_id + " .remote_filebrowser").jstree().toggle_node(e.currentTarget.id);
@@ -66,7 +66,8 @@
     for (var p in file_objs) {
       file_obj = file_objs[p];
       for (var e=0; e<file_obj.length; e++) {
-        var entry = file_obj[e];
+        var entry = file_obj[e],
+            entryname = entry.entry;
         var parent = "root",
             cobj = categories_obj,
             category, id;
@@ -82,7 +83,7 @@
           cobj = cobj[category]; // walk the tree...
         }
         // modify the last entry to include key of file_obj
-        leaf['li_attr'] = {"file_entry": p + ":" + e};
+        leaf['li_attr'] = {"filename": p, "entryname": entryname};
       }
     }
     // if not empty, push in the root node:
@@ -170,7 +171,8 @@
         var buttons = $("<div />", {class: "buttons"});
         var clear_all = $("<button />", {text: "clear all"});
         clear_all.click(function() {$("#"+target_id + " .remote_filebrowser")
-          .jstree("uncheck_all"); handleChecked({data: {instrument_id: instrument_id}})});
+          .jstree("uncheck_all"); handleChecked();
+        });
         buttons
           .append(clear_all)
 
@@ -200,7 +202,7 @@
 
         var dirbrowser = document.createElement('ul');
         dirbrowser.id = "dirbrowser";
-        dirbrowser.setAttribute("style", "margin-bottom:0px;");
+        dirbrowser.setAttribute("style", "margin:0px;");
         dirdata.subdirs.reverse();
         $.each(dirdata.subdirs, function(index, subdir) {
           subdiritem = document.createElement('li');
@@ -274,15 +276,21 @@
       var file_objs = webreduce.editor._file_objs[this.parentNode.id] || {};
       //var selected_nodes = jstree.get_selected().map(function(s) {return jstree.get_node(s)});
       var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-      var plotnodes = checked_nodes.filter(function(n) {return n.li_attr.file_entry != null});
-      var plot_entry_ids = plotnodes.map(function(n) {
-        var file_entry = n.li_attr.file_entry,
+      var entrynodes = checked_nodes.filter(function(n) {
+        return (n.li_attr.filename != null && n.li_attr.entryname != null)
+      });
+      var entry_ids = entrynodes.map(function(n) {
+        var file_obj_key = n.li_attr.filename,
+            entryname = n.li_attr.entryname,
+            filename = file_obj_key.split("/").slice(-1).join("");
+        /*var file_entry = n.li_attr.file_entry,
             file_obj = file_entry.split(":").slice(0,1).join(""),
             filename = file_obj.split("/").slice(-1).join(""),
             entryname = file_entry.split(":").slice(-1).join("");
-        return {file_obj: file_obj, filename: filename, entryname: entryname}
+        */
+        return {file_obj: file_obj_key, filename: filename, entryname: entryname}
       });
-      var new_plotdata = webreduce.instruments[instrument_id].plot(file_objs, plot_entry_ids);
+      var new_plotdata = webreduce.instruments[instrument_id].plot(file_objs, entry_ids);
       options.series = options.series.concat(new_plotdata.series);
       datas = datas.concat(new_plotdata.data);
       if (xcol != null && new_plotdata.xcol != xcol) {

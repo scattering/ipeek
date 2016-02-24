@@ -398,7 +398,6 @@
                 var instr = current_instr;
                 var instr_name = instr;
                 var href = (instr in SINGLEPLOTS) ? SINGLEPLOTS[instr] : 'singleplotwindow.html?instrument=' + instr;
-                window.open(href)
                 var instr_link = $('<a />', {'href': href});
                 if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
                 instr_link.html(instr_name);
