@@ -16,7 +16,7 @@ source_path_to_ftp = "/var/ftp"
 source_port = 22
 
 sources = [
-    {"name": "NG7SANS", 
+    {"name": "NG7SANS_ICE", 
      "root_dir": "/var/ftp/pub/ncnrdata/ng7sans/",
      "live_datapath":"pub/sansdata/NG7Current/",
      "live_dataname": "live001.sa3_ice_a001"},
