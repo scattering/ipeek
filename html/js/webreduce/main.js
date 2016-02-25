@@ -3,6 +3,7 @@ webreduce.instruments = webreduce.instruments || {};
 
 (function webreduction() {
      //"use strict";
+     // add a comment
     
     active_reduction = {
       "config": {},
