@@ -29,6 +29,19 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     })
   }
   
+  function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
+    var icon_width = 75;
+    var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
+    var width = icon_width * rel_width;
+    var rel_x = Math.abs((min_x - global_min_x) / (global_max_x - global_min_x));
+    var x = icon_width * rel_x;
+    var output = "<svg class=\"range\" width=\"" + (icon_width + 2) + "\" height=\"12\">";
+    output += "<rect width=\"" + width + "\" height=\"10\" x=\"" + x + "\" style=\"fill:IndianRed;stroke:none\"/>"
+    output += "<rect width=\"" + icon_width + "\" height=\"10\" style=\"fill:none;stroke:black;stroke-width:1\"/>"
+    output += "</svg>"
+    return output
+  }
+  
   var primary_axis = {
     "specular": "Qz_target",
     "background+": "Qz_target",
@@ -101,6 +114,57 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
     function(info) { return info.name },
     function(info) { return info.polarization || "unpolarized" }
   ];
+  
+  function add_range_indicators(target) {
+    var propagate_up_levels = 2; // levels to push up xmin and xmax.
+    var jstree = target.jstree(true);
+    var source_id = target.parent().attr("id");
+    var file_objs = webreduce.editor._file_objs[source_id];
+    var leaf, entry;
+    // first set min and max for entries:
+    for (fn in jstree._model.data) {
+      leaf = jstree._model.data[fn];
+      if (leaf.li_attr && 'filename' in leaf.li_attr && 'entryname' in leaf.li_attr) {
+        entry = file_objs[leaf.li_attr.filename].filter(function(f) {return f.entry == leaf.li_attr.entryname});
+        if (entry && entry[0]) {
+          var e = entry[0];
+          var xaxis = primary_axis[e.intent || 'specular'];
+          var extent = d3.extent(entry[0][xaxis]);
+          leaf.li_attr.xmin = extent[0];
+          leaf.li_attr.xmax = extent[1];
+          var parent = leaf;
+          for (var i=0; i<propagate_up_levels; i++) {
+            var parent_id = parent.parent;
+            parent = jstree._model.data[parent_id];
+            if (parent.li_attr.xmin != null) {
+              parent.li_attr.xmin = Math.min(extent[0], parent.li_attr.xmin);
+            }
+            else {
+              parent.li_attr.xmin = extent[0];
+            }
+            if (parent.li_attr.xmax != null) {
+              parent.li_attr.xmax = Math.max(extent[1], parent.li_attr.xmax);
+            }
+            else {
+              parent.li_attr.xmax = extent[1];
+            }
+          }
+        }
+      }
+    }
+    for (fn in jstree._model.data) {
+      leaf = jstree._model.data[fn];
+      if (leaf.parent == null) {continue}
+      var l = leaf.li_attr;
+      var p = jstree._model.data[leaf.parent].li_attr;
+      if (l.xmin != null && l.xmax != null && p.xmin != null && p.xmax != null) {
+        var range_icon = make_range_icon(parseFloat(p.xmin), parseFloat(p.xmax), parseFloat(l.xmin), parseFloat(l.xmax));
+        leaf.text += range_icon;
+      }
+    }
+  }
+  
+  instrument.decorators = [add_range_indicators];
     
 })(webreduce.instruments['ncnr.refl']);
 
