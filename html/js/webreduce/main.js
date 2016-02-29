@@ -64,29 +64,12 @@ webreduce.instruments = webreduce.instruments || {};
 		  
 		  layout.toggle('east');
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
-      
-      
-
-      
-      
-      var handle_module_clicked = function() {
-        // module group is 2 levels above module title in DOM
-        var index = d3.select(d3.select(".module .selected").node().parentNode.parentNode).attr("index");
-        var active_module = active_reduction.template.modules[index];
-        var module_def = instrument_def.modules.filter(function(m) { return (m.id === active_module.module )})[0] || {};
-        var fields = module_def.fields || [];
-        console.log(index, active_reduction.config[index], active_module, module_def.fields);
-      }
+     
       // need to make field-datatype-specific client actions... for example, the super_load
       // module has fields with datatypes 'fileinfo', 'bool', 'bool', ...
       // for the fileinfo field, want to interact with the file chooser on the left panel
       // for the boolean inputs, want checkboxes.
       
-      var handle_terminal_clicked = function() {
-        var index = d3.select(d3.select(".module .selected").node().parentNode.parentNode).attr("index");
-        var terminal_id = d3.select(".module .selected").attr("terminal_id");
-        console.log(index, terminal_id);
-      }
 
       // require(d3, dataflow)
       webreduce.editor = {};

@@ -35,8 +35,12 @@
     Promise.all(load_promises).then(function(results) {
       var categorizers = webreduce.instruments[instrument_id].categorizers;
       var treeinfo = file_objs_to_tree(file_objs, categorizers);
+      // add decorators etc to the tree with postprocess:
+      var postprocess = webreduce.instruments[instrument_id].postprocess;
+      if (postprocess) { postprocess(treeinfo, file_objs) }
       console.log(treeinfo);
-      var jstree = $("#"+target_id + " .remote_filebrowser").jstree({
+      var target = $("#"+target_id + " .remote_filebrowser");
+      var jstree = target.jstree({
         "plugins": ["checkbox", "changed", "sort"],
         "checkbox" : {
           "three_state": true,
@@ -46,12 +50,21 @@
         },
         "core": {"data": treeinfo}
       });
-      $("#"+target_id + " .remote_filebrowser")
+      
+      target.on("ready.jstree", function() {
+        if (webreduce.instruments[instrument_id].decorators) {
+            webreduce.instruments[instrument_id].decorators.forEach(function(d) {
+                d(target);
+            });
+          }
+      });
+      
+      target
         .on("check_node.jstree", handleChecked)
         .on("uncheck_node.jstree", handleChecked);
-      $("#"+target_id + " .remote_filebrowser").on("click", "a", function(e) {
+      target.on("click", "a", function(e) {
         if (!(e.target.classList.contains("jstree-checkbox"))) {
-          $("#" + target_id + " .remote_filebrowser").jstree().toggle_node(e.currentTarget.id);
+          target.jstree().toggle_node(e.currentTarget.id);
         }
       });
     });
@@ -301,6 +314,7 @@
       }
     });
     //options.axes.xaxis.label = "Qz (target)";
+    options.legend = {"show": true, "left": 125};
     options.axes.xaxis.label = xcol;
     options.axes.yaxis.label = "counts/monitor";
     options.xtransform = $("#xscale").val();
