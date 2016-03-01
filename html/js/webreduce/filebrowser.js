@@ -2,7 +2,7 @@
 
 (function () {
   var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
-  
+
   function make_range_icon(global_min_x, global_max_x, min_x, max_x) {
     var icon_width = 75;
     var rel_width = Math.abs((max_x - min_x) / (global_max_x - global_min_x));
@@ -15,7 +15,7 @@
     output += "</svg>"
     return output
   }
-  
+
   function categorizeFiles(files, files_metadata, path, target_id, instrument_id) {
     var load_promises = [];
     var fileinfo = {};
@@ -50,7 +50,7 @@
         },
         "core": {"data": treeinfo}
       });
-      
+
       target.on("ready.jstree", function() {
         if (webreduce.instruments[instrument_id].decorators) {
             webreduce.instruments[instrument_id].decorators.forEach(function(d) {
@@ -58,7 +58,7 @@
             });
           }
       });
-      
+
       target
         .on("check_node.jstree", handleChecked)
         .on("uncheck_node.jstree", handleChecked);
@@ -69,12 +69,12 @@
       });
     });
   }
-  
+
   // categorizers are callbacks that take an info object and return category string
   function file_objs_to_tree(file_objs, categorizers) {
     // file_obj should always be a list of entries
     var out = [], categories_obj = {}, file_obj;
-    
+
     //var out = [], categories_obj = {}, file_obj;
     for (var p in file_objs) {
       file_obj = file_objs[p];
@@ -96,14 +96,14 @@
           cobj = cobj[category]; // walk the tree...
         }
         // modify the last entry to include key of file_obj
-        leaf['li_attr'] = {"filename": p, "entryname": entryname};
+        leaf['li_attr'] = {"filename": p, "entryname": entryname, "mtime": entry.mtime};
       }
     }
     // if not empty, push in the root node:
     if (out.length > 0) { out.push({'id': "root", 'parent': "#", 'text': "", 'state': {'opened': true}}); }
     return out
   }
-  
+
   var add_remote_source = function(target_id, path) {
     var remote_source_count = $("#" + target_id + " div.remote_filebrowser").length;
     var new_id = "remote_source_" + (remote_source_count + 1).toFixed();
@@ -168,7 +168,7 @@
       return out;
     }
   */
-  
+
   var getCurrentPath = function(target_id) {
     // get the path from a specified path browser element
     var target_id = (target_id == null) ? "body" : target_id;
@@ -228,7 +228,7 @@
             webreduce.server_api.get_file_metadata(new_pathlist)
               .then( function (metadata) {
                  updateFileBrowserPane(target_id, new_pathlist, instrument_id)(metadata);
-              }) 
+              })
           }
           dirbrowser.appendChild(subdiritem);
         });
@@ -266,7 +266,7 @@
           .append(dirbrowser)
           .append(filebrowser);
 
-        // instrument-specific categorizers 
+        // instrument-specific categorizers
         // webreduce.instruments[instrument_id].categorizeFiles(files, metadata, pathlist.join("/"), target_id);
         categorizeFiles(files, metadata, pathlist.join("/"), target_id, instrument_id);
 
@@ -278,7 +278,7 @@
       }
       return handler
   }
-  
+
   function handleChecked(event) {
     var instrument_id = webreduce.editor._instrument_id;
     var xcol,
@@ -324,7 +324,7 @@
     d3.selectAll("#plotdiv").data([datas]).call(mychart);
     $("#xscale, #yscale").change(handleChecked);
       var x0 = 10,
-          y0 = 10, 
+          y0 = 10,
           dx = 135,
           dy = 40;
     mychart.zoomRect(true);

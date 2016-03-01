@@ -4,13 +4,13 @@ webreduce.instruments = webreduce.instruments || {};
 (function webreduction() {
      //"use strict";
      // add a comment
-    
+
     active_reduction = {
       "config": {},
       "template": {}
     }
     current_instrument = "ncnr.refl";
-    
+
     var NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     var dirHelper = "listftpfiles.php";
     var data_path = ["ncnrdata"];
@@ -20,9 +20,9 @@ webreduce.instruments = webreduce.instruments || {};
         statusline.html(message);
       }
     }
-    
+
     webreduce.statusline_log = statusline_log;
-    
+
     function getUrlVars() {
       var vars = [], hash;
       var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
@@ -36,7 +36,7 @@ webreduce.instruments = webreduce.instruments || {};
 
     webreduce.hooks = {};
     webreduce.hooks.resize_center = null;
-    
+
     window.onpopstate = function(e) {
       // called by load on Safari with null state, so be sure to skip it.
       //if (e.state) {
@@ -47,9 +47,9 @@ webreduce.instruments = webreduce.instruments || {};
       }
       webreduce.server_api.get_file_metadata(start_path).then(webreduce.updateFileBrowserPane("remote_source_1", start_path, current_instrument));
     }
-    
+
     window.onpopstate();
-    
+
     window.onload = function() {
       var layout = $('body').layout({
            west__size:          350
@@ -61,15 +61,15 @@ webreduce.instruments = webreduce.instruments || {};
         ,  south__onresize:     $.layout.callbacks.resizePaneAccordions
         ,  center__onresize:    webreduce.hooks.resize_center
       });
-		  
+
 		  layout.toggle('east');
       //$.post(dirHelper, {'pathlist': $("#remote_path").val().split("/")}, function(r) { categorize_files(r.files)});
-     
+
       // need to make field-datatype-specific client actions... for example, the super_load
       // module has fields with datatypes 'fileinfo', 'bool', 'bool', ...
       // for the fileinfo field, want to interact with the file chooser on the left panel
       // for the boolean inputs, want checkboxes.
-      
+
 
       // require(d3, dataflow)
       webreduce.editor = {};
@@ -102,17 +102,15 @@ webreduce.instruments = webreduce.instruments || {};
         var terminal_id = selected.attr("terminal_id");
         console.log(index, terminal_id);
       }
-      
+
       webreduce.editor.handle_fileinfo = function(fields, active_module) {
         var fileinfos = fields.filter(function(f) {return f.datatype == 'fileinfo'});
         fileinfos.forEach(function(fi) {
           var target = d3.select(".ui-layout-pane-east");
           var fi_div = target.append("div")
-            .classed("fileinfo", true)
+            .classed("fileinfo form", true)
             .style("border", "1px solid")
-          
-          fi_div.append("span")
-            .text(fi.id);
+
           var files = [];
           $(".remote_filebrowser").each(function() {
               var jstree = $(this).jstree(true);
@@ -120,23 +118,46 @@ webreduce.instruments = webreduce.instruments || {};
               var fnodes = checked_nodes.filter(function(n) {
                 return (n.li_attr.filename != null && n.li_attr.entryname != null)
               });
-              files = files.concat(fnodes);
+              var finfo = fnodes.map(function(n) {
+                return {
+                  'path': n.li_attr.filename,
+                  'mtime': n.li_attr.mtime
+                }});
+              files = files.concat(finfo);
           });
-          
-          console.log(files);
+
+          var existing_count = 0;
+          if (active_module.config && active_module.config[fi.id] ) {
+            existing_count = active_module.config[fi.id].length;
+          }
+          fi_div.append("label")
+            .text(fi.id + "(" + existing_count + ")")
+          .append("button")
+            .text("accept selected (" + files.length + ")")
+            .style("float", "right")
+            .on('click', function() {
+              active_module.config[fi.id] = files;
+            })
+          /*
           fi_div.append("ul")
             .selectAll("li.finfo").data(files)
             .enter().append("li")
               .classed("finfo", true)
-              .text(function(d) {return d.li_attr.filename.split('/').slice(-1).join('')})
-          
+              .text(function(d) {
+                //var finfo = d.li_attr.filename.split('/').slice(-1).join('');
+                //finfo += ":" + d.li_attr.entryname;
+                //finfo += "," + d.li_attr.mtime;
+                return "(" + files.length + ")";
+              });
+          */
+
         });
       }
-      
+
       webreduce.editor.make_form = function(fields, active_module) {
         var data = [];
         var conversions = {
-          'bool': 'checkbox', 
+          'bool': 'checkbox',
           'float': 'number',
           'str': 'text'
         }
@@ -150,16 +171,16 @@ webreduce.instruments = webreduce.instruments || {};
             var value = (active_module.config && active_module.config[field.id])? active_module.config[field.id] : field.default;
             data.push({
               'type': conversions[field.datatype],
-              'value': value, 
+              'value': value,
               'checked': (value) ? true : false,
               'label': field.label + ((units === undefined) ? "" : "(" + units + ")"),
               'id': field.id
             });
           }
-        } 
+        }
         console.log(data);
         var target = d3.select(".ui-layout-pane-east");
-        target.select("div.form").remove();
+        target.selectAll("div.form").remove();
         var forms = target.selectAll("div.form")
         .data([data]).enter()
         .append("div")
@@ -182,7 +203,7 @@ webreduce.instruments = webreduce.instruments || {};
             active_module.config[d3.select(this).attr('field_id')] = this.value;
           })
       }
-      
+
       webreduce.editor.load_instrument = function(instrument_id) {
         var editor = this;
         editor._instrument_id = instrument_id;
@@ -200,15 +221,15 @@ webreduce.instruments = webreduce.instruments || {};
             editor._instance.module_defs(editor._module_defs);
             // pass it through:
             return instrument_def;
-          }) 
+          })
       }
       webreduce.editor.load_template = function(template_def) {
         this._instance.data([template_def]);
         this._active_template = template_def;
         var target = d3.select("#" + this._target_id);
-        
+
         target.call(this._instance);
-        
+
         target.selectAll(".module").classed("draggable wireable", false);
 
         target.selectAll(".module .terminal").on("click", function() {
@@ -220,9 +241,9 @@ webreduce.instruments = webreduce.instruments || {};
           target.selectAll(".module .selected").classed("selected", false);
           d3.select(this).select("rect.title").classed("selected", true);
           webreduce.editor.handle_module_clicked();
-        });        
+        });
       }
-      
+
       webreduce.editor.create_instance("bottom_panel");
       webreduce.editor.load_instrument(current_instrument)
         .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
