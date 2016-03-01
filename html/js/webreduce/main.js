@@ -93,6 +93,7 @@ webreduce.instruments = webreduce.instruments || {};
         jQuery.extend(true, fields_dict, active_module.config);
         layout.open("east");
         webreduce.editor.make_form(fields, active_module);
+        webreduce.editor.handle_fileinfo(fields, active_module);
       }
       webreduce.editor.handle_terminal_clicked = function() {
         var target = d3.select("#" + this._target_id);
@@ -100,6 +101,36 @@ webreduce.instruments = webreduce.instruments || {};
         var index = d3.select(selected.node().parentNode.parentNode).attr("index");
         var terminal_id = selected.attr("terminal_id");
         console.log(index, terminal_id);
+      }
+      
+      webreduce.editor.handle_fileinfo = function(fields, active_module) {
+        var fileinfos = fields.filter(function(f) {return f.datatype == 'fileinfo'});
+        fileinfos.forEach(function(fi) {
+          var target = d3.select(".ui-layout-pane-east");
+          var fi_div = target.append("div")
+            .classed("fileinfo", true)
+            .style("border", "1px solid")
+          
+          fi_div.append("span")
+            .text(fi.id);
+          var files = [];
+          $(".remote_filebrowser").each(function() {
+              var jstree = $(this).jstree(true);
+              var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
+              var fnodes = checked_nodes.filter(function(n) {
+                return (n.li_attr.filename != null && n.li_attr.entryname != null)
+              });
+              files = files.concat(fnodes);
+          });
+          
+          console.log(files);
+          fi_div.append("ul")
+            .selectAll("li.finfo").data(files)
+            .enter().append("li")
+              .classed("finfo", true)
+              .text(function(d) {return d.li_attr.filename.split('/').slice(-1).join('')})
+          
+        });
       }
       
       webreduce.editor.make_form = function(fields, active_module) {

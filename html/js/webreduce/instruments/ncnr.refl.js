@@ -20,6 +20,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         module_id = 0,
         terminal_id = "output";
     return webreduce.server_api.calc_terminal(template, config, module_id, terminal_id).then(function(result) {
+      result.values.forEach(function(v) {v.mtime = mtime});
       if (db) { db[path] = result.values; }
       //console.log(result.result);
       if (webreduce.statusline_log) {
