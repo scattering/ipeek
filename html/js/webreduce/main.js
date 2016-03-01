@@ -111,10 +111,31 @@ webreduce.instruments = webreduce.instruments || {};
       }
       webreduce.editor.handle_terminal_clicked = function() {
         var target = d3.select("#" + this._target_id);
+        var instrument_id = this._instrument_id;
         var selected = target.select(".module .selected");
-        var index = d3.select(selected.node().parentNode.parentNode).attr("index");
+        var index = parseInt(d3.select(selected.node().parentNode.parentNode).attr("index"));
         var terminal_id = selected.attr("terminal_id");
         console.log(index, terminal_id);
+        webreduce.server_api.calc_terminal(this._active_template, {}, index, terminal_id).then(function(result) {
+          var options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
+          var new_plotdata = webreduce.instruments[instrument_id].plot(result.values);
+          console.log(result.values);
+          options.series = options.series.concat(new_plotdata.series);
+          var datas = new_plotdata.data;
+          var xlabel = new_plotdata.xlabel;
+          var ylabel = new_plotdata.ylabel;
+          options.legend = {"show": true, "left": 125};
+          options.axes.xaxis.label = xlabel;
+          options.axes.yaxis.label = ylabel;
+          options.xtransform = $("#xscale").val();
+          options.ytransform = $("#yscale").val();
+          mychart = new xyChart(options);
+          d3.selectAll("#plotdiv svg").remove();
+          d3.selectAll("#plotdiv").data([datas]).call(mychart);
+          //$("#xscale, #yscale").change(handleChecked);
+          mychart.zoomRect(true);
+          
+        }); 
       }
 
       webreduce.editor.accept_parameters = function(target, active_module) {
@@ -259,6 +280,7 @@ webreduce.instruments = webreduce.instruments || {};
             return instrument_def;
           })
       }
+      
       webreduce.editor.load_template = function(template_def) {
         this._instance.data([template_def]);
         this._active_template = template_def;

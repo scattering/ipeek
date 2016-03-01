@@ -64,7 +64,7 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
   }
 
     
-  function plot(file_objs, entry_ids) {
+  function plot_files(file_objs, entry_ids) {
     // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
     var series = new Array();
     var options = {
@@ -97,16 +97,51 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
         xydata[i] = [x,y/ynorm];
       }
       datas.push(xydata);
-      series.push({label: eid.filename + ":" + eid.entryname});
+      series.push({label: entry.name + ":" + entry.entry});
 
     });
     ycol = "detector/counts";
     ynormcol = "monitor/counts";
 
     return {xcol: xcol, ycol: ycol, series: series, data: datas};
+  }
+  
+  function plot(refl_objs) {
+    // entry_ids is list of {path: path, filename: filename, entryname: entryname} ids
+    var series = new Array();
+    var options = {
+      series: series,
+      legend: {show: true, left: 150},
+      axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
+    };
+    var datas = [], xcol;
+    var ycol = "v", ylabel = "y-axis";
+    var xcol = "x", xlabel = "x-axis";
+    var ynormcol = "monitor/counts";
+    refl_objs.forEach(function(entry) {
+      var intent = entry['intent'];
+      var ydata = get_refl_item(entry, ycol);
+      var xdata = get_refl_item(entry, xcol);
+      ylabel = get_refl_item(entry, "vlabel");
+      xlabel = get_refl_item(entry, "xlabel");
+      var ynormdata = get_refl_item(entry, ynormcol);
+      var xydata = [], x, y, ynorm;
+      for (var i=0; i<xdata.length || i<ydata.length; i++) {
+        x = (i<xdata.length) ? xdata[i] : x; // use last value
+        y = (i<ydata.length) ? ydata[i] : y; // use last value
+        ynorm = (i<ynormdata.length) ? ynormdata[i] : ynorm; // use last value
+        xydata[i] = [x,y/ynorm];
+      }
+      datas.push(xydata);
+      series.push({label: entry.name + ":" + entry.entry});
+
+    });
+
+    return {xcol: xcol, ycol: ycol, ylabel: ylabel, xlabel: xlabel, series: series, data: datas};
   } 
   
-  instrument.plot = plot
+  instrument.plot = plot;
+  instrument.plot_files = plot_files;
   instrument.load_file = load_refl; 
   instrument.categorizers = [
     function(info) { return info.sample.name },

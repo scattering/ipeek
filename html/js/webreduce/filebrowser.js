@@ -324,7 +324,7 @@
         */
         return {file_obj: file_obj_key, filename: filename, entryname: entryname}
       });
-      var new_plotdata = webreduce.instruments[instrument_id].plot(file_objs, entry_ids);
+      var new_plotdata = webreduce.instruments[instrument_id].plot_files(file_objs, entry_ids);
       options.series = options.series.concat(new_plotdata.series);
       datas = datas.concat(new_plotdata.data);
       if (xcol != null && new_plotdata.xcol != xcol) {
