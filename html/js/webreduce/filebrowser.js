@@ -67,6 +67,24 @@
           target.jstree().toggle_node(e.currentTarget.id);
         }
       });
+      
+      target.on("fileinfo.update", function(ev, info) {
+        var jstree = target.jstree(true);
+        jstree.uncheck_all();
+        var keys = Object.keys(jstree._model.data);
+        info.value.forEach(function(fi) {
+          var matching = keys.filter(function(k) {
+            var leaf = jstree._model.data[k];
+            var isMatch = ((leaf.li_attr) &&
+                            leaf.li_attr.entryname == fi.entries[0] &&
+                            leaf.li_attr.filename == fi.path &&
+                            leaf.li_attr.mtime == fi.mtime)
+            return isMatch;
+          });
+          jstree.check_node(matching);
+        });
+        handleChecked(null, null, true);
+      });
     });
   }
 
@@ -279,11 +297,12 @@
       return handler
   }
 
-  function handleChecked(event) {
+  function handleChecked(d, i, stopPropagation) {
     var instrument_id = webreduce.editor._instrument_id;
     var xcol,
         datas = [],
-        options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}};
+        options={series: [], axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}},
+        fileinfo = [];
     $(".remote_filebrowser").each(function() {
       var jstree = $(this).jstree(true);
       var file_objs = webreduce.editor._file_objs[this.parentNode.id] || {};
@@ -296,6 +315,8 @@
         var file_obj_key = n.li_attr.filename,
             entryname = n.li_attr.entryname,
             filename = file_obj_key.split("/").slice(-1).join("");
+            mtime = n.li_attr.mtime;
+        fileinfo.push({path: file_obj_key, mtime: mtime, entries: [entryname]})
         /*var file_entry = n.li_attr.file_entry,
             file_obj = file_entry.split(":").slice(0,1).join(""),
             filename = file_obj.split("/").slice(-1).join(""),
@@ -313,6 +334,9 @@
         xcol = new_plotdata.xcol;
       }
     });
+    if (!stopPropagation) {
+      $("div.fields").trigger("fileinfo.update", [fileinfo]);
+    }
     //options.axes.xaxis.label = "Qz (target)";
     options.legend = {"show": true, "left": 125};
     options.axes.xaxis.label = xcol;
@@ -331,6 +355,7 @@
   }
   webreduce = window.webreduce || {};
   webreduce.updateFileBrowserPane = updateFileBrowserPane;
+  webreduce.handleChecked = handleChecked;
   webreduce.getCurrentPath = getCurrentPath;
   webreduce.add_remote_source = add_remote_source;
 

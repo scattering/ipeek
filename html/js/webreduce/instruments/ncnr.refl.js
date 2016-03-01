@@ -89,7 +89,6 @@ webreduce.instruments['ncnr.refl'] = webreduce.instruments['ncnr.refl'] || {};
       var ydata = get_refl_item(entry, ycol);
       var xdata = get_refl_item(entry, xcol);
       var ynormdata = get_refl_item(entry, ynormcol);
-      console.log(entry, ydata, xdata);
       var xydata = [], x, y, ynorm;
       for (var i=0; i<xdata.length || i<ydata.length; i++) {
         x = (i<xdata.length) ? xdata[i] : x; // use last value

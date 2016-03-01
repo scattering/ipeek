@@ -81,6 +81,7 @@ webreduce.instruments = webreduce.instruments || {};
       }
       webreduce.editor.handle_module_clicked = function() {
         // module group is 2 levels above module title in DOM
+        webreduce.editor.dispatch.on("accept", null);
         var target = d3.select("#" + this._target_id);
         var index = d3.select(target.select(".module .selected").node().parentNode.parentNode).attr("index");
         var active_module = this._active_template.modules[index];
@@ -92,8 +93,21 @@ webreduce.instruments = webreduce.instruments || {};
         );
         jQuery.extend(true, fields_dict, active_module.config);
         layout.open("east");
+        var target = d3.select(".ui-layout-pane-east");
+        target.selectAll("div").remove();
         webreduce.editor.make_form(fields, active_module);
         webreduce.editor.handle_fileinfo(fields, active_module);
+
+        target.append("div")
+          .style("position", "absolute")
+          .style("bottom", "0")
+          .append("button")
+            .text("accept")
+            .on("click", function() {
+              console.log(target, active_module);
+              webreduce.editor.accept_parameters(target, active_module);
+              webreduce.editor.handle_module_clicked();
+            })
       }
       webreduce.editor.handle_terminal_clicked = function() {
         var target = d3.select("#" + this._target_id);
@@ -103,55 +117,59 @@ webreduce.instruments = webreduce.instruments || {};
         console.log(index, terminal_id);
       }
 
+      webreduce.editor.accept_parameters = function(target, active_module) {
+        target.selectAll("div.fields")
+          .each(function(d) {
+            console.log(d)
+            d.forEach(function(data) {
+              active_module.config[data.id] = data.value;
+            });
+          });
+      }
+      
       webreduce.editor.handle_fileinfo = function(fields, active_module) {
         var fileinfos = fields.filter(function(f) {return f.datatype == 'fileinfo'});
+        var target = d3.select(".ui-layout-pane-east");
+        target.append("div")
+          .attr("id", "fileinfo")
+          //.classed("fields", true);
+          
         fileinfos.forEach(function(fi) {
-          var target = d3.select(".ui-layout-pane-east");
-          var fi_div = target.append("div")
-            .classed("fileinfo form", true)
-            .style("border", "1px solid")
-
-          var files = [];
-          $(".remote_filebrowser").each(function() {
-              var jstree = $(this).jstree(true);
-              var checked_nodes = jstree.get_checked().map(function(s) {return jstree.get_node(s)});
-              var fnodes = checked_nodes.filter(function(n) {
-                return (n.li_attr.filename != null && n.li_attr.entryname != null)
-              });
-              var finfo = fnodes.map(function(n) {
-                return {
-                  'path': n.li_attr.filename,
-                  'mtime': n.li_attr.mtime
-                }});
-              files = files.concat(finfo);
-          });
-
-          var existing_count = 0;
+          var datum = {"id": fi.id, value: []},
+              existing_count = 0;
           if (active_module.config && active_module.config[fi.id] ) {
             existing_count = active_module.config[fi.id].length;
+            datum.value = active_module.config[fi.id];
           }
-          fi_div.append("label")
-            .text(fi.id + "(" + existing_count + ")")
-          .append("button")
-            .text("accept selected (" + files.length + ")")
-            .style("float", "right")
-            .on('click', function() {
-              active_module.config[fi.id] = files;
-            })
-          /*
-          fi_div.append("ul")
-            .selectAll("li.finfo").data(files)
-            .enter().append("li")
-              .classed("finfo", true)
-              .text(function(d) {
-                //var finfo = d.li_attr.filename.split('/').slice(-1).join('');
-                //finfo += ":" + d.li_attr.entryname;
-                //finfo += "," + d.li_attr.mtime;
-                return "(" + files.length + ")";
-              });
-          */
+          var radio = target.select("#fileinfo").append("div")
+            .classed("fields", true)
+            .datum([datum])
+          radio.append("input")
+            .attr("id", fi.id)
+            .attr("type", "radio")
+            .attr("name", "fileinfo");
+          radio.append("label")
+            .attr("for", fi.id)
+            .text(fi.id + "(" + existing_count + ")");
+            
+          $(radio.node()).on("fileinfo.update", function(ev, info) {
+            if (radio.select("input").property("checked")) {
+                radio.datum([{id: fi.id, value: info}]);
+            } 
+          });
 
         });
+        $("#fileinfo input").first().prop("checked", true);
+        $("#fileinfo input").on("click", function() {
+          //console.log(d3.select(this).datum());
+          $(".remote_filebrowser").trigger("fileinfo.update", d3.select(this).datum());
+        })
+        $("#fileinfo").buttonset();
+        webreduce.handleChecked(); // to populate the datum
+      }
+      
+      webreduce.editor.fileinfo_update = function(fileinfo) {
+        $(".remote_filebrowser").trigger("fileinfo.update", [fileinfo]);
       }
 
       webreduce.editor.make_form = function(fields, active_module) {
@@ -172,21 +190,21 @@ webreduce.instruments = webreduce.instruments || {};
             data.push({
               'type': conversions[field.datatype],
               'value': value,
-              'checked': (value) ? true : false,
               'label': field.label + ((units === undefined) ? "" : "(" + units + ")"),
               'id': field.id
             });
           }
         }
-        console.log(data);
-        var target = d3.select(".ui-layout-pane-east");
-        target.selectAll("div.form").remove();
-        var forms = target.selectAll("div.form")
-        .data([data]).enter()
-        .append("div")
-        .classed("form", true)
-        .style("list-style", "none");
 
+        var target = d3.select(".ui-layout-pane-east");
+        target.selectAll("div").remove();
+        //var forms = target.select("div.form")
+        //.data([data]).enter()
+        var forms = target.append("div")
+          .classed("form fields", true)
+          .style("list-style", "none");
+        forms.datum(data);
+        
         forms.selectAll("li")
           .data(function(d) {return d})
           .enter()
@@ -198,10 +216,28 @@ webreduce.instruments = webreduce.instruments || {};
           .attr("field_id", function(d) {return d.id})
           .attr("value", function(d) {return d.value})
           .property("checked", function(d) {return d.value})
-          .on("change", function() {
-            active_module.config = active_module.config || {};
-            active_module.config[d3.select(this).attr('field_id')] = this.value;
+          .on("change", function(d) {
+            var item = d3.select(this);
+            if (this.type == "checkbox") { d.value = this.checked }
+            else { d.value = this.value }
+          });
+        
+        //$(forms.node()).on("accept", function() {
+        /*webreduce.editor.dispatch.on("accept.form", function() {
+          active_module.config = active_module.config || {};
+          forms.selectAll("li")
+          .each(function() {
+            var item = d3.select(this).select("input");
+            var value = (item.attr("type") == "checkbox") ? item.property("checked") : item.attr("value");
+            var field_id = item.attr("field_id");
+            active_module.config[field_id] = value;
           })
+        });
+        */
+          //  alert("accepting fields");
+          //  active_module.config = active_module.config || {};
+          //  active_module.config[d3.select(this).attr('field_id')] = this.value;
+          //})
       }
 
       webreduce.editor.load_instrument = function(instrument_id) {
@@ -244,6 +280,7 @@ webreduce.instruments = webreduce.instruments || {};
         });
       }
 
+      webreduce.editor.dispatch = d3.dispatch("accept");
       webreduce.editor.create_instance("bottom_panel");
       webreduce.editor.load_instrument(current_instrument)
         .then(function(instrument_def) { webreduce.editor.load_template(instrument_def.templates[0]); });
