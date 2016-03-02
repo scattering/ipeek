@@ -24,28 +24,13 @@
 <!--        <script type="text/javascript" src="jquery-1.5.1.min.js"></script>-->
 <!--        <script type="text/javascript" src="jquery.jqplot.min.js"></script>-->
 
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
-        
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
-<!--        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>-->
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.set_transform.js"></script>
-        
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
-
-        <script type="text/javascript" src="plotting_api2.js"></script>
         <script src="geturlvars.js"></script>
         
+        <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
+        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/heat-chart-colorbar-typed-options.js"></script>
+        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/get_colormap.js" charset="utf-8"></script>
+        <link rel="stylesheet" href="css/xy-chart.css" />
 
         <!-- JQPLOT -->
         <script type="text/javascript">
@@ -83,11 +68,11 @@
                     for (var c=0; c<cols && cells < numCells; c++) {
                         var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
                         cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
-                        var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
+                        var xtransform = $('<label />', {'class': 'transform xtransform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
                         cell.append(xtransform);
-                        var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
+                        var ytransform = $('<label />', {'class': 'transform ytransform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
                         cell.append(ytransform);
-                        var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
+                        var ztransform = $('<label />', {'class': 'transform ztransform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
                         cell.append(ztransform);
                         cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
                         cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
@@ -113,7 +98,7 @@
                 current_instr = jQuery.getUrlVar('instrument');
                 INSTRUMENTS = [current_instr];
                 createTable('content_table', 2, 2);
-                $('.transform').change(updateTransform);        
+                //$('.transform').change(updateTransform);        
                 loadData();
                 onshow();
                 
@@ -130,50 +115,13 @@
                 }
             }
             
-            /*function updateTransform(ev) {
-                var plottarget = $(this).parent().parent().find('.jqplot-target')[0].id;
-                for (var p in plots) {
-                    if (plots[p].targetId == ('#' + plottarget)) {
-                        var noCache = new Date().getTime();
-                        $.ajax({
-                            dataType: "json", 
-                            url: 
-                        });
-                        //$.getJSON("test_jqpeek/" + p + "/live_data.json", { "noCache": noCache }, showData(p));
-                        break;
-                    }
-                }
-            }*/
-            
-            function updateTransform(ev) {
-                var plottarget = $(this).parent().find('.jqplot-target')[0].id;
-                var logselected = ev.target.checked; 
-                var transform = logselected? 'log' : 'lin';
-                var axis = ev.target.parentElement.getAttribute('axis');
-		        //$(this).parent().parent().find('.jqplot-target').each(function(i, e) { plottargets.push('#' + e.id) });
-		        for (var p in plots) {
-		            if (plots[p].targetId == ('#' + plottarget)) {
-		                var transformOpts = {transform: {}, seriesDefaults: {rendererOptions: {transform: null}}};
-                        transformOpts.transform[axis] = transform;
-                        transformOpts.seriesDefaults.rendererOptions.transform = transform;
-                        $.extend(true, plots[p].options, transformOpts);
-                        plots[p].replot(plots[p].options);
-                        if (colorbars[p]) { 
-                            colorbars[p].series[0].parent_plot = plots[p].series[0];
-                            colorbars[p].series[0].set_transform(transform);
-                            colorbars[p].plugins._interactor.zoomMax() 
-                        };
-		                break;
-		            }
-		        }
-		    }
             
             function showData(datalist, instr) {
                 data_2d = datalist[0];
                 data_sum = datalist[1];
                 var axes_options = {axes: {
-                    xaxis: {renderer: $.jqplot.GracefulAxisRenderer,  labelRenderer: $.jqplot.AxisLabelRenderer, tickRenderer: $.jqplot.AxisTickRenderer},
-                    yaxis: {renderer: $.jqplot.GracefulAxisRenderer,  labelRenderer: $.jqplot.AxisLabelRenderer, tickRenderer: $.jqplot.AxisTickRenderer}
+                    xaxis: {},
+                    yaxis: {}
                 }}
                 $.extend(true, data_2d.options, axes_options);
                 $.extend(true, data_sum.options, axes_options);
@@ -182,6 +130,7 @@
                 var i = 0;
                 
                 var cell_2d_target = 'cell1';
+                var cell_1d_target = 'cell2';
                 var plot_2d_target = 'plot1';
                 var plot_1d_target = 'plot2';
                 var eta_target = 'metadata';
@@ -190,15 +139,15 @@
                 $('#cell1 .transform[axis=yaxis]').hide();
                 $('#cell1 .transform[axis=zaxis]').show();
                 var logZselected = $('#cell1 .transform[axis=zaxis]').find('input')[0].checked;
-                var ztransform = logZselected? 'log' : 'lin';
+                var ztransform = logZselected? 'log' : 'linear';
                 
                 $('#cell2 .transform[axis=xaxis]').show();
                 $('#cell2 .transform[axis=yaxis]').show();
                 $('#cell2 .transform[axis=zaxis]').hide();
                 var logYselected = $('#cell2 .transform[axis=yaxis]').find('input')[0].checked;
                 var logXselected = $('#cell2 .transform[axis=xaxis]').find('input')[0].checked;
-                var ytransform = logYselected? 'log' : 'lin';
-                var xtransform = logXselected? 'log' : 'lin';
+                var ytransform = logYselected? 'log' : 'linear';
+                var xtransform = logXselected? 'log' : 'linear';
 
                 if ('sum' in plots && plots['sum'].destroy) {
                     plots['sum'].destroy();
@@ -213,33 +162,53 @@
                 $('#' + plot_1d_target).empty();
                 var plot_1d_options = {
                     'legend': {'show': false},
-                    'transform': {'xaxis': xtransform, 'yaxis': ytransform }
+                    series: [], 
+                    axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
                 };
                 if (ERRORBARS.indexOf(instr) > -1) {
                     plot_1d_options.seriesDefaults = {renderer: $.jqplot.errorbarRenderer, rendererOptions: {errorBar: true}}
                 }
-                plots['sum'] = render1dplot(null, data_sum, {}, plot_1d_target, plot_1d_options);
 
+                plot_1d_options.axes.xaxis.label = "Q";
+                plot_1d_options.axes.yaxis.label = "I";
+                plot_1d_options.xtransform = xtransform;
+                plot_1d_options.ytransform = ytransform;
+                var chart_1d = new xyChart(plot_1d_options);
+                d3.selectAll("#" + plot_1d_target + " svg").remove();
+                d3.selectAll("#" + plot_1d_target).data([data_sum.data]).call(chart_1d);
+                //$("#xscale, #yscale").change(handleChecked);
+                $("#" + cell_1d_target + " .xtransform input").change(function() {chart_1d.xtransform((this.checked)? 'log' : 'linear')});
+                $("#" + cell_1d_target + " .ytransform input").change(function() {chart_1d.ytransform((this.checked)? 'log' : 'linear')});
+                  var x0 = 10,
+                      y0 = 10, 
+                      dx = 135,
+                      dy = 40;
+                chart_1d.zoomRect(true);
+                
+                plots['sum'] = chart_1d;
+                //plots['sum'] = render1dplot(null, data_sum, {}, plot_1d_target, plot_1d_options);
+                
                 $('#' + plot_2d_target).empty();
-                var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
-                $('#' + plot_2d_target).append(plotbox)
-                plotbox.append($('<div />', {
-                    style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
-                    id: plot_2d_target + "_plot"}));
-                plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:plot_2d_target + "_colorbar"}));
-                var plot = renderImageData2(data_2d, ztransform, plot_2d_target + "_plot");
-                var cbar_options = {
-                    axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer,  labelRenderer: $.jqplot.AxisLabelRenderer, tickRenderer: $.jqplot.AxisTickRenderer}}
-                }
-                var colorbar = renderImageColorbar2(plot.series[0], plot_2d_target + '_colorbar', cbar_options);
-                plots['area_2d'] = plot;
-                colorbars['area_2d'] = colorbar;
-                plot.replot(); // for aspect ratio plugin!
-                colorbar.plugins._interactor.zoomMax(); // for scale!
-                //plots[plot_target] = plottingAPI(datalist, plot_target);
+                d3.selectAll("#" + plot_2d_target + " svg").remove();
+                var chart = new heatChart({
+                	"ztransform": ztransform,
+                	"aspect_ratio": 1.0,
+                	"dims": data_2d.dims
+                }); // new heatChart()
+                chart
+                  .colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+                  .autoscale(true)
+                  .xlabel(data_2d.xlabel)
+                  .ylabel(data_2d.ylabel);
+                plots['area_2d'] = chart;
+                d3.select('#' + plot_2d_target)
+                  .data(data_2d.z)
+                  .call(chart);
                 if (data_2d.metadata) {
                     $('#' + eta_target).html(make_metadata_table(data_2d.metadata));
                 }
+                $("#" + cell_2d_target + " .ztransform input").change(function() {chart.ztransform((this.checked)? 'log' : 'linear')});
+                
             }
             
             /*
@@ -303,11 +272,7 @@
             }
                                
             #instruments tr { margin-bottom: 30px; }
-            div { 
-                user-select: none; 
-                -webkit-user-select: none; 
-                -moz-user-select: none;
-            }
+            
             .metadata-label {color: red}
             .slidingDiv {
                 background-color: #99CCFF;
@@ -319,13 +284,7 @@
             .show_hide {
                 display:none;
             }
-            .jqplot-table-legend-swatch {
-                width: 10;
-                height: 10;
-            }
-            .jqplot-series-shadowCanvas {
-                display: none;
-            }
+            
         </style>
          <style type="text/css">
         #leftSide {
@@ -338,6 +297,26 @@
           width: 50%;
         }
     </style>
+    <style>
+    svg,
+    canvas {
+      position: absolute;
+      image-rendering: optimizeSpeed;
+      image-rendering: crisp-edges;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: optimize-contrast;
+      -ms-interpolation-mode: nearest-neighbor;
+    }
+    
+    rect {
+      fill: #fff;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+
+  </style>
     </head>
     <body id="singleplot">
     <?php include("/var/www/include/navigation.inc"); ?>
