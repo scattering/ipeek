@@ -190,7 +190,7 @@
                 
                 $('#' + plot_2d_target).empty();
                 d3.selectAll("#" + plot_2d_target + " svg").remove();
-                $('#' + plot_2d_target).append($("<div />", {text: data_2d.title, style: "text-align:center;"}));
+                $('#run_title').text(data_2d.title);
                 var chart = new heatChart({
                 	"ztransform": ztransform,
                 	"aspect_ratio": 1.0,
@@ -261,10 +261,13 @@
             }
             #plot_2d {
                 width: 45%;
-                height: 600px;
+                /*height: 600px;*/
             }
             #plot_sum {
                 width: 
+            }
+            .ztransform {
+            	z-index: 10;
             }
             .instrument-name { 
                 text-align: center;
@@ -288,6 +291,9 @@
             
         </style>
          <style type="text/css">
+        #run_title {
+        	text-align: center;
+        }
         #leftSide {
           float: left;
           width: 50%;
@@ -323,6 +329,7 @@
     <?php include("/var/www/include/navigation.inc"); ?>
     <?php include("/var/www/include/utility.inc"); ?>
 
+		<div id="run_title"></div>
     <div id="content_table"></div>
     <div id="metadata"></div>
         
