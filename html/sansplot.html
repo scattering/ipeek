@@ -190,6 +190,7 @@
                 
                 $('#' + plot_2d_target).empty();
                 d3.selectAll("#" + plot_2d_target + " svg").remove();
+                $('#' + plot_2d_target).append($("<div />", {text: data_2d.title, style: "text-align:center;"}));
                 var chart = new heatChart({
                 	"ztransform": ztransform,
                 	"aspect_ratio": 1.0,
