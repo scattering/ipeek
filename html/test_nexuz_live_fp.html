@@ -322,8 +322,12 @@
       datafiles.forEach(function(j) {
         sequence = sequence.then(function() {
           //console.log(path + "/" + j, nexus_objs);
-          
-          fileinfo[j] = get_info(nexus_objs[path + "/" + j], categories.concat([{type: 'linkTarget', path: '/data/x'}, {path: '/data/x'}, {path: '/data/y'}]));
+          try {
+            fileinfo[j] = get_info(nexus_objs[path + "/" + j], categories.concat([{type: 'linkTarget', path: '/data/x'}, {path: '/data/x'}, {path: '/data/y'}]));
+          }
+          catch (e) {
+            console.log("couldn't categorize file: " + path + "/" + j, e);
+          }
         })
       });
       sequence.then(function() { 
@@ -518,7 +522,7 @@
         var ycols = entry.get("data").items().filter(function(d) { return d[1].getAttrs().signal != null });
         var xcol, ycol, ynormcol, xdata, ydata, ynormdata;
         if (ycols.length > 0) {
-          xcol = ycols[0][1].getAttrs().axes.replace("_", "/");
+          xcol = ycols[0][1].getAttrs().axes; // .replace("_", "/");
           ycol = ycols[0][0];
           ynormcol = "control/monitor_counts";
           ydata = ycols[0][1].getValue();
