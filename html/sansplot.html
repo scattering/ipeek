@@ -38,7 +38,7 @@
             COLS = 4;
             INSTRUMENTS = [];
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
-            ERRORBARS = ['BT7','BT9', 'BT4', 'NGBSANS_NICE'];
+            ERRORBARS = ['BT7','BT9', 'BT4', 'NGBSANS', 'NG7SANS'];
             PRECISION = 6;
             current_instr = null;
             plots = {};
@@ -165,7 +165,8 @@
                     axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
                 };
                 if (ERRORBARS.indexOf(instr) > -1) {
-                    plot_1d_options.seriesDefaults = {renderer: $.jqplot.errorbarRenderer, rendererOptions: {errorBar: true}}
+                    plot_1d_options.show_errorbars = true;
+                    plot_1d_options.errorbar_width = 6;
                 }
 
                 plot_1d_options.axes.xaxis.label = "Q";
