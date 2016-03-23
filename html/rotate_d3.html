@@ -1,8 +1,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-        <meta http-equiv="X-UA-Compatible" content="IE=9" >
-                <meta http-equiv="refresh" content="3600">
+        <meta http-equiv="refresh" content="3600">
         <title>NCNR live data</title>
         
         <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Arimo" />
@@ -170,10 +169,13 @@
                 // create a plotting region in the target
                 var cell = $('<div />', {'class': 'plotcell', 'id': 'cell1'});
                 cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+                cell.append($('<div />', {'class': 'run-title'}))
                 var wrapper = $('<div />', {'class': 'plotwrapper', 'id': 'wrapper', 'class': 'wrapper'});
                 cell.append(wrapper);
-                wrapper.append($('<div />', {'id': 'plot1', 'class': 'plotdiv'}));
-                wrapper.append($('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"}));
+                var plot0_div = $('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"});
+                wrapper.append(plot0_div);
+                var plot1_div = $('<div />', {'id': 'plot1', 'class': 'plotdiv'});
+                wrapper.append(plot1_div);
                 var transform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
                 cell.append(transform);
                 cell.append($('<span />', {'id': 'eta1'}));
@@ -350,6 +352,7 @@
                 //if (plot && plot.destroy) { plot.destroy() }
                 
                 $('#' + next_target).show( "drop", { direction: "right" }, 1000);
+                $('#' + cell_target + ' .run-title').text(data.title);
                 if (data.type == '1d') {
                     var options = {};
                     options.show_errorbars = (ERRORBARS.indexOf(current_instr) > -1);
@@ -551,6 +554,11 @@
             }
         </style>
          <style type="text/css">
+         .run-title {
+        	text-align: center;
+        	padding-left: 20px;
+        	padding-right: 20px;
+        }
         #leftSide {
           float: left;
           width: 50%;
