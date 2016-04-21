@@ -327,6 +327,7 @@
                         d3.select("#"+plot_target)
                           .data(data.z)
                           .call(chart);
+                        chart.zoomScroll(true);
                         if (data.metadata) {
                             $('#' + eta_target).html(make_metadata_table(data.metadata));
                         }
