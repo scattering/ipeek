@@ -317,7 +317,7 @@
                 //if (plots[current_target] && plots[current_target].setTransform) {plots[current_target].setTransform(transform)};
                 if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
                 if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
-                if (plots[next_target] && plots[next_target].ztransform) {plots[next_target].ztransform((transform == "log")? "log" : "linear").update();}
+                if (plots[next_target] && plots[next_target].ztransform) {plots[next_target].ztransform((transform == "log")? "log" : "linear");}
                 else if (plots[next_target] && plots[next_target].ytransform) {plots[next_target].ytransform((transform == "log")? "log" : "linear").update();}
             }
             
@@ -381,9 +381,7 @@
                     }
                     var chart = heatmap_charts[next_target]; // new heatChart()
                     chart
-                      .ztransform((transform == "log")? "log" : "linear")
                       .colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-                      .autoscale(true)
                       .aspect_ratio(aspect_ratio)
                       .dims(data.dims)
                       .xlabel(data.xlabel)
@@ -392,7 +390,8 @@
                     d3.select("#"+next_target)
                       .data(data.z)
                       .call(chart);
-                    chart.zoomScroll(true);
+                    chart.zoomScroll(true)
+                      .ztransform((transform == "log")? "log" : "linear")
                     if (data.metadata) {
                         $('#' + eta_target).html(make_metadata_table(data.metadata));
                     }
