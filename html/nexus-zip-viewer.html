@@ -176,7 +176,7 @@
       return path;      
     }
     
-    function updateFileBrowserPane(target_id, pathlist) {
+    function updateFileBrowserPane(target_id, pathlist, filename_in) {
         function handler(dirdata) {
             var buttons = $("<div />", {class: "buttons"});
             //var clear_all = $("<button />", {
@@ -240,6 +240,9 @@
                     chb.setAttribute("type", "checkbox");
                     chb.setAttribute("filename", filename);
                     chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
+                    if (filename == filename_in) {
+                        chb.checked = true;
+                    }
                     //chb.onchange = handleChecked;
                     var check_td = tr.insertCell();
                     check_td.appendChild(chb)
@@ -295,7 +298,13 @@
                 stop: handleSelection
             });
             $(filebrowser).tablesorter();
-        }   
+        }
+        
+        if (filename_in != null) {
+            var path = '/pub/' + getCurrentPath();
+            getNexusZip(path, filename_in);
+        }
+            
         return handler
     }
     
@@ -315,11 +324,12 @@
     $("#navigation").on("change", "input", handleChecked);
     window.onpopstate = function(e) {
       var start_path = $.extend(true, [], data_path),
-          url_vars = getUrlVars();
+          url_vars = getUrlVars(),
+          filename = url_vars.filename; // null/undefined if not provided
       if (url_vars.pathlist && url_vars.pathlist.length) {
           start_path = url_vars.pathlist.split("+");
       }
-      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path, filename));
     }
     
     window.onpopstate(); // call it on first load, too!
