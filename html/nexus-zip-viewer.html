@@ -301,7 +301,7 @@
         }
         
         if (filename_in != null) {
-            var path = '/pub/' + getCurrentPath();
+            var path = '/pub/' + pathlist.join("/");
             getNexusZip(path, filename_in);
         }
             
