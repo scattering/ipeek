@@ -67,7 +67,7 @@ sources = [
      "live_datapath":"live_data",
      "live_datafiles": ["live_data.json", "live_vaxformat.ngb"]},
      {"name": "NGB30SANS",
-     "host_name": "ng3sans.ncnr.nist.gov",
+     "host_name": "ngb30sans.ncnr.nist.gov",
      "host_port": 22,
      "retrieve_method": "ssh",
      "root_dir": "/usr/local/nice/server_data/experiments/",
