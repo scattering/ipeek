@@ -325,15 +325,17 @@ nz.Field.prototype = {
             accessor = function(d) {return d.map(parseInt)};
           }
           else if (/[s]/.test(attrs.format[1].toLowerCase())) {
-            accessor = function(d) {
-              var d = d.replace(/\\n/g, '\n');
-              d = d.replace(/\\t/g, '\t');
-              d = d.replace(/\\r/g, '\r');
-              return d
-            };
+            var unescape = function(d) {
+              var out = d.replace(/\\n/g, '\n');
+              out = out.replace(/\\t/g, '\t');
+              out = out.replace(/\\r/g, '\r');
+              return out
+            }
+            accessor = function(d) { return d.map(unescape)};
           }
           else {
             throw ("unknown format for data in " + path + ": " + attrs.format[1])
+            accessor = function(d) {return d}
           }
           return d3.tsv.parseRows(text, accessor);
         });
