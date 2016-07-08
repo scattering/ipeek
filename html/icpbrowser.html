@@ -43,19 +43,48 @@
       ICP.read(text);
       return ICP
     }
-       
+    
+    var getPoissonUncertainty = function(y) {
+        // for a poisson-distributed observable, get the range of 
+        // expected actual values for a particular measured value.
+        // As described in the documentation for the error analysis
+        // on the BaBar experiment: 
+        //
+        //4)      An alternative with some nice properties is +-0.5 + sqrt(n+0.25)
+        //i.e upper error = 0.5 + sqrt(n+0.25), lower error = -0.5 + sqrt(n+0.25).
+        //These produce the following intervals:  
+        //n    low      high     cred.        
+        //0 0.000000  1.000000 0.632121
+        //1 0.381966  2.618034 0.679295
+        //2 1.000000  4.000000 0.681595
+        //3 1.697224  5.302776 0.682159
+        //4 2.438447  6.561553 0.682378
+        //5 3.208712  7.791288 0.682485
+        //6 4.000000  9.000000 0.682545
+        //7 4.807418 10.192582 0.682582
+        //8 5.627719 11.372281 0.682607
+        //9 6.458619 12.541381 0.682624
+        var hi =  0.5+Math.sqrt(y+0.25);
+        var lo = -0.5+Math.sqrt(y+0.25);
+        return {"yupper": y+hi, "ylower": y-lo}
+    }
+
     var makeXY = function(dataset, xcol, ycol, ynormcol) {
-      var data_array = [], x, y, ynorm;
+      var data_array = [], x, y, yerr, n, ynorm;
       for (var i=0; i<dataset.points; i++){
         x = parseFloat(dataset.column[xcol][i]);
         y = parseFloat(dataset.column[ycol][i]);
+        yerr = getPoissonUncertainty(y);
         if (ynormcol == "1" || ynormcol == null) {
           ynorm = y;
         } 
         else {
-          ynorm = y / parseFloat(dataset.column[ynormcol][i]);
+          n = parseFloat(dataset.column[ynormcol][i]);
+          ynorm = y / n;
+          yerr.yupper *= 1.0/n;
+          yerr.ylower *= 1.0/n;
         }
-        data_array[i] = [x, ynorm];
+        data_array[i] = [x, ynorm, yerr];
       }
       return data_array;
     }
@@ -83,7 +112,12 @@
             ycolselect = $("#ycol"),
             ycol = ycolselect.val() || "counts",
             ynormalize = $("#ynormalize"),
-            ynormval = ynormalize.val() || "1";
+            ynormval = ynormalize.val() || "1",
+            errorbars = $("#show_errorbars").prop("checked");
+        if (errorbars) { 
+            options.show_errorbars = true;
+            options.seriesDefaults = {rendererOptions: {errorBar: true}} 
+        }; 
         var all_columns = d3.set(column_names[0]); // start with the first set
         for (var i=1; i<column_names.length; i++) {
           var new_cols = d3.set(column_names[i]);
@@ -318,7 +352,7 @@
     
     window.onpopstate(); // call it on first load, too!
     
-    $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleChecked);    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize, #show_errorbars').change(handleChecked);    
    
   });
   window.onload = function() {
@@ -488,6 +522,9 @@ canvas {
     <span class="axis-select-label">divide by:</span>
     <select id="ynormalize">
     </select>
+    <span class="axis-select-label">
+        <label>Poisson errorbars:<input type="checkbox" id="show_errorbars" checked /> </label>
+    </span>
   </div>
 </div>
 <div id="top_panel" class="ui-layout-north">
