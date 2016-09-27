@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/layout-default-latest.css" />
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="js/es6-promise.min.js"></script>
   <script src="js/zip/zip.js"></script>
   <script src="js/zip/deflate.js"></script>
   <script src="js/zip/inflate.js"></script>
@@ -231,7 +232,7 @@
             var filebrowser = document.createElement('table');
             filebrowser.class = "tablesorter";
             filebrowser.id = "filebrowser";
-            var browser_body = filebrowser.createTBody();
+            //var browser_body = filebrowser.createTBody();
             
             $.each(files, function(index, filename) {
                 if (NEXUS_ZIP_REGEXP.test(filename)) {
@@ -293,11 +294,15 @@
               .append(patheditor)
               .append(dirbrowser)
               .append(filebrowser);
-            $(browser_body).selectable({
+            $(filebrowser).children('tbody').selectable({
                 filter:'td', 
                 stop: handleSelection
             });
-            $(filebrowser).tablesorter();
+            try {
+              $(filebrowser).tablesorter();
+            }
+            catch (err) {
+            }
         }
         
         if (filename_in != null) {
@@ -332,7 +337,7 @@
       $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path, filename));
     }
     
-    window.onpopstate(); // call it on first load, too!
+    //window.onpopstate(); // call it on first load, too!
     
     $('#xcol, #ycol, #xscale, #yscale, #ynormalize').change(handleChecked);    
    
@@ -347,8 +352,9 @@
         ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
         ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
 		  });
-		  $("#filebrowser").tablesorter(); 
-		}
+		  $("#filebrowser").tablesorter();
+          window.onpopstate(); // call it on first load, too! 
+  }
   </script>
 <style>
 .patheditor { 
