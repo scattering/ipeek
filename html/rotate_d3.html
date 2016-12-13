@@ -101,12 +101,15 @@
                 var yislog = (Y_TRANSFORM[instr] == 'log');
                 $('#logtransform').prop('checked', yislog);
                 var noCache = new Date().getTime();
-                $.get("data/" + instr + "/live_data.json", { "noCache": noCache }, function(result) {
-                    var data = eval(result);
-                    showData(eval(result));
-                  }, "text"
-                )
-                //$.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, showData);
+                return new Promise(function(resolve, reject) {
+                  $.ajax({
+                      dataType: "text",
+                      url: "http://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
+                      data: { "noCache": noCache },
+                      success: function(result) { var data = eval(result); resolve(showData(data)); },
+                      error: function(e) { resolve(showData([{}])); }
+                  });
+                });
             }
             
             function play() {
