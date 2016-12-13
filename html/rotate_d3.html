@@ -105,7 +105,7 @@
                 return new Promise(function(resolve, reject) {
                   $.ajax({
                       dataType: "text",
-                      url: "http://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
+                      url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
                       data: { "noCache": noCache },
                       success: function(result) { var data = eval(result); resolve(showData(data)); },
                       error: function(e) { resolve(showData([{}])); }
