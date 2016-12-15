@@ -1,0 +1,66 @@
+.plotdiv {
+    padding: 0px;
+    font-family: sans;
+}
+
+.plotdiv svg,
+.plotdiv canvas {
+    position: absolute;
+    image-rendering: optimizeSpeed;
+    image-rendering: crisp-edges;
+    image-rendering: -moz-crisp-edges;
+    image-rendering: -webkit-optimize-contrast;
+    image-rendering: optimize-contrast;
+    -ms-interpolation-mode: nearest-neighbor;
+}
+.plotdiv .line {
+    fill: none;
+    stroke-width: 1.5px;
+}
+
+.plotdiv .highlight {
+    stroke-width: 4.5px;
+}
+.plotdiv .axis-label {
+    font-size: 18px;
+}
+
+.plotdiv .axis .tick text {
+    font: 14px sans-serif;
+}
+
+.plotdiv .axis path,
+.plotdiv .axis line {
+    fill: none;
+    stroke: #000;
+    shape-rendering: crispEdges;
+}
+
+.plotdiv .grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+}
+.plotdiv .grid path {
+    stroke-width: 0;
+    fill: none;
+}
+.plotdiv rect {
+    fill: none;
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+
+.plotdiv rect.zoom {
+    stroke: steelblue;
+    fill-opacity: 0.5;
+}
+
+.plotdiv .no-data {
+    font-family: 'Homemade Apple', cursive;
+    font-size: 4vw;
+    text-align: center;
+    position: relative;
+    top: 50%;
+    transform: translateY(-50%);
+}
