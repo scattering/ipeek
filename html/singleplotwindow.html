@@ -144,7 +144,7 @@
                 for (var i=0; i<instruments.length; i++) {
                     var instr = instruments[i];
                     var noCache = new Date().getTime();
-                    $.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                    $.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
                 }
             }
             
