@@ -3,7 +3,6 @@ import d3 from 'd3';
 import xyChart from './xy-chart';
 import heatChart from './heat-chart-colorbar-typed-options';
 import * as cm from './colormap';
-import Promise from './es6-promise.min';
  
 var chart;
 var loadNCNRData = function(instrument, target, refresh_time) {
