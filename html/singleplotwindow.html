@@ -149,7 +149,7 @@
                       dataType: "text",
                       url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
                       data: { "noCache": noCache },
-                      success: function(result) { var data = eval(result); resolve(showData(data, instr)); },
+                      success: function(result) { var data = eval(result); showData(data, instr); },
                       error: function(e) { resolve(showData([{}])); }
                     });
                 }
