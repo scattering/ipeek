@@ -144,7 +144,14 @@
                 for (var i=0; i<instruments.length; i++) {
                     var instr = instruments[i];
                     var noCache = new Date().getTime();
-                    $.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                    //$.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                    $.ajax({
+                      dataType: "text",
+                      url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
+                      data: { "noCache": noCache },
+                      success: function(result) { var data = eval(result); resolve(showData(data, instr)); },
+                      error: function(e) { resolve(showData([{}])); }
+                    });
                 }
             }
             
