@@ -10,6 +10,7 @@ var loadNCNRData = function(instrument, target, refresh_time) {
   this.chart = null;
   this.instrument = instrument;
   this.target = target;
+  $("#" + target).addClass("plotdiv");
   this.refresh_time = refresh_time; // set to zero or null to disable refresh;
   
   var that = this;

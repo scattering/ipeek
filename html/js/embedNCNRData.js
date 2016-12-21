@@ -146,6 +146,7 @@ var NCNRDataLoader =
 	    this.chart = null;
 	    this.instrument = instrument;
 	    this.target = target;
+	    (0, _jquery2.default)("#" + target).addClass("plotdiv");
 	    this.refresh_time = refresh_time; // set to zero or null to disable refresh;
 
 	    var that = this;
