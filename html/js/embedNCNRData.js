@@ -157,7 +157,7 @@ var NCNRDataLoader =
 	      return new Promise(function (resolve, reject) {
 	        _jquery2.default.ajax({
 	          dataType: "json",
-	          url: "http://ncnr.nist.gov/ipeek/data/" + instrument + "/live_data.json",
+	          url: "https://www.ncnr.nist.gov/ipeek/data/" + instrument + "/live_data.json",
 	          data: { "noCache": noCache },
 	          success: function success(data) {
 	            resolve(showData(data));

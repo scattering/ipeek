@@ -21,7 +21,7 @@ var loadNCNRData = function(instrument, target, refresh_time) {
     return new Promise(function(resolve, reject) {
       $.ajax({
           dataType: "json",
-          url: "http://ncnr.nist.gov/ipeek/data/" + instrument + "/live_data.json",
+          url: "https://www.ncnr.nist.gov/ipeek/data/" + instrument + "/live_data.json",
           data: { "noCache": noCache },
           success: function(data) { resolve(showData(data)); },
           error: function(e) { resolve(showData([{}])); },
