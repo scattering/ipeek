@@ -1,16 +1,29 @@
 import $ from 'jquery';
 import d3 from 'd3';
 import xyChart from './xy-chart';
-import heatChart from './heat-chart-colorbar-typed-options';
+import heatChart from './heat-chart';
 import * as cm from './colormap';
  
 var chart;
-var loadNCNRData = function(instrument, target, refresh_time) {
+var loadNCNRData = function(instrument, target, refresh_time, title, height, width) {
   // refresh_time in seconds
   this.chart = null;
   this.instrument = instrument;
   this.target = target;
-  $("#" + target).addClass("plotdiv");
+  var target_el = $("#" + target);
+  if (height != null) target_el.height(height);
+  if (width != null) target_el.width(width);
+  var target_height = target_el.height();
+  
+  if (title != null) { 
+    var title_el = $("<h2 />", {"text": title, "class": "plot-title"});
+    target_el.append(title_el);
+    target_height -= title_el.height()
+  }
+  
+  var plotdiv = $("<div />", {"class": "plotdiv"});
+  target_el.append(plotdiv);
+  plotdiv.height(target_height);
   this.refresh_time = refresh_time; // set to zero or null to disable refresh;
   
   var that = this;
@@ -44,14 +57,14 @@ var loadNCNRData = function(instrument, target, refresh_time) {
         chart.options(options, true).source_data(data.data).update();
       }
       else {
-        $('#' + target).empty();
+        plotdiv.empty();
         chart = new xyChart();
         chart
           .options(options)
           //.options(data.options)
           //.ytransform(options.ytransform)
           .zoomRect(true);
-        d3.select("#" + target)
+        d3.select(plotdiv[0])
           .data([data.data])
           .call(chart);
         //chart.ytransform(options.ytransform);
@@ -62,7 +75,7 @@ var loadNCNRData = function(instrument, target, refresh_time) {
         chart.source_data(data.z[0]);
       }
       else {
-        $('#' + target).empty();
+        plotdiv.empty();
         var aspect_ratio = null;
         if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
           aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
@@ -70,21 +83,21 @@ var loadNCNRData = function(instrument, target, refresh_time) {
         chart = new heatChart();
         chart
           .colormap(cm.get_colormap(instrument == "NGBSANS" ? "spectral" : "jet"))
-          .aspect_ratio(aspect_ratio)
           .dims(data.dims)
           .xlabel(data.xlabel)
           .ylabel(data.ylabel);
-        d3.select("#"+ target)
+        d3.select(plotdiv[0])
           .data(data.z)
           .call(chart);
         chart.zoomScroll(true)
           .ztransform((logselected)? "log" : "linear")
+          .aspect_ratio(aspect_ratio)
         
         that.chart = chart;
       }
     } else {
         // this will get triggered if data is missing or has a type other than 1d or 2d
-        $('#' + target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
+        plotdiv.empty().append('<div class="no-data">Ceci n\'est pas data</div>');
     }
 
     return chart;

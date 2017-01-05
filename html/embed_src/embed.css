@@ -1,3 +1,9 @@
+.plot-title {
+    margin: 3px;
+    font-family: sans;
+    text-align: center;
+}
+
 .plotdiv {
     padding: 0px;
     font-family: sans;

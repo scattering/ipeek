@@ -47,17 +47,17 @@ var NCNRDataLoader =
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
 	  if (true) {
-	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(1), __webpack_require__(7)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(1), __webpack_require__(2), __webpack_require__(8)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	  } else if (typeof exports !== "undefined") {
-	    factory(exports, require('./loadNCNRData'), require('./embed.css'));
+	    factory(exports, require('./loadNCNRData'), require('jquery'), require('./embed.css'));
 	  } else {
 	    var mod = {
 	      exports: {}
 	    };
-	    factory(mod.exports, global.loadNCNRData, global.embed);
+	    factory(mod.exports, global.loadNCNRData, global.jquery, global.embed);
 	    global.embed = mod.exports;
 	  }
-	})(this, function (exports, _loadNCNRData) {
+	})(this, function (exports, _loadNCNRData, _jquery) {
 	  'use strict';
 
 	  Object.defineProperty(exports, "__esModule", {
@@ -67,6 +67,8 @@ var NCNRDataLoader =
 
 	  var _loadNCNRData2 = _interopRequireDefault(_loadNCNRData);
 
+	  var _jquery2 = _interopRequireDefault(_jquery);
+
 	  function _interopRequireDefault(obj) {
 	    return obj && obj.__esModule ? obj : {
 	      default: obj
@@ -75,10 +77,15 @@ var NCNRDataLoader =
 
 	  var target = document.currentScript.getAttribute("target");
 	  var instrument = document.currentScript.getAttribute("instrument");
+	  var title = document.currentScript.getAttribute("title");
+	  var width = document.currentScript.getAttribute("width");
+	  var height = document.currentScript.getAttribute("height");
 
 	  if (target != null && instrument != null) {
 	    var refresh = document.currentScript.getAttribute("refresh") || 60;
-	    var plot = new _loadNCNRData2.default(instrument, target, refresh);
+	    (0, _jquery2.default)().ready(function () {
+	      var plot = new _loadNCNRData2.default(instrument, target, refresh, title, height, width);
+	    });
 	  }
 
 	  exports.load = _loadNCNRData2.default;
@@ -90,17 +97,17 @@ var NCNRDataLoader =
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
 	  if (true) {
-	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(2), __webpack_require__(3), __webpack_require__(4), __webpack_require__(5), __webpack_require__(6)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(2), __webpack_require__(3), __webpack_require__(4), __webpack_require__(6), __webpack_require__(7)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	  } else if (typeof exports !== "undefined") {
-	    factory(exports, require('jquery'), require('d3'), require('./xy-chart'), require('./heat-chart-colorbar-typed-options'), require('./colormap'));
+	    factory(exports, require('jquery'), require('d3'), require('./xy-chart'), require('./heat-chart'), require('./colormap'));
 	  } else {
 	    var mod = {
 	      exports: {}
 	    };
-	    factory(mod.exports, global.jquery, global.d3, global.xyChart, global.heatChartColorbarTypedOptions, global.colormap);
+	    factory(mod.exports, global.jquery, global.d3, global.xyChart, global.heatChart, global.colormap);
 	    global.loadNCNRData = mod.exports;
 	  }
-	})(this, function (exports, _jquery, _d, _xyChart, _heatChartColorbarTypedOptions, _colormap) {
+	})(this, function (exports, _jquery, _d, _xyChart, _heatChart, _colormap) {
 	  'use strict';
 
 	  Object.defineProperty(exports, "__esModule", {
@@ -113,7 +120,7 @@ var NCNRDataLoader =
 
 	  var _xyChart2 = _interopRequireDefault(_xyChart);
 
-	  var _heatChartColorbarTypedOptions2 = _interopRequireDefault(_heatChartColorbarTypedOptions);
+	  var _heatChart2 = _interopRequireDefault(_heatChart);
 
 	  var cm = _interopRequireWildcard(_colormap);
 
@@ -141,12 +148,25 @@ var NCNRDataLoader =
 	  }
 
 	  var chart;
-	  var loadNCNRData = function loadNCNRData(instrument, target, refresh_time) {
+	  var loadNCNRData = function loadNCNRData(instrument, target, refresh_time, title, height, width) {
 	    // refresh_time in seconds
 	    this.chart = null;
 	    this.instrument = instrument;
 	    this.target = target;
-	    (0, _jquery2.default)("#" + target).addClass("plotdiv");
+	    var target_el = (0, _jquery2.default)("#" + target);
+	    if (height != null) target_el.height(height);
+	    if (width != null) target_el.width(width);
+	    var target_height = target_el.height();
+
+	    if (title != null) {
+	      var title_el = (0, _jquery2.default)("<h2 />", { "text": title, "class": "plot-title" });
+	      target_el.append(title_el);
+	      target_height -= title_el.height();
+	    }
+
+	    var plotdiv = (0, _jquery2.default)("<div />", { "class": "plotdiv" });
+	    target_el.append(plotdiv);
+	    plotdiv.height(target_height);
 	    this.refresh_time = refresh_time; // set to zero or null to disable refresh;
 
 	    var that = this;
@@ -185,13 +205,13 @@ var NCNRDataLoader =
 	        if (chart && chart.type && chart.type == 'xy') {
 	          chart.options(options, true).source_data(data.data).update();
 	        } else {
-	          (0, _jquery2.default)('#' + target).empty();
+	          plotdiv.empty();
 	          chart = new _xyChart2.default();
 	          chart.options(options)
 	          //.options(data.options)
 	          //.ytransform(options.ytransform)
 	          .zoomRect(true);
-	          _d2.default.select("#" + target).data([data.data]).call(chart);
+	          _d2.default.select(plotdiv[0]).data([data.data]).call(chart);
 	          //chart.ytransform(options.ytransform);
 	          that.chart = chart;
 	        }
@@ -199,21 +219,21 @@ var NCNRDataLoader =
 	        if (chart && chart.type && chart.type == 'heatmap_2d') {
 	          chart.source_data(data.z[0]);
 	        } else {
-	          (0, _jquery2.default)('#' + target).empty();
+	          plotdiv.empty();
 	          var aspect_ratio = null;
 	          if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
 	            aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
 	          }
-	          chart = new _heatChartColorbarTypedOptions2.default();
-	          chart.colormap(cm.get_colormap(instrument == "NGBSANS" ? "spectral" : "jet")).aspect_ratio(aspect_ratio).dims(data.dims).xlabel(data.xlabel).ylabel(data.ylabel);
-	          _d2.default.select("#" + target).data(data.z).call(chart);
-	          chart.zoomScroll(true).ztransform(logselected ? "log" : "linear");
+	          chart = new _heatChart2.default();
+	          chart.colormap(cm.get_colormap(instrument == "NGBSANS" ? "spectral" : "jet")).dims(data.dims).xlabel(data.xlabel).ylabel(data.ylabel);
+	          _d2.default.select(plotdiv[0]).data(data.z).call(chart);
+	          chart.zoomScroll(true).ztransform(logselected ? "log" : "linear").aspect_ratio(aspect_ratio);
 
 	          that.chart = chart;
 	        }
 	      } else {
 	        // this will get triggered if data is missing or has a type other than 1d or 2d
-	        (0, _jquery2.default)('#' + target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
+	        plotdiv.empty().append('<div class="no-data">Ceci n\'est pas data</div>');
 	      }
 
 	      return chart;
@@ -21009,17 +21029,17 @@ var NCNRDataLoader =
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
 	  if (true) {
-	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(3), __webpack_require__(2)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(3), __webpack_require__(5)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	  } else if (typeof exports !== "undefined") {
-	    factory(exports, require('d3'), require('jquery'));
+	    factory(exports, require('d3'), require('./jquery-extend'));
 	  } else {
 	    var mod = {
 	      exports: {}
 	    };
-	    factory(mod.exports, global.d3, global.jquery);
+	    factory(mod.exports, global.d3, global.jqueryExtend);
 	    global.xyChart = mod.exports;
 	  }
-	})(this, function (exports, _d, _jquery) {
+	})(this, function (exports, _d, _jqueryExtend) {
 	  'use strict';
 
 	  Object.defineProperty(exports, "__esModule", {
@@ -21045,7 +21065,8 @@ var NCNRDataLoader =
 	    }
 	  }
 
-	  //var extend = jQuery.extend;
+	  exports.default = xyChart;
+
 
 	  if (!d3.hasOwnProperty("id")) {
 	    d3.id = function () {
@@ -21082,7 +21103,7 @@ var NCNRDataLoader =
 	      series: new Array()
 	    };
 
-	    var options = (0, _jquery.extend)(true, {}, options_defaults, options_override); // copy
+	    var options = (0, _jqueryExtend.extend)(true, {}, options_defaults, options_override); // copy
 
 	    var id = d3.id();
 	    var interactors = [];
@@ -21556,9 +21577,9 @@ var NCNRDataLoader =
 	    chart.options = function (_, clear) {
 	      if (!arguments.length) return options;
 	      if (clear) {
-	        options = (0, _jquery.extend)(true, {}, options_defaults, _);
+	        options = (0, _jqueryExtend.extend)(true, {}, options_defaults, _);
 	      } else {
-	        (0, _jquery.extend)(true, options, _);
+	        (0, _jqueryExtend.extend)(true, options, _);
 	      }
 	      return chart;
 	    };
@@ -21728,8 +21749,6 @@ var NCNRDataLoader =
 
 	    return chart;
 	  }
-
-	  exports.default = xyChart;
 	});
 
 /***/ },
@@ -21738,17 +21757,154 @@ var NCNRDataLoader =
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
 	  if (true) {
-	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(3), __webpack_require__(2)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
 	  } else if (typeof exports !== "undefined") {
-	    factory(exports, require('d3'), require('jquery'));
+	    factory(exports);
 	  } else {
 	    var mod = {
 	      exports: {}
 	    };
-	    factory(mod.exports, global.d3, global.jquery);
-	    global.heatChartColorbarTypedOptions = mod.exports;
+	    factory(mod.exports);
+	    global.jqueryExtend = mod.exports;
 	  }
-	})(this, function (exports, _d, _jquery) {
+	})(this, function (exports) {
+	  // The "extend" function from jQuery, by itself.
+	  'use strict';
+
+	  Object.defineProperty(exports, "__esModule", {
+	    value: true
+	  });
+
+	  var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) {
+	    return typeof obj;
+	  } : function (obj) {
+	    return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj;
+	  };
+
+	  exports.default = extend;
+	  exports.extend = extend;
+	  exports.type = type;
+
+
+	  var toString = Object.prototype.toString,
+	      hasOwn = Object.prototype.hasOwnProperty,
+	      push = Array.prototype.push,
+	      slice = Array.prototype.slice,
+	      trim = String.prototype.trim,
+	      indexOf = Array.prototype.indexOf,
+	      class2type = {
+	    "[object Boolean]": "boolean",
+	    "[object Number]": "number",
+	    "[object String]": "string",
+	    "[object Function]": "function",
+	    "[object Array]": "array",
+	    "[object Date]": "date",
+	    "[object RegExp]": "regexp",
+	    "[object Object]": "object"
+	  };
+
+	  function type(obj) {
+	    return obj == null ? String(obj) : class2type[toString.call(obj)] || "object";
+	  }
+
+	  var jQuery = {
+	    isFunction: function isFunction(obj) {
+	      return jQuery.type(obj) === "function";
+	    },
+	    isArray: Array.isArray || function (obj) {
+	      return jQuery.type(obj) === "array";
+	    },
+	    isWindow: function isWindow(obj) {
+	      return obj != null && obj == obj.window;
+	    },
+	    isNumeric: function isNumeric(obj) {
+	      return !isNaN(parseFloat(obj)) && isFinite(obj);
+	    },
+	    type: type,
+	    isPlainObject: function isPlainObject(obj) {
+	      if (!obj || jQuery.type(obj) !== "object" || obj.nodeType) {
+	        return false;
+	      }
+	      try {
+	        if (obj.constructor && !hasOwn.call(obj, "constructor") && !hasOwn.call(obj.constructor.prototype, "isPrototypeOf")) {
+	          return false;
+	        }
+	      } catch (e) {
+	        return false;
+	      }
+	      var key;
+	      for (key in obj) {}
+	      return key === undefined || hasOwn.call(obj, key);
+	    }
+	  };
+
+	  function extend() {
+	    var options,
+	        name,
+	        src,
+	        copy,
+	        copyIsArray,
+	        clone,
+	        target = arguments[0] || {},
+	        i = 1,
+	        length = arguments.length,
+	        deep = false;
+	    if (typeof target === "boolean") {
+	      deep = target;
+	      target = arguments[1] || {};
+	      i = 2;
+	    }
+	    if ((typeof target === "undefined" ? "undefined" : _typeof(target)) !== "object" && !jQuery.isFunction(target)) {
+	      target = {};
+	    }
+	    if (length === i) {
+	      target = this;
+	      --i;
+	    }
+	    for (i; i < length; i++) {
+	      if ((options = arguments[i]) != null) {
+	        for (name in options) {
+	          src = target[name];
+	          copy = options[name];
+	          if (target === copy) {
+	            continue;
+	          }
+	          if (deep && copy && (jQuery.isPlainObject(copy) || (copyIsArray = jQuery.isArray(copy)))) {
+	            if (copyIsArray) {
+	              copyIsArray = false;
+	              clone = src && jQuery.isArray(src) ? src : [];
+	            } else {
+	              clone = src && jQuery.isPlainObject(src) ? src : {};
+	            }
+	            // WARNING: RECURSION
+	            target[name] = extend(deep, clone, copy);
+	          } else if (copy !== undefined) {
+	            target[name] = copy;
+	          }
+	        }
+	      }
+	    }
+	    return target;
+	  }
+	});
+
+/***/ },
+/* 6 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
+	  if (true) {
+	    !(__WEBPACK_AMD_DEFINE_ARRAY__ = [exports, __webpack_require__(3), __webpack_require__(5)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+	  } else if (typeof exports !== "undefined") {
+	    factory(exports, require('d3'), require('./jquery-extend'));
+	  } else {
+	    var mod = {
+	      exports: {}
+	    };
+	    factory(mod.exports, global.d3, global.jqueryExtend);
+	    global.heatChart = mod.exports;
+	  }
+	})(this, function (exports, _d, _jqueryExtend) {
 	  "use strict";
 
 	  Object.defineProperty(exports, "__esModule", {
@@ -21757,14 +21913,6 @@ var NCNRDataLoader =
 	  exports.default = heatChart;
 
 	  var d3 = _interopRequireWildcard(_d);
-
-	  var _jquery2 = _interopRequireDefault(_jquery);
-
-	  function _interopRequireDefault(obj) {
-	    return obj && obj.__esModule ? obj : {
-	      default: obj
-	    };
-	  }
 
 	  function _interopRequireWildcard(obj) {
 	    if (obj && obj.__esModule) {
@@ -21816,8 +21964,8 @@ var NCNRDataLoader =
 	        zmax: 100.0
 	      }
 	    };
-	    var options = jQuery.extend(true, {}, options_defaults); // copy
-	    jQuery.extend(true, options, options_override); // process any overrides from creation;
+	    var options = (0, _jqueryExtend.extend)(true, {}, options_defaults); // copy
+	    (0, _jqueryExtend.extend)(true, options, options_override); // process any overrides from creation;
 
 	    //var zoomRect = false;
 	    var zoomScroll = false;
@@ -21918,70 +22066,46 @@ var NCNRDataLoader =
 
 	        yAxis.scale(y).ticks(options.numberOfTicks).tickPadding(10).tickSubdivide(true).orient("left");
 
-	        // we will bind data to the container div, a slightly non-standard
-	        // arrangement.
-	        var container = d3.select(this).selectAll("div.heatmap-container").data([0]);
-
 	        zoom.x(x).y(y);
 
-	        // if inner container doesn't exist, build it.
-	        container.enter().append("div").attr("class", "heatmap-container").attr("width", innerwidth).attr("height", innerheight).style("display", "inline-block").style("width", innerwidth + "px").style("height", innerheight + "px");
+	        var mainCanvas = outercontainer.append("canvas");
+	        mainCanvas.attr("width", width).attr("height", height).attr("class", "mainplot").style("width", width + "px").style("height", height + "px").style("padding-left", options.margin.left + "px").style("padding-right", options.margin.right + "px").style("padding-top", options.margin.top + "px");
 
-	        var mainCanvas = container.selectAll("canvas.mainplot").data([0]);
-	        mainCanvas.enter().append("canvas");
-	        mainCanvas.attr("width", width).attr("height", height).attr("class", "mainplot").style("width", width + "px").style("height", height + "px").style("padding-left", options.margin.left + "px").style("padding-right", options.margin.right + "px").style("padding-top", options.margin.top + "px").call(drawImage);
+	        var container = outercontainer.append("div").attr("class", "heatmap-container").attr("width", innerwidth).attr("height", innerheight)
+	        //.style("left", "0")
+	        //.style("top", "0")
+	        .style("display", "inline-block").style("width", innerwidth + "px").style("height", innerheight + "px");
+
+	        mainCanvas.call(drawImage);
 
 	        chart.mainCanvas = mainCanvas;
 
-	        var svg = container.selectAll("svg.mainplot").data([0]);
-	        var esvg = svg.enter().append("svg").attr("class", "mainplot").on("dblclick.resetzoom", resetzoom);
-	        esvg.append("g").attr("class", "x axis").append("text").attr("class", "x axis-label").attr("x", width / 2.0).attr("text-anchor", "middle").attr("y", 35);
-	        esvg.append("g").attr("class", "y axis").append("text").attr("class", "y axis-label").attr("text-anchor", "middle").attr("transform", "rotate(-90)").attr("y", -35).attr("x", -height / 2);
+	        var svg = container.append("svg").attr("width", width + options.margin.left + options.margin.right).attr("height", height + options.margin.top + options.margin.bottom).attr("class", "mainplot").on("dblclick.resetzoom", resetzoom);
 
-	        esvg.append("g").attr("class", "x grid");
-	        esvg.append("g").attr("class", "y grid");
-	        esvg.append("g").attr("class", "y interactors");
-	        var mainview = esvg.append("g").attr("class", "mainview").attr("transform", "translate(" + options.margin.left + "," + options.margin.top + ")");
+	        var mainview = svg.append("g").attr("class", "mainview").attr("width", width).attr("height", height).attr("transform", "translate(" + options.margin.left + "," + options.margin.top + ")");
 
-	        svg.select(".x.axis").call(xAxis);
-	        svg.select(".y.axis").call(yAxis);
-	        svg.select(".x.grid").call(xAxisGrid);
-	        svg.select(".y.grid").call(yAxisGrid);
-	        svg.select(".x.axis-label").text(options.xlabel);
-	        svg.select(".y.axis-label").text(options.ylabel);
+	        mainview.append("g").attr("class", "x axis").attr("transform", "translate(0," + height + ")");
+	        mainview.append("text").attr("transform", "translate(0," + height + ")").classed("x axis-label", true).attr("x", width / 2.0).attr("text-anchor", "middle").attr("y", 35);
+	        mainview.append("g").attr("class", "y axis");
+	        mainview.append("text").attr("transform", "rotate(-90)").classed("y axis-label", true).attr("y", 0 - options.margin.left).attr("x", 0 - height / 2).attr("dy", "1em").style("text-anchor", "middle");
 
-	        svg.attr("width", width + options.margin.left + options.margin.right).attr("height", height + options.margin.top + options.margin.bottom);
+	        mainview.append("g").attr("class", "x grid").attr("transform", "translate(0," + height + ")");
+	        mainview.append("g").attr("class", "y grid");
+	        mainview.append("g").attr("class", "y interactors");
 
-	        svg.selectAll("g.x").attr("transform", "translate(" + options.margin.left + "," + (height + options.margin.top) + ")");
-	        svg.selectAll("g.y").attr("transform", "translate(" + options.margin.left + "," + options.margin.top + ")");
+	        mainview.append("rect").attr("class", "zoom box").attr("width", width).attr("height", height).style("visibility", "hidden").attr("pointer-events", "all");
+
+	        mainview.select(".x.axis").call(xAxis);
+	        mainview.select(".y.axis").call(yAxis);
+	        mainview.select(".x.grid").call(xAxisGrid);
+	        mainview.select(".y.grid").call(yAxisGrid);
+	        mainview.select(".x.axis-label").text(options.xlabel);
+	        mainview.select(".y.axis-label").text(options.ylabel);
 
 	        chart.svg = svg;
-	        //svg.call(zoom); // moved to zoomScroll function
+	        chart.mainview = mainview;
 
-	        //************************************************************
-	        // Position cursor (shows position of mouse in data coords)
-	        //************************************************************
-	        if (options.position_cursor) {
-	          var position_cursor = mainview.selectAll(".position-cursor").data([0]);
-	          position_cursor.enter().append("text").attr("class", "position-cursor").attr("x", width - 10).attr("y", height + options.margin.bottom).style("text-anchor", "end");
-
-	          var follow = function follow() {
-	            if (source_data == null || source_data[0] == null) {
-	              return;
-	            }
-	            var mouse = d3.mouse(mainview.node());
-	            var x_coord = x.invert(mouse[0]),
-	                y_coord = y.invert(mouse[1]),
-	                xdim = source_data[0].length,
-	                ydim = source_data.length;
-	            var x_bin = Math.floor((x_coord - dims.xmin) / (dims.xmax - dims.xmin) * xdim),
-	                y_bin = Math.floor((y_coord - dims.ymin) / (dims.ymax - dims.ymin) * ydim);
-	            var z_coord = x_bin >= 0 && x_bin < xdim && y_bin >= 0 && y_bin < ydim ? source_data[y_bin][x_bin] : NaN;
-	            position_cursor.text(x_coord.toPrecision(5) + ", " + y_coord.toPrecision(5) + ", " + z_coord.toPrecision(5));
-	          };
-
-	          esvg.on("mousemove.position_cursor", null).on("mouseover.position_cursor", null).on("mousemove.position_cursor", follow).on("mouseover.position_cursor", follow);
-	        }
+	        chart.position_cursor(options.position_cursor);
 	      });
 	      selection.call(chart.colorbar);
 	    }
@@ -22002,26 +22126,23 @@ var NCNRDataLoader =
 
 	        zAxis.scale(z).ticks(options.numberOfTicks).tickPadding(10).tickSubdivide(true).orient("right");
 
-	        // we will bind data to the container div, a slightly non-standard
-	        // arrangement.
-	        var container = d3.select(this).selectAll("div.colorbar-container").data([0]);
+	        var container = d3.select(this);
 
 	        cb_zoom.y(z);
 	        chart.colorbar.resetzoom = cb_resetzoom;
 	        chart.colorbar.zoom = cb_zoom;
 
-	        // if inner container doesn't exist, build it.
-	        container.enter().append("div").attr("class", "colorbar-container").attr("width", innerwidth).attr("height", innerheight).style("display", "inline-block").style("width", innerwidth + "px").style("height", innerheight + "px");
+	        var colorbarCanvas;
+	        var container = outercontainer.append("div").attr("class", "colorbar-container").attr("width", innerwidth).attr("height", innerheight).style("display", "inline-block").style("width", innerwidth + "px").style("height", innerheight + "px");
 
-	        var colorbarCanvas = container.selectAll("canvas.colorbar").data([0]);
-	        colorbarCanvas.enter().append("canvas");
-	        colorbarCanvas.attr("width", width).attr("height", height).attr("class", "colorbar").style("width", width + "px").style("height", height + "px").style("padding-left", offset_left + "px").style("padding-right", options.cb_margin.right + "px").style("padding-top", options.cb_margin.top + "px").call(drawScale);
+	        var colorbarCanvas = container.append("canvas").attr("width", width).attr("height", height).attr("class", "colorbar").style("width", width + "px").style("height", height + "px").style("padding-left", offset_left + "px").style("padding-right", options.cb_margin.right + "px").style("padding-top", options.cb_margin.top + "px");
+
+	        colorbarCanvas.call(drawScale);
 
 	        chart.colorbar.colorbarCanvas = colorbarCanvas;
 
-	        var svg = container.selectAll("svg.colorbar").data([0]);
-	        var esvg = svg.enter().append("svg").attr("class", "colorbar").call(cb_zoom).on("dblclick.zoom", null).on("dblclick.resetzoom", null).on("dblclick.resetzoom", cb_resetzoom);
-	        esvg.append("g").attr("class", "z axis");
+	        var svg = container.append("svg").attr("class", "colorbar").call(cb_zoom).on("dblclick.zoom", null).on("dblclick.resetzoom", null).on("dblclick.resetzoom", cb_resetzoom);
+	        svg.append("g").attr("class", "z axis");
 
 	        svg.select(".z.axis").call(zAxis);
 
@@ -22033,7 +22154,7 @@ var NCNRDataLoader =
 	      });
 	    };
 	    chart.colorbar.update = function () {
-	      this.outercontainer.call(chart.colorbar);
+	      chart.colorbar.colorbarCanvas.call(drawScale);_redraw_colorbar = true;
 	    };
 
 	    chart.colormap = function (_) {
@@ -22072,13 +22193,13 @@ var NCNRDataLoader =
 	      }
 	      if (_redraw_main == true) {
 	        _redraw_main = false;
-	        var svg = chart.svg;
+	        var mainview = chart.mainview;
 	        var canvas = chart.mainCanvas;
 	        var container = chart.outercontainer;
-	        svg.select(".x.axis").call(xAxis);
-	        svg.select(".y.axis").call(yAxis);
-	        svg.select(".grid.x").call(xAxisGrid);
-	        svg.select(".grid.y").call(yAxisGrid);
+	        mainview.select(".x.axis").call(xAxis);
+	        mainview.select(".y.axis").call(yAxis);
+	        mainview.select(".grid.x").call(xAxisGrid);
+	        mainview.select(".grid.y").call(yAxisGrid);
 
 	        chart.mainCanvas.call(drawImage);
 
@@ -22092,6 +22213,10 @@ var NCNRDataLoader =
 	    };
 
 	    window.requestAnimationFrame(chart.redrawLoop);
+
+	    chart.update = function () {
+	      _redraw_main = true;return chart;
+	    };
 
 	    chart.margin = function (_) {
 	      if (!arguments.length) return options.margin;
@@ -22144,6 +22269,57 @@ var NCNRDataLoader =
 	      return chart;
 	    };
 
+	    chart.aspect_ratio = function (_) {
+	      if (!arguments.length) return options.aspect_ratio;
+	      options.aspect_ratio = _;
+	      var offset_right = options.show_colorbar ? options.colorbar_width + 5 : 0;
+	      var outercontainer = this.outercontainer,
+	          innerwidth = outercontainer.node().clientWidth - offset_right,
+	          innerheight = outercontainer.node().clientHeight,
+	          width = innerwidth - options.margin.right - options.margin.left,
+	          height = innerheight - options.margin.top - options.margin.bottom;
+
+	      var limits = fixAspect(width, height);
+	      // Update the x-scale.
+	      x.domain([limits.xmin, limits.xmax]);
+	      // Update the y-scale.
+	      y.domain([limits.ymin, limits.ymax]);
+
+	      zoom.x(x).y(y);
+	      return chart;
+	    };
+
+	    chart.position_cursor = function (_) {
+	      if (!arguments.length) return options.position_cursor;
+	      options.position_cursor = _;
+	      if (options.position_cursor) {
+	        var svg = chart.svg,
+	            mainview = chart.mainview;
+	        var position_cursor = mainview.append("text").attr("class", "position-cursor").attr("x", parseFloat(mainview.attr("width")) - 10).attr("y", parseFloat(mainview.attr("height")) + options.margin.bottom).style("text-anchor", "end");
+
+	        var follow = function follow() {
+	          if (source_data == null || source_data[0] == null) {
+	            return;
+	          }
+	          var mouse = d3.mouse(mainview.node());
+	          var x_coord = x.invert(mouse[0]),
+	              y_coord = y.invert(mouse[1]),
+	              xdim = source_data[0].length,
+	              ydim = source_data.length;
+	          var x_bin = Math.floor((x_coord - dims.xmin) / (dims.xmax - dims.xmin) * xdim),
+	              y_bin = Math.floor((y_coord - dims.ymin) / (dims.ymax - dims.ymin) * ydim);
+	          var z_coord = x_bin >= 0 && x_bin < xdim && y_bin >= 0 && y_bin < ydim ? source_data[y_bin][x_bin] : NaN;
+	          position_cursor.text(x_coord.toPrecision(5) + ", " + y_coord.toPrecision(5) + ", " + z_coord.toPrecision(5));
+	        };
+
+	        svg.on("mousemove.position_cursor", follow).on("mouseover.position_cursor", follow);
+	      } else {
+	        chart.mainview.selectAll(".position-cursor").remove();
+	        chart.svg.on("mousemove.position_cursor", null).on("mouseover.position_cursor", null);
+	      }
+	      return chart;
+	    };
+
 	    // drop all the other options into the chart namespace,
 	    // making objects update rather than overwrite
 	    for (var attr in options) {
@@ -22152,8 +22328,8 @@ var NCNRDataLoader =
 	        chart[attr] = function (attr) {
 	          var accessor = function accessor(_) {
 	            if (!arguments.length) return options[attr];
-	            if (jQuery.type(options[attr]) == "object") {
-	              jQuery.extend(options[attr], _);
+	            if ((0, _jqueryExtend.type)(options[attr]) == "object") {
+	              (0, _jqueryExtend.extend)(options[attr], _);
 	            } else {
 	              options[attr] = _;
 	            }
@@ -22173,10 +22349,11 @@ var NCNRDataLoader =
 	    chart.zoomScroll = function (_) {
 	      if (!arguments.length) return zoomScroll;
 	      zoomScroll = _;
+	      var zoom_el = chart.svg.select("rect.zoom.box");
 	      if (zoomScroll == true) {
-	        chart.svg.call(zoom).on("dblclick.zoom", null);
+	        zoom_el.call(zoom).on("dblclick.zoom", null);
 	      } else if (zoomScroll == false) {
-	        chart.svg.on(".zoom", null);
+	        zoom_el.on(".zoom", null);
 	      }
 	      return chart;
 	    };
@@ -22563,7 +22740,7 @@ var NCNRDataLoader =
 	});
 
 /***/ },
-/* 6 */
+/* 7 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
@@ -22621,16 +22798,16 @@ var NCNRDataLoader =
 	});
 
 /***/ },
-/* 7 */
+/* 8 */
 /***/ function(module, exports, __webpack_require__) {
 
 	// style-loader: Adds some css to the DOM by adding a <style> tag
 
 	// load the styles
-	var content = __webpack_require__(8);
+	var content = __webpack_require__(9);
 	if(typeof content === 'string') content = [[module.id, content, '']];
 	// add the styles to the DOM
-	var update = __webpack_require__(10)(content, {});
+	var update = __webpack_require__(11)(content, {});
 	if(content.locals) module.exports = content.locals;
 	// Hot Module Replacement
 	if(false) {
@@ -22647,21 +22824,21 @@ var NCNRDataLoader =
 	}
 
 /***/ },
-/* 8 */
+/* 9 */
 /***/ function(module, exports, __webpack_require__) {
 
-	exports = module.exports = __webpack_require__(9)();
+	exports = module.exports = __webpack_require__(10)();
 	// imports
 
 
 	// module
-	exports.push([module.id, ".plotdiv {\n    padding: 0px;\n    font-family: sans;\n}\n\n.plotdiv svg,\n.plotdiv canvas {\n    position: absolute;\n    image-rendering: optimizeSpeed;\n    image-rendering: crisp-edges;\n    image-rendering: -moz-crisp-edges;\n    image-rendering: -webkit-optimize-contrast;\n    image-rendering: optimize-contrast;\n    -ms-interpolation-mode: nearest-neighbor;\n}\n.plotdiv .line {\n    fill: none;\n    stroke-width: 1.5px;\n}\n\n.plotdiv .highlight {\n    stroke-width: 4.5px;\n}\n.plotdiv .axis-label {\n    font-size: 18px;\n}\n\n.plotdiv .axis .tick text {\n    font: 14px sans-serif;\n}\n\n.plotdiv .axis path,\n.plotdiv .axis line {\n    fill: none;\n    stroke: #000;\n    shape-rendering: crispEdges;\n}\n\n.plotdiv .grid .tick {\n    stroke: lightgrey;\n    opacity: 0.7;\n}\n.plotdiv .grid path {\n    stroke-width: 0;\n    fill: none;\n}\n.plotdiv rect {\n    fill: none;\n    user-select: none; \n    -webkit-user-select: none; \n    -moz-user-select: none;\n}\n\n.plotdiv rect.zoom {\n    stroke: steelblue;\n    fill-opacity: 0.5;\n}\n\n.plotdiv .no-data {\n    font-family: 'Homemade Apple', cursive;\n    font-size: 4vw;\n    text-align: center;\n    position: relative;\n    top: 50%;\n    transform: translateY(-50%);\n}\n", ""]);
+	exports.push([module.id, ".plot-title {\n    margin: 3px;\n    font-family: sans;\n    text-align: center;\n}\n\n.plotdiv {\n    padding: 0px;\n    font-family: sans;\n}\n\n.plotdiv svg,\n.plotdiv canvas {\n    position: absolute;\n    image-rendering: optimizeSpeed;\n    image-rendering: crisp-edges;\n    image-rendering: -moz-crisp-edges;\n    image-rendering: -webkit-optimize-contrast;\n    image-rendering: optimize-contrast;\n    -ms-interpolation-mode: nearest-neighbor;\n}\n.plotdiv .line {\n    fill: none;\n    stroke-width: 1.5px;\n}\n\n.plotdiv .highlight {\n    stroke-width: 4.5px;\n}\n.plotdiv .axis-label {\n    font-size: 18px;\n}\n\n.plotdiv .axis .tick text {\n    font: 14px sans-serif;\n}\n\n.plotdiv .axis path,\n.plotdiv .axis line {\n    fill: none;\n    stroke: #000;\n    shape-rendering: crispEdges;\n}\n\n.plotdiv .grid .tick {\n    stroke: lightgrey;\n    opacity: 0.7;\n}\n.plotdiv .grid path {\n    stroke-width: 0;\n    fill: none;\n}\n.plotdiv rect {\n    fill: none;\n    user-select: none; \n    -webkit-user-select: none; \n    -moz-user-select: none;\n}\n\n.plotdiv rect.zoom {\n    stroke: steelblue;\n    fill-opacity: 0.5;\n}\n\n.plotdiv .no-data {\n    font-family: 'Homemade Apple', cursive;\n    font-size: 4vw;\n    text-align: center;\n    position: relative;\n    top: 50%;\n    transform: translateY(-50%);\n}\n", ""]);
 
 	// exports
 
 
 /***/ },
-/* 9 */
+/* 10 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;(function (global, factory) {
@@ -22730,7 +22907,7 @@ var NCNRDataLoader =
 	});
 
 /***/ },
-/* 10 */
+/* 11 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/*

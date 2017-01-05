@@ -28,10 +28,10 @@
         </script>
         
         <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/heat-chart-colorbar-typed-options.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/get_colormap.js" charset="utf-8"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
-        <script src="geturlvars.js"></script>
+        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/heat-chart.js"></script>
+        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/colormap.js" charset="utf-8"></script>
+        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
+        <script src="js/geturlvars.js"></script>
         
 
         <script type="text/javascript">
@@ -231,12 +231,12 @@
             }
             
             var heatmap_charts = {
-              'plot0': new heatChart(),
-              'plot1': new heatChart()
+              'plot0': new heatChart.default(),
+              'plot1': new heatChart.default()
             }
             var xy_charts = {
-              'plot0': new xyChart(),
-              'plot1': new xyChart()
+              'plot0': new xyChart.default(),
+              'plot1': new xyChart.default()
             }
             
             function showData(datalist, instr) {
@@ -323,7 +323,7 @@
                         }
                         var chart = heatmap_charts[plot_target]; // new heatChart()
                         chart
-                          .colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+                          .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                           .autoscale(true)
                           .aspect_ratio(aspect_ratio)
                           .dims(data.dims)

@@ -2,23 +2,24 @@
 <html>
   <head>
     <script type="text/javascript" src="js/jquery-1.11.1.min.js"></script>
-    <script type="text/javascript" src="js/embedNCNRData.js" instrument="PBR" target="tag_plot" charset="utf-8"></script>
+    <script type="text/javascript" src="js/embedNCNRData.js" instrument="PBR" target="tag_plot" title="PBR!" height="200" width="400" charset="utf-8"></script>
     <script type="text/javascript">
       var instruments = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'DCS', 'MACS', 'MAGIK', 'NGBSANS', 'NGB30SANS', 'NG2', 'NG7', 'NG7SANS', 'NSE', 'PBR', 'SPINS'];
       plots = {};
       var rows = 3,
           cols = 3, 
           margin = 5;
-      //$(document).ready(function() {
       window.onload = function() {
-        $("body").append($("<div />", {id: "tag_plot", class: "plotdiv"}));
+        $("body").append($("<div />", {id: "tag_plot", class: "plotcell"}));
         instruments.forEach(function(instr, i) {
-          $("body").append($("<div />", {id: "plot" + i, class: "plotdiv"}));
-          plots[instr] = new NCNRDataLoader.load(instr, "plot" + i, 30);
+          $("body").append($("<div />", {id: "plot" + i, class: "plotcell"}));
         });
-        $(".plotdiv").css("margin", margin + "px 0px", true);
-        $(".plotdiv").height($(document).innerHeight() / rows - ((rows + 1) * margin));
-        $(".plotdiv").width($(document).innerWidth() / cols  - ((cols + 1) * margin));
+        $(".plotcell").css("margin", margin + "px 0px", true);
+        $(".plotcell").height($(document).innerHeight() / rows - ((rows + 1) * margin));
+        $(".plotcell").width($(document).innerWidth() / cols  - ((cols + 1) * margin));
+        instruments.forEach(function(instr, i) {
+          plots[instr] = new NCNRDataLoader.load(instr, "plot" + i, 30, instr);
+        });
         
       } //)
     </script>
@@ -29,7 +30,7 @@
         justify-content: space-around;
         background-color: LightGrey;
     }
-    .plotdiv {
+    .plotcell {
       margin: 5px 0px 5px 0px;
       border-radius: 25px;
       border: 2px solid grey;
