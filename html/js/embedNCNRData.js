@@ -207,12 +207,8 @@ var NCNRDataLoader =
 	        } else {
 	          plotdiv.empty();
 	          chart = new _xyChart2.default();
-	          chart.options(options)
-	          //.options(data.options)
-	          //.ytransform(options.ytransform)
-	          .zoomRect(true);
+	          chart.options(options).zoomRect(true);
 	          _d2.default.select(plotdiv[0]).data([data.data]).call(chart);
-	          //chart.ytransform(options.ytransform);
 	          that.chart = chart;
 	        }
 	      } else if (data.type == '2d') {

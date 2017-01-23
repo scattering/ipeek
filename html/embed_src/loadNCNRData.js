@@ -61,13 +61,10 @@ var loadNCNRData = function(instrument, target, refresh_time, title, height, wid
         chart = new xyChart();
         chart
           .options(options)
-          //.options(data.options)
-          //.ytransform(options.ytransform)
           .zoomRect(true);
         d3.select(plotdiv[0])
           .data([data.data])
           .call(chart);
-        //chart.ytransform(options.ytransform);
         that.chart = chart;
       }
     } else if (data.type == '2d') {
