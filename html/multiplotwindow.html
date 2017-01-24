@@ -100,7 +100,7 @@
             window.onload = function() {
                 //$.ajaxSetup({ cache: false });
                 debug=false;
-                createTable('content_table', 4, INSTRUMENTS.length);
+                createTable('content_table', COLS, INSTRUMENTS.length);
                 $('.transform').change(updateTransform);                
                 loadData();
                 onshow();
