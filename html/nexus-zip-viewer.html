@@ -121,7 +121,8 @@
               f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               if (!isdir) {
                 f.get(id).then(nz.getValue).then(function(v) {
-                    $("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
+                    //$("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
+                    $("#device_values").html("<pre>" + v.reduce(function(a, b) {return a.concat(b)}).join("\n") + "</pre>")
                 });    
               } else {
                 $("#device_values").html("<pre>Group</pre>")
