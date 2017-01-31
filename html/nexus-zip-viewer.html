@@ -122,7 +122,7 @@
               if (!isdir) {
                 f.get(id).then(nz.getValue).then(function(v) {
                     //$("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
-                    $("#device_values").html("<pre>" + v.reduce(function(a, b) {return a.concat(b)}).join("\n") + "</pre>")
+                    $("#device_values").html('<pre class="value">' + v.reduce(function(a, b) {return a.concat(b)}).join("\n") + '</pre>')
                 });    
               } else {
                 $("#device_values").html("<pre>Group</pre>")
@@ -377,6 +377,9 @@ div.treediv {
     margin-bottom: 50px;
     margin-right: 75px;
     margin-left: 25px;
+}
+pre.value {
+    user-select: all;
 }
 #filebrowser .ui-selecting { background: #FECA40; }
 #filebrowser .ui-selected { background: #F39814; color: white; }
