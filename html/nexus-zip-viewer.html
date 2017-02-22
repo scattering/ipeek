@@ -32,6 +32,7 @@
   <script>
   $(function() {
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
+    ZIP_REGEXP = /\.zip$/
     dirHelper = "listftpfiles.php";
     zip.useWebWorkers = false;
     data_path = ["ncnrdata"];
@@ -236,7 +237,7 @@
             //var browser_body = filebrowser.createTBody();
             
             $.each(files, function(index, filename) {
-                if (NEXUS_ZIP_REGEXP.test(filename)) {
+                if (NEXUS_ZIP_REGEXP.test(filename) || ZIP_REGEXP.test(filename)) {
                     var tr = filebrowser.insertRow();
                     var chb = document.createElement('input');
                     chb.setAttribute("type", "checkbox");
