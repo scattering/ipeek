@@ -1,0 +1,289 @@
+<!doctype html>
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>SANS data reader</title>
+  <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
+  <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+
+    <script type="text/javascript" src="js/plotting_api.js"></script>
+    <script src="js/geturlvars.js"></script>
+<!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
+    <script type="text/javascript" src="//ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
+  <script>
+    exports = {}; // compatibility with node scripts
+  </script>
+  <script src="js/jspack.js"></script>
+  <script src="js/sansdata.js"></script>
+  <script>
+  $(function() {
+    
+    INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'CGD', 'NGD', 'NG2', 'NG3SANS', 'NG5', 'NG7', 'NG7SANS', 'NGBSANS'];
+    INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
+    current_instr = null;
+    plots = {};
+    colorbars = {};
+    data_path = ["ncnrdata"];
+
+    set_data = function(data) {
+        //console.log(readNCNRData(data));
+        output = readNCNRData(data);
+        rawdata = output[2];
+        metadata = output[1];
+        detdata = output[0];
+        plottable = get_plottable(readNCNRData(data));
+        showSANSData(plottable);
+    }
+    
+    var loadData = function() {
+        var file = document.getElementById('sansfile').files[0]; // only one file allowed
+        datafilename = file.name;
+        var result = null;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var data = new Uint8Array(this.result);
+            set_data(data);
+        }
+        reader.readAsArrayBuffer(file);
+        current_instr = "NG7SANS";
+    }
+    
+    var getData = function(url) {
+        var oReq = new XMLHttpRequest();
+        oReq.open("GET", url, true);
+        oReq.responseType = "arraybuffer";
+
+        oReq.onload = function (oEvent) {
+          var arrayBuffer = oReq.response; // Note: not oReq.responseText
+          if (arrayBuffer) {
+            var byteArray = new Uint8Array(arrayBuffer);
+            set_data(byteArray);
+            //for (var i = 0; i < byteArray.byteLength; i++) {
+              // do something with each byte in the array
+            //}
+          }
+        };
+
+        oReq.send(null);
+    }
+    
+    //var fileinput = document.getElementById('sansfile');
+    //fileinput.onchange = loadData;
+    
+    function createPlotRegion(target) {
+        // create a plotting region in the target
+        var cell = $('<div />', {'class': 'plotcell', 'id': 'cell1'});
+        //cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+        cell.append($('<div />', {'class': 'instrument-name'}));
+        var wrapper = $('<div />', {'class': 'plotwrapper', 'id': 'wrapper', 'class': 'wrapper'});
+        cell.append(wrapper);
+        wrapper.append($('<div />', {'id': 'plot1', 'class': 'plotdiv'}));
+        wrapper.append($('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"}));
+        var transform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
+        cell.append(transform);
+        cell.append($('<span />', {'id': 'eta1'}));
+        $('#'+target).append(cell);
+    }
+    
+    //createPlotRegion('plot_region');
+    
+    window.onresize = function() {
+        $('.wrapper, .plotdiv').height(($(window).innerHeight() - 250).toFixed() + 'px');
+        for (var p in plots) {
+            plots[p].replot();
+        }
+    }
+    
+    window.onresize();
+    
+    
+        
+    function updateFileBrowserPane(target_id, pathlist) {
+        function handler(dirdata) {
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path}
+            var filebrowser = document.createElement('ol');
+            filebrowser.classList.add('ui-widget-content');
+            var subdiritem, dirlink, fileitem, new_pathlist;
+            if (pathlist.length > 0) {
+                // add parent dir link
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "Parent Directory";
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.pop();
+                subdiritem.onclick = function() { 
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                filebrowser.appendChild(subdiritem);
+            }
+            $.each(dirdata.subdirs, function(index, subdir) {
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "(dir) " + subdir;
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.push(subdir);
+                subdiritem.onclick = function() { 
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                filebrowser.appendChild(subdiritem);
+            });
+            $.each(dirdata.files, function(index, filename) {
+                fileitem = document.createElement('li');
+                fileitem.classList.add('fileitem');
+                //dirlink = document.createElement('a');
+                //dirlink.href = "#";
+                //dirlink.textContent = filename;
+                fileitem.textContent = filename;
+                fileitem.onclick = function() {
+                    getData('/pub/' + pathlist.join('/') + '/' + filename); 
+                }
+                //fileitem.appendChild(dirlink);
+                filebrowser.appendChild(fileitem);
+            });
+            $('#' + target_id).empty();
+            $('#' + target_id).append(filebrowser);
+        }   
+        return handler
+    }
+    
+    dirHelper = "listftpfiles.php";
+    $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
+    
+    showSANSData = function(data) {    
+        //data = datalist[0];
+        $.extend(true, data.options, {axes: {
+            xaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}},
+            yaxis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}
+            }
+        }); 
+        var i=0;
+        next_target = 'plot1';
+        current_target = 'plot0';
+        var cell_target = 'cell' + (i+1).toFixed();
+        var eta_target = 'eta' + (i+1).toFixed();
+        var logselected = $('#' + cell_target).find('input')[0].checked;
+        var transform = logselected? 'log' : 'lin';
+        
+        if (plots && plots[next_target] && plots[next_target].destroy) { plots[next_target].destroy() }
+        if (colorbars && colorbars[next_target] && colorbars[next_target].destroy) { colorbars[next_target].destroy() }
+        
+        $('#' + next_target).show( "drop", { direction: "right" }, 1000);
+        if (data.type == '1d') {
+            plots[next_target] = render1dplot(null, data, transform, next_target);
+            if (data.metadata) {
+                $('#' + eta_target).html(make_metadata_table(data.metadata));
+            }
+        } else if (data.type == '2d') {
+            //plots[instr] = plottingAPI(datalist, next_target);
+            $('#' + next_target).empty();
+            var plotbox = $('<div />', {class:'ui-widget-content', style:"display: block; width: 100%; height: 100%;", id:"plotbox"});
+            $('#' + next_target).append(plotbox)
+            plotbox.append($('<div />', {
+                style:"display: inline-block; left: 0; top: 0; width:"+(plotbox.width()-150).toFixed()+"px; height: 100%;", 
+                id:next_target + "_plot"}));
+            plotbox.append($('<div />', {style:"display: inline-block; width: 100px; height: 100%;", id:next_target + "_colorbar"}));
+            var plot = renderImageData2(data, transform, next_target + "_plot");
+            var cbar_options = {
+                axes: {y2axis: {renderer: $.jqplot.GracefulAxisRenderer, tickOptions: {fontSize: 18}, labelOptions: {fontSize: 18}}}
+            }
+            var colorbar = renderImageColorbar2(plot.series[0], next_target + '_colorbar');
+            plots[next_target] = plot;
+            colorbars[next_target] = colorbar;
+            plot.replot(); // for aspect ratio plugin!
+            colorbar.plugins._interactor.zoomMax(); // for scale!
+            //plots[next_target] = plottingAPI(datalist, next_target);
+            if (data.metadata) {
+                $('#' + eta_target).html(make_metadata_table(data.metadata));
+            }
+        }
+        var instr = current_instr;
+        var instr_name = instr;
+        var instr_link = $('<a />', {'href': 'singleplotwindow.html?instrument=' + instr});
+        if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
+        instr_link.html(instr_name);
+        $('.instrument-name', '#' + cell_target).empty()
+        $('.instrument-name', '#' + cell_target).append(instr_link)
+        
+        $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
+            function() { 
+                var cb = colorbars[current_target];
+                var pl = plots[current_target];
+                if (cb && cb.destroy) {
+                    cb.destroy();
+                    cb = null;
+                }
+                if (pl && pl.destroy) {
+                    pl.destroy();
+                    pl = null;
+                }
+            });
+        
+    }
+    
+    createPlotRegion('plot_region');
+   
+  });
+  </script>
+</head>
+<style>
+html,body{height:100%;margin:0;padding:0}
+body{font: 76% arial,sans-serif; min-height:100%;}
+p{margin:0 10px 10px}
+a{display:block;color: #981793;padding:10px}
+div#header h1{height:80px;line-height:80px;margin:0;
+  padding-left:10px;background: #EEE;color: #79B30B}
+div#content p{line-height:1.4}
+div#navigation{background:#B9CAFF}
+div#extra{background:#FF8539}
+div#footer{background: #333;color: #FFF}
+div#footer p{margin:0;padding:5px 10px}
+div#outer{float:right;width:100%;margin-left:-300px;}
+div#content{margin-left:300px}
+/*div#navigation{float:left;width:300px;overflow:auto;}*/
+div#navigation{position:absolute;top:80px;left:0px;right:0px;bottom:50px;width:300px;overflow:auto;}
+li.subdiritem { 
+    list-style-type: none; 
+    cursor: pointer;
+    color: blue;
+}
+li.fileitem {
+    cursor: pointer;
+    color: blue;
+    text-decoration: underline;
+}
+/*div#footer{clear:both;width:100%}*/
+div#footer{overflow:hidden; position:absolute; bottom:0; left:0; right:0px; height:50px; width:100%;}
+</style>
+<body>
+
+<div id="header" style="background-color:#FFA500;">
+<h1 style="margin-bottom:0;">SANS data browser</h1></div>
+<div id="outer">
+    <div id = navigation></div>
+    <div id="content">
+    <div id="plot_region"></div>
+    </div>
+</div>
+<div id="footer">
+Other instruments pending
+</div>
+
+</body>
+</html>
