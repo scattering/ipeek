@@ -47,7 +47,7 @@
         line = lines[i];
         if (in_header) {
           header_lines[h++] = line;
-          if (/^#Columns/.test(line) == true) {
+          if (/^#Columns/.test(line) == true || /^##/.test(line)) {
             in_header = false;
           }
         }
