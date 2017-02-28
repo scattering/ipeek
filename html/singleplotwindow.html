@@ -232,11 +232,9 @@
             }
             
             var heatmap_charts = {
-              'plot0': new heatChart.default(),
               'plot1': new heatChart.default()
             }
             var xy_charts = {
-              'plot0': new xyChart.default(),
               'plot1': new xyChart.default()
             }
             
@@ -298,8 +296,11 @@
                           .options(data.options)
                           .zoomRect(true);
                         plots[plot_target] = chart;
-                        d3.select("#" + plot_target + " svg")
+                        d3.selectAll("#" + plot_target + " div.heatmap-container")
                           .remove();
+                        d3.selectAll("#" + plot_target + " div.colorbar-container")
+                          .remove();
+                        d3.selectAll("#" + plot_target + " svg").remove();
                         d3.select("#" + plot_target)
                           .data([data.data])
                           .call(chart);
@@ -326,15 +327,21 @@
                         chart
                           .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                           .autoscale(true)
-                          .aspect_ratio(aspect_ratio)
+                          //.aspect_ratio(aspect_ratio)
                           .dims(data.dims)
                           .xlabel(data.xlabel)
                           .ylabel(data.ylabel);
                         plots[plot_target] = chart;
+                        d3.selectAll("#" + plot_target + " div.heatmap-container")
+                          .remove();
+                        d3.selectAll("#" + plot_target + " div.colorbar-container")
+                          .remove();
+                        d3.selectAll("#" + plot_target + " svg").remove();
                         d3.select("#"+plot_target)
                           .data(data.z)
                           .call(chart);
                         chart.ztransform(ztransform);
+                        chart.aspect_ratio(aspect_ratio);
                         chart.zoomScroll(true);
                         if (data.metadata) {
                             $('#' + eta_target).html(make_metadata_table(data.metadata));
