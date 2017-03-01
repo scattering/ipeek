@@ -232,7 +232,7 @@
             }
             
             var heatmap_charts = {
-              'plot1': new heatChart.default()
+              'plot1': new heatChart.default({margin: {left: 90, bottom: 75}})
             }
             var xy_charts = {
               'plot1': new xyChart.default()
@@ -295,6 +295,8 @@
                         chart
                           .options(data.options)
                           .zoomRect(true);
+                        if (data.xlabel) { chart.xlabel(data.xlabel); }
+                        if (data.ylabel) { chart.ylabel(data.ylabel); }
                         plots[plot_target] = chart;
                         d3.selectAll("#" + plot_target + " div.heatmap-container")
                           .remove();
@@ -324,13 +326,13 @@
                           aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
                         }
                         var chart = heatmap_charts[plot_target]; // new heatChart()
+                        chart.options(data.options);
+                        if (data.xlabel) { chart.xlabel(data.xlabel); }
+                        if (data.ylabel) { chart.ylabel(data.ylabel); }
                         chart
                           .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                           .autoscale(true)
-                          //.aspect_ratio(aspect_ratio)
-                          .dims(data.dims)
-                          .xlabel(data.xlabel)
-                          .ylabel(data.ylabel);
+                          .dims(data.dims);
                         plots[plot_target] = chart;
                         d3.selectAll("#" + plot_target + " div.heatmap-container")
                           .remove();

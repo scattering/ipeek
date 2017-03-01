@@ -389,12 +389,13 @@
                       aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
                     }
                     var chart = heatmap_charts[next_target]; // new heatChart()
+                    //chart.options(data.options)
                     chart
                       .colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                       .aspect_ratio(aspect_ratio)
                       .dims(data.dims)
-                      .xlabel(data.xlabel)
-                      .ylabel(data.ylabel);
+                    if (data.xlabel) { chart.xlabel(data.xlabel); }
+                    if (data.ylabel) { chart.ylabel(data.ylabel); }
                     plots[next_target] = chart;
                     d3.select("#"+next_target)
                       .data(data.z)
