@@ -172,6 +172,7 @@
             .data([xys])
             .call(chart);
         chart.zoomRect(true);
+        d3.select("#reset_zoom").on("click", function() {chart.resetzoom()});
       });
     };
     //var fileinput = document.getElementById('sansfile');
@@ -525,6 +526,7 @@ canvas {
     <span class="axis-select-label">
         <label>Poisson errorbars:<input type="checkbox" id="show_errorbars" checked /> </label>
     </span>
+    <button id="reset_zoom">Reset zoom</button>
   </div>
 </div>
 <div id="top_panel" class="ui-layout-north">
