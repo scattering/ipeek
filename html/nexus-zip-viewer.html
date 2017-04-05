@@ -119,6 +119,9 @@
               var id = $(data.node).attr("id");
               selected_node = id;
               var isdir = (id.slice(-1) == "/");
+              f.get(id).then(function(item) { 
+                  $("#link_target").html( (item.orig_path == null) ? "" : "<pre>link to: " + item.orig_path + "</pre>" );
+              });
               f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               if (!isdir) {
                 f.get(id).then(nz.getValue).then(function(v) {
@@ -523,6 +526,7 @@ canvas {
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
   <div id="device_attrs"></div>
+  <div id="link_target"></div>
 </div>
 
 </body>
