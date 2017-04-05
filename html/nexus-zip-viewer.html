@@ -120,7 +120,7 @@
               selected_node = id;
               var isdir = (id.slice(-1) == "/");
               f.get(id).then(function(item) { 
-                  $("#link_target").html( (item.orig_path == null) ? "" : "<pre>link to: " + item.orig_path + "</pre>" );
+                  $("#link_target").html( (item.orig_path == null || item.path == null) ? "" : "<pre>link to: " + item.path + "</pre>" );
               });
               f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               if (!isdir) {
