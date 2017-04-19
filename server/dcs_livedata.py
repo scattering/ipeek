@@ -90,7 +90,7 @@ sources = [
      {"name": "MACS",
      "host_name": "macs.ncnr.nist.gov",
      "host_port": 22,
-     "username": "ice",
+     "username": "ncnr",
      "retrieve_method": "ssh",
      "root_dir": "/home/NIST/",
      "live_datapath":"ncnr",
