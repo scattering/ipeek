@@ -89,7 +89,7 @@
                 $('.plotcell div').width(($('.plotcell').width() - 10).toFixed() + 'px');
                 $('.plotcell .plotdiv').height(($(window).innerHeight() - 250).toFixed() + 'px');
                 for (var p in plots) {
-                    plots[p].replot();
+                    plots[p].autofit();
                 }
             }
             window.onload = function() {
@@ -192,16 +192,19 @@
                 $('#' + plot_2d_target).empty();
                 d3.selectAll("#" + plot_2d_target + " svg").remove();
                 $('#run_title').text(data_2d.title);
-                var chart = new heatChart.default({
-                	"ztransform": ztransform,
+                var plot_2d_options = {
+                    "ztransform": ztransform,
                 	"aspect_ratio": 1.0,
-                	"dims": data_2d.dims
-                }); // new heatChart()
+                	"dims": data_2d.dims,
+                    axes: {
+                        xaxis: {label: data_2d.xlabel},
+                        yaxis: {label: data_2d.ylabel}
+                    }
+                }
+                var chart = new heatChart.default(plot_2d_options);
                 chart
                   .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-                  .autoscale(true)
-                  .xlabel(data_2d.xlabel)
-                  .ylabel(data_2d.ylabel);
+                  .autoscale(true);
                 plots['area_2d'] = chart;
                 d3.select('#' + plot_2d_target)
                   .data(data_2d.z)
