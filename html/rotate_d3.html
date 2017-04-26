@@ -28,10 +28,11 @@
                 }
         </script>
         
-        <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/heat-chart-colorbar-typed-options.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/get_colormap.js" charset="utf-8"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+        <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/heat-chart.js"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/colormap.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
 
         <script type="text/javascript">
             var refreshtime = 10; // refresh rate
@@ -331,12 +332,12 @@
             }
             
             var heatmap_charts = {
-              'plot0': new heatChart(),
-              'plot1': new heatChart()
+              'plot0': new heatChart.default({}),
+              'plot1': new heatChart.default({})
             }
             var xy_charts = {
-              'plot0': new xyChart(),
-              'plot1': new xyChart()
+              'plot0': new xyChart.default({}),
+              'plot1': new xyChart.default({})
             }
             
             function showData(datalist) {
@@ -391,8 +392,8 @@
                     var chart = heatmap_charts[next_target]; // new heatChart()
                     //chart.options(data.options)
                     chart
-                      .colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-                      .aspect_ratio(aspect_ratio)
+                      .options({aspect_ratio: aspect_ratio})
+                      .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                       .dims(data.dims)
                     if (data.xlabel) { chart.xlabel(data.xlabel); }
                     if (data.ylabel) { chart.ylabel(data.ylabel); }
