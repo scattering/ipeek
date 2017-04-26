@@ -43,7 +43,7 @@
         <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
 
         <script type="text/javascript" src="plotting_api2.js"></script>
-        <script src="geturlvars.js"></script>
+        <script src="js/geturlvars.js"></script>
         
 
         <!-- JQPLOT -->
@@ -116,7 +116,7 @@
                     var noCache = new Date().getTime();
                     $.ajax({
                         dataType: "json",
-                        url: "data/" + instr + "/live_data.json",
+                        url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
                         data: { "noCache": noCache },
                         context: {"instr": instr},
                         success: showData
