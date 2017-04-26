@@ -23,12 +23,13 @@
 <!--        <script type="text/javascript" src="jquery-1.5.1.min.js"></script>-->
 <!--        <script type="text/javascript" src="jquery.jqplot.min.js"></script>-->
 
-        <script src="geturlvars.js"></script>
+        <script src="js/geturlvars.js"></script>
         
-        <script type="text/javascript" src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/heat-chart-colorbar-typed-options.js"></script>
-        <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/d3-science/get_colormap.js" charset="utf-8"></script>
+        <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/heat-chart.js"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/colormap.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
         <link rel="stylesheet" href="css/xy-chart.css" />
 
         <!-- JQPLOT -->
@@ -38,7 +39,7 @@
             COLS = 4;
             INSTRUMENTS = [];
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
-            ERRORBARS = ['BT7','BT9', 'BT4', 'NGBSANS', 'NG7SANS'];
+            ERRORBARS = ['BT7','BT9', 'BT4', 'NGB30SANS', 'NG7SANS', 'NGBSANS'];
             PRECISION = 6;
             current_instr = null;
             plots = {};
@@ -110,7 +111,7 @@
                 for (var i=0; i<instruments.length; i++) {
                     var instr = instruments[i];
                     var noCache = new Date().getTime();
-                    $.getJSON("data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                    $.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
                 }
             }
             
@@ -173,7 +174,7 @@
                 plot_1d_options.axes.yaxis.label = "I";
                 plot_1d_options.xtransform = xtransform;
                 plot_1d_options.ytransform = ytransform;
-                var chart_1d = new xyChart(plot_1d_options);
+                var chart_1d = new xyChart.default(plot_1d_options);
                 d3.selectAll("#" + plot_1d_target + " svg").remove();
                 d3.selectAll("#" + plot_1d_target).data([data_sum.data]).call(chart_1d);
                 //$("#xscale, #yscale").change(handleChecked);
@@ -191,13 +192,13 @@
                 $('#' + plot_2d_target).empty();
                 d3.selectAll("#" + plot_2d_target + " svg").remove();
                 $('#run_title').text(data_2d.title);
-                var chart = new heatChart({
+                var chart = new heatChart.default({
                 	"ztransform": ztransform,
                 	"aspect_ratio": 1.0,
                 	"dims": data_2d.dims
                 }); // new heatChart()
                 chart
-                  .colormap(cm.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+                  .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                   .autoscale(true)
                   .xlabel(data_2d.xlabel)
                   .ylabel(data_2d.ylabel);
