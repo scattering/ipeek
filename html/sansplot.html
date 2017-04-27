@@ -51,26 +51,22 @@
               }
             }
             
-            function createTable(target, cols, numCells) {
+            function createTable(target, numCells) {
                 // create a table with numCells in the target
-                var cells = 0;
-                for (var r=0; cells < numCells; r++) {
-                    var row = $('<div />', {'class': 'plotrow'});
-                    $('#'+ target).append(row);
-                    for (var c=0; c<cols && cells < numCells; c++) {
-                        var cell = $('<div />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
-                        cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
-                        var xtransform = $('<label />', {'class': 'transform xtransform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
-                        cell.append(xtransform);
-                        var ytransform = $('<label />', {'class': 'transform ytransform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
-                        cell.append(ytransform);
-                        var ztransform = $('<label />', {'class': 'transform ztransform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
-                        cell.append(ztransform);
-                        cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
-                        cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
-                        row.append(cell);
-                        cells++;
-                    }
+                var t = $("#" + target);
+                for (var c=0; c < numCells; c++) {
+                    
+                    var cell = $('<div />', {'class': 'plotcell', 'id': 'cell' + (c+1).toFixed()});
+                    cell.append($('<div />', {'id': 'plot'+(c+1).toFixed(), 'class': 'plotdiv'}));
+                    var xtransform = $('<label />', {'class': 'transform xtransform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(xtransform);
+                    var ytransform = $('<label />', {'class': 'transform ytransform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(ytransform);
+                    var ztransform = $('<label />', {'class': 'transform ztransform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(ztransform);
+                    cell.append($('<span />', {'id': 'eta' + (c+1).toFixed()}));
+                    cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+                    t.append(cell);
                 }
             }
             
@@ -84,7 +80,7 @@
                 debug=false;
                 current_instr = jQuery.getUrlVar('instrument');
                 INSTRUMENTS = [current_instr];
-                createTable('content_table', 2, 2);
+                createTable('plots', 2);
                 //$('.transform').change(updateTransform);        
                 loadData([current_instr], true);
                 onshow();
@@ -304,37 +300,43 @@
         padding-right: 20px;
     }
     
-    div#content_table {
+    div#plots {
         flex: 1;
-    }
-    
-    div.plotrow {
+        height: 100%;
         display: flex;
+        padding-bottom: 2em;
     }
     
     div.plotcell {
-        width: 50%;
+        flex: 1;
+        height: 100%;
     }
     
     div.plotdiv {
-        height: 80%;
+        height: 100%;
+    }
+    
+    header, footer, div#metadata  {
+      width: 100%;
     }
 
   </style>
     </head>
     <body id="singleplot">
         <div class="wrapper">
-            <?php include("/var/www/include/navigation.inc"); ?>
-            <?php include("/var/www/include/utility.inc"); ?>
-
+            <header>
+              <?php include("/var/www/include/navigation.inc"); ?>
+              <?php include("/var/www/include/utility.inc"); ?>
+            </header>
+            
             <div id="run_title"></div>
-            <div id="content_table"></div>
+            <div id="plots"></div>
             <div id="metadata"></div>
             
-            <div class="footer">
+            <footer>
                 <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
                 <div style="float:right;"><p><? lastmod(); ?></p></div>
-            </div>
+            </footer>
         </div>
 
     </body>
