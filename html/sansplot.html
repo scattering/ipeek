@@ -86,19 +86,21 @@
                 INSTRUMENTS = [current_instr];
                 createTable('content_table', 2, 2);
                 //$('.transform').change(updateTransform);        
-                loadData();
+                loadData([current_instr], true);
                 onshow();
-                
-                //loadData(INSTRUMENTS);
-                onresize();
             }
             
-            function loadData(instruments) {
+            function loadData(instruments, autofit) {
                 var instruments = instruments || INSTRUMENTS;
                 for (var i=0; i<instruments.length; i++) {
                     var instr = instruments[i];
                     var noCache = new Date().getTime();
-                    $.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+                    $.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {
+                      showData(datalist, instr);
+                      if (autofit) {
+                        onresize();
+                      }
+                    });
                 }
             }
             
@@ -315,7 +317,7 @@
     }
     
     div.plotdiv {
-        height: 100%;
+        height: 80%;
     }
 
   </style>
