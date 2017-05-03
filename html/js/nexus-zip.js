@@ -322,7 +322,7 @@ nz.Field.prototype = {
             accessor = function(d) {return d.map(parseFloat)};
           }
           else if (/[cbhil]/.test(attrs.format[1].toLowerCase())) {
-            accessor = function(d) {return d.map(parseInt)};
+            accessor = function(d) {return d.map(function(dd) { return parseInt(dd) })};
           }
           else if (/[s]/.test(attrs.format[1].toLowerCase())) {
             var unescape = function(d) {
