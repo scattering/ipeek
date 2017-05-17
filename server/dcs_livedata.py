@@ -51,7 +51,7 @@ sources = [
      "retrieve_method": "ssh",
      "root_dir": "/usr/local/nice/server_data/experiments/",
      "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["live_data.json", "experiment_info.json"]},
      {"name": "NG7",
      "host_name": "ng7refl.ncnr.nist.gov",
      "host_port": 22,
