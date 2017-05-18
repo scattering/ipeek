@@ -192,15 +192,28 @@
         z-index: 10;
     }
     #north_panel {
-        background-color: LightGreen;
+        background-color: LightSkyBlue;
         height: 15px;
 	padding: 5px;
     }
     #north_panel.connected {
         background-color: LightGreen;
     }
-    #north_panel h3 {
+    div.header {
         display: inline-block;
+	margin: 0;
+    }
+    
+    div.instrument-name {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	height: 100%;
+	float: right;
+    }
+    
+    div.instrument-name > * > * {
+	display: inline-block;
     }
     
     .control-buttons {
@@ -231,8 +244,15 @@
 <body>
 <div id="dialog" title="description"></div>
 <div id="north_panel" class="ui-layout-north">
-    <h3 class="instrument-name">Instrument: </h3>
-    <select id="instrument"></select>
+    <div class="header title">
+        <h2>Experiment Browser</h2>
+    </div>
+    <div class="header instrument-name">
+	<div>
+	    <h3>Instrument: </h3>
+	    <select id="instrument"></select>
+	</div>
+    </div>
     <span id="queue_state"></span>
     </div>
 </div>
