@@ -28,11 +28,15 @@
     function change_instrument(instrument) {
       var instrument_path = instrument_name_to_path[instrument] || instrument.toLowerCase();
       $.getJSON('https://ncnr.nist.gov/ipeek/data/' + instrument + '/experiment_info.json', function(result) {
-	  $.extend(true, result, experiment_lookup[instrument_path] || {})
-	  enhanced_info = result;
+	  var instrument_lookup = experiment_lookup[instrument_path] || {};
 	  var data = Object.keys(result)
-	    .map(function(k) { var v = result[k]; v.paths = v.paths || []; return v })
-	    .filter(function(v) { return v.id });
+	    .map(function(k) { 
+		var v = result[k]; 
+		var folder = (v.clientPath || "null").replace(/^\//, '');
+		v.paths = (instrument_lookup[folder] || {}).paths || []; 
+		return v
+	    })
+	    //.filter(function(v) { return v.id });
 	  if (mainTable == null) {
 	    mainTable = $("table#experiments").dataTable({
 	      data: data,
@@ -69,7 +73,7 @@
         }
 	
 	return d.map(function(p) {
-	    var datalink = '<a href="https://ncnr.nist.gov/pub/ncnrdata/' + p + '/' + row.id + '/data">';
+	    var datalink = '<a href="https://ncnr.nist.gov/pub/ncnrdata/' + p + row.clientPath + '/data">';
 	    datalink += p;
 	    datalink += '</a>';
 	    return datalink;
