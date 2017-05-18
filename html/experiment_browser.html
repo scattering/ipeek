@@ -72,7 +72,7 @@
 	    return JSON.stringify(d);
         }
 	
-	return d.map(function(p) {
+	return d.slice().sort().map(function(p) {
 	    var datalink = '<a href="https://ncnr.nist.gov/pub/ncnrdata/' + p + row.clientPath + '/data">';
 	    datalink += p;
 	    datalink += '</a>';
