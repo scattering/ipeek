@@ -144,7 +144,7 @@
 	  .addClass("overflow")
 	  .on( "selectmenuchange", function( event, ui ) {
 	    change_instrument(this.value);
-	    window.history.pushState(null, this.value, "?instrument=" + this.value);
+	    window.history.replaceState(null, this.value, "?instrument=" + this.value);
 	})
 	
 	if (instrument_choices.indexOf(instrument) > -1) {
