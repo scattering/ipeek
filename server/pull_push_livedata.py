@@ -11,71 +11,63 @@ import StringIO
 DEBUG = False
 RETRIEVE_METHOD = "ssh" # or "ftp" or "urllib"
 MAX_FTP_RETRIES = 5
-
-#source_host = "solo.ncnr.nist.gov"                  #hard-coded
-#source_path = "/var/ftp"
-#source_port = 22
+HOST_PORT = 22
 
 sources = [
     {"name": "DCS",
      "host_name": "solo.ncnr.nist.gov",
-     "host_port": 22,
-     "retrieve_method": "ssh",
-     "root_dir": "/home/NIST/ncnr/",
-     "live_datapath":"livedata",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["/home/NIST/ncnr/live_data.json"]},
      {"name": "NSE",
      "host_name": "echo.ncnr.nist.gov",
-     "host_port": 22,
-     "retrieve_method": "ssh",
-     "root_dir": "/usr/local/nice/server_data/experiments/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "BT7",
      "host_name": "bt7console.ncnr.nist.gov",
-     "host_port": 22,
      "retrieve_method": "ssh",
-     "root_dir": "/home/NIST/ncnr/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["/home/NIST/ncnr/live_data/live_data.json"]},
      {"name": "SPINS",
      "host_name": "ng5spins.ncnr.nist.gov",
-     "host_port": 22,
      "retrieve_method": "ssh",
-     "root_dir": "/home/NIST/ncnr/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["/home/NIST/ncnr/live_data/live_data.json"]},
      {"name": "MAGIK",
      "host_name": "magik.ncnr.nist.gov",
-     "host_port": 22,
-     "retrieve_method": "ssh",
-     "root_dir": "/usr/local/nice/server_data/experiments/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": [
+       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
+       "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
+     ]},
+     {"name": "NG7",
+     "host_name": "ng7refl.ncnr.nist.gov",
+     "live_datafiles": [
+       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
+       "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
+     ]},
      {"name": "PBR",
      "host_name": "pbr.ncnr.nist.gov",
-     "host_port": 22,
-     "retrieve_method": "ssh",
-     "root_dir": "/usr/local/nice/server_data/experiments/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": [
+       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
+       "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
+     ]},
      {"name": "NGBSANS",
      "host_name": "ngbsans.ncnr.nist.gov",
-     "host_port": 22,
-     "retrieve_method": "ssh",
-     "root_dir": "/usr/local/nice/server_data/experiments/",
-     "live_datapath":"live_data",
-     "live_datafiles": ["live_data.json", "live_vaxformat.ngb"]},
+     "live_datafiles": [
+       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
+       "/usr/local/nice/server_data/experiments/live_data/live_vaxformat.ngb"
+     ]},
+     {"name": "NGB30SANS",
+     "host_name": "ngb30sans.ncnr.nist.gov",
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
+     {"name": "NG7SANS",
+     "host_name": "ng7sans.ncnr.nist.gov",
+     "live_datafiles": [
+        "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
+        "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
+     ]},
      {"name": "MACS",
      "host_name": "macs.ncnr.nist.gov",
-     "host_port": 22,
-     "username": "ice",
-     "retrieve_method": "ssh",
-     "root_dir": "/home/ice/",
-     "live_datapath":"python_ipeek",
-     "live_datafiles": ["live_data.json"]},
+     "live_datafiles": ["/home/NIST/ncnr/live_data.json"]},
+     {"name": "PHADES",
+     "host_name": "cts.ncnr.nist.gov",
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
 ]
-
 output = {}
 output_filelike = {}
 
@@ -92,83 +84,75 @@ dest_username = "bbm"
 # writing a list of the last file in Javascript format to a file
 json_filename = 'live_data.json'
 
+def retrieve_ftp(source_host, source_port, file_path, output_buffer, username):
+    ftp = ftplib.FTP(source_host)
+    ftp.login('anonymous')
+    live_datapath = os.path.dirname(file_path)
+    live_dataname = os.path.basename(file_path)
+    ftp.cwd(live_datapath)
+    ftp.retrbinary("RETR " + live_dataname, output_buffer.write)
+    ftp.close()
+    
+def retrieve_ssh(source_host, source_port, file_path, output_buffer, username):
+    source_transport = paramiko.Transport((source_host, source_port))
+    source_transport.window_size = 2147483647
+    source_transport.use_compression(True)
+    source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
+    source_username = username
+    source_transport.connect(username=source_username, pkey = source_pkey)
+    source_sftp = paramiko.SFTPClient.from_transport(source_transport)
+    if DEBUG:
+        print("starting read:", name, os.path.basename(file_path))
+    f = source_sftp.open(file_path)
+    response = f.read()
+    f.close()
+    if DEBUG:
+        print("ending read:", name, os.path.basename(file_path))
+    output_buffer.write(response)
+    if DEBUG:
+        print("ending stringIO:", name, os.path.basename(file_path))
+        
+def retrieve_urllib(source_host, source_port, file_path, output_buffer, username):
+    req_addr = os.path.join("ftp://" + source_host, live_datapath, live_dataname)
+    #req = urllib2.Request(req_addr)
+    response = None
+    retries = 0
+    while retries < MAX_FTP_RETRIES:
+        try:
+            response = urllib2.urlopen(req_addr)
+            break
+        except:
+            print("failed attempt %d to retrieve %s: trying again" % (retries, req_addr))
+        retries += 1
+            
+    if response is None: return
+    if DEBUG:
+        print("retrieved %s" % (req_addr))
+    output_buffer.write(response.read())
+    
 
+retrievers = {
+    "ssh": retrieve_ssh,
+    "urllib": retrieve_urllib,
+    "ftp": retrieve_ftp
+}
     
 for source in sources:
-    retrieve_method = source['retrieve_method']
-    #live_dataname = source['live_dataname']
-    live_datapath = source['live_datapath']
-    root_dir = source['root_dir']
+    retrieve_method = source.get('retrieve_method', RETRIEVE_METHOD)
     name = source['name']
-    if ('username' in source): 
-        username = source['username']
-    else: 
-        username = "ncnr"
+    username = source.get('username', 'ncnr')
     source_host = source['host_name']
-    source_port = source['host_port']
-    #print "live data modified:", source_sftp.file(live_dataname).stat().st_mtime
+    source_port = source.get('host_port', HOST_PORT)
     try:
-        for live_dataname in source['live_datafiles']:
+        for live_datapath in source['live_datafiles']:
             live_data = StringIO.StringIO()
-            #live_data = open(os.path.join(local_path, live_dataname), 'wb')
-            if retrieve_method == "urllib":       
-                req_addr = os.path.join("ftp://" + source_host, live_datapath, live_dataname)
-                #req = urllib2.Request(req_addr)
-                response = None
-                retries = 0
-                while retries < MAX_FTP_RETRIES:
-                    try:
-                        response = urllib2.urlopen(req_addr)
-                        break
-                    except:
-                        print "failed attempt %d to retrieve %s: trying again" % (retries, req_addr)
-                    retries += 1
-                
-                        
-                if response is None: continue
-                print "retrieved %s" % (req_addr)
-                live_data.write(response.read())
-            
-            elif retrieve_method == "ftp":
-                ftp = ftplib.FTP(source_host)
-                ftp.login('anonymous')
-                ftp.cwd(live_datapath)
-                ftp.retrbinary("RETR " + live_dataname, live_data.write)
-                ftp.close()
-                
-            elif retrieve_method == "ssh":
-                source_transport = paramiko.Transport((source_host, source_port))
-                source_transport.window_size = 2147483647
-                source_transport.use_compression(True)
-                source_pkey = paramiko.RSAKey(filename="/home/bbm/.ssh/datapullkey")
-                source_username = username
-                source_transport.connect(username=source_username, pkey = source_pkey)
-                source_sftp = paramiko.SFTPClient.from_transport(source_transport)
-                if DEBUG:
-                    print "starting read:", name,  live_dataname
-                f = source_sftp.open(os.path.join(root_dir, live_datapath, live_dataname))
-                response = f.read()
-                f.close()
-                if DEBUG:
-                    print "ending read:", name,  live_dataname
-                live_data.write(response)
-                if DEBUG:
-                    print "ending stringIO:", name,  live_dataname
-                
-            else:
-                print "no valid retrieve_method"
-              
+            retriever = retrievers.get(retrieve_method, lambda *args: None)
+            print name, source_host, username
+            retriever(source_host, source_port, live_datapath, live_data, username)
             live_data.seek(0) # move back to the beginning of file
-            #live_data.close()
-            
-            files = [live_dataname,]
-
-            # here I import the library that reads in SANS files:
-            #from plot_dcs import process_raw_dcs
-            #json_data = process_raw_dcs(local_path)
-            json_data = live_data    
             output.setdefault(name, {})
-            output[name][live_dataname] = json_data.read()
+            filename = os.path.basename(live_datapath)
+            output[name][filename] = live_data.read()
             
     except:
         if DEBUG:
