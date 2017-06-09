@@ -135,7 +135,6 @@ for source in sources:
         for live_datapath in source['live_datafiles']:
             live_data = StringIO.StringIO()
             retriever = retrievers.get(retrieve_method, lambda *args: None)
-            print name, source_host, username
             retriever(source_host, source_port, live_datapath, live_data, username)
             live_data.seek(0) # move back to the beginning of file
             output.setdefault(name, {})
