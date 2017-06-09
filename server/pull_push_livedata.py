@@ -30,22 +30,13 @@ sources = [
      "live_datafiles": ["/home/NIST/ncnr/live_data/live_data.json"]},
      {"name": "MAGIK",
      "host_name": "magik.ncnr.nist.gov",
-     "live_datafiles": [
-       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
-       "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
-     ]},
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "NG7",
      "host_name": "ng7refl.ncnr.nist.gov",
-     "live_datafiles": [
-       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
-       "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
-     ]},
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "PBR",
      "host_name": "pbr.ncnr.nist.gov",
-     "live_datafiles": [
-       "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
-       "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
-     ]},
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "NGBSANS",
      "host_name": "ngbsans.ncnr.nist.gov",
      "live_datafiles": [
@@ -57,10 +48,7 @@ sources = [
      "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "NG7SANS",
      "host_name": "ng7sans.ncnr.nist.gov",
-     "live_datafiles": [
-        "/usr/local/nice/server_data/experiments/live_data/live_data.json", 
-        "/usr/local/nice/server_data/experiments/manifest/experiment_manifest.backup"
-     ]},
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "MACS",
      "host_name": "macs.ncnr.nist.gov",
      "live_datafiles": ["/home/NIST/ncnr/live_data.json"]},
