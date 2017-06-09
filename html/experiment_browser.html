@@ -18,7 +18,7 @@
 
   <script type="text/javascript">
     var mainTable;
-    var instrument_choices = ["PBR", "MAGIK", "NG7SANS"]
+    var instrument_choices = ["PBR", "MAGIK", "NG7SANS", "NG7", "NGB30SANS", "NGBSANS", "NSE", "PHADES"]
     var instrument_name_to_path = {"PBR": "ngd", "MAGIK": "cgd"}
     var experiment_lookup = {};
     var enhanced_info = {};
@@ -27,16 +27,15 @@
     
     function change_instrument(instrument) {
       var instrument_path = instrument_name_to_path[instrument] || instrument.toLowerCase();
-      $.getJSON('https://ncnr.nist.gov/ipeek/data/' + instrument + '/experiment_info.json', function(result) {
+      $.getJSON('https://ncnr.nist.gov/ipeek/data/' + instrument + '/experiment_manifest.backup', function(result) {
 	  var instrument_lookup = experiment_lookup[instrument_path] || {};
-	  var data = Object.keys(result)
-	    .map(function(k) { 
-		var v = result[k]; 
-		var folder = (v.clientPath || "null").replace(/^\//, '');
-		v.paths = (instrument_lookup[folder] || {}).paths || []; 
-		return v
-	    })
-	    //.filter(function(v) { return v.id });
+	  var data = result.map(function(expt) {
+	      var v = expt.value.value;
+	      var folder = (v.clientPath || "null").replace(/^\//, '');
+	      v.paths = (instrument_lookup[folder] || {}).paths || []; 
+	      return v
+	  });
+	  //.filter(function(v) { return v.id });
 	  if (mainTable == null) {
 	    mainTable = $("table#experiments").dataTable({
 	      data: data,
