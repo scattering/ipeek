@@ -9,7 +9,7 @@ import time
 import StringIO
 import json
 
-DEBUG = True
+DEBUG = False
 RETRIEVE_METHOD = "ssh" # or "ftp" or "urllib"
 MAX_FTP_RETRIES = 5
 HOST_PORT = 22
