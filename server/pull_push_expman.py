@@ -108,8 +108,16 @@ def strip_emails(manifest):
         expt['value']['value'].pop('emails', None)
     return json.dumps(manifest_obj)
 
+def strip_emails_and_proprietary(manifest):
+    manifest_obj = json.loads(manifest)
+    for i, expt in enumerate(manifest_obj):
+        if expt['value']['value'].get('publish', '') != 'NORMAL':
+            manifest_obj.pop(i)
+        else:
+            expt['value']['value'].pop('emails', None)
+    return json.dumps(manifest_obj)
         
-filters = [strip_header, strip_emails]
+filters = [strip_header, strip_emails_and_proprietary]
 
 for source in sources:
     retrieve_method = source.get('retrieve_method', RETRIEVE_METHOD)
