@@ -64,6 +64,8 @@
                     cell.append(ytransform);
                     var ztransform = $('<label />', {'class': 'transform ztransform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
                     cell.append(ztransform);
+                    var showgrid = $('<label />', {'class': 'showgrid'}).text('grid').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(showgrid);
                     cell.append($('<span />', {'id': 'eta' + (c+1).toFixed()}));
                     cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                     t.append(cell);
@@ -123,12 +125,14 @@
                 $('#cell1 .transform[axis=xaxis]').hide();
                 $('#cell1 .transform[axis=yaxis]').hide();
                 $('#cell1 .transform[axis=zaxis]').show();
+                $('#cell1 .showgrid').show();
                 var logZselected = $('#cell1 .transform[axis=zaxis]').find('input')[0].checked;
                 var ztransform = logZselected? 'log' : 'linear';
                 
                 $('#cell2 .transform[axis=xaxis]').show();
                 $('#cell2 .transform[axis=yaxis]').show();
                 $('#cell2 .transform[axis=zaxis]').hide();
+                $('#cell2 .showgrid').show();
                 var logYselected = $('#cell2 .transform[axis=yaxis]').find('input')[0].checked;
                 var logXselected = $('#cell2 .transform[axis=xaxis]').find('input')[0].checked;
                 var ytransform = logYselected? 'log' : 'linear';
@@ -165,6 +169,7 @@
                 //$("#xscale, #yscale").change(handleChecked);
                 $("#" + cell_1d_target + " .xtransform input").change(function() {chart_1d.xtransform((this.checked)? 'log' : 'linear')});
                 $("#" + cell_1d_target + " .ytransform input").change(function() {chart_1d.ytransform((this.checked)? 'log' : 'linear')});
+                $("#" + cell_1d_target + " .showgrid input").change(function() {chart_1d.show_grid(this.checked)});
                   var x0 = 10,
                       y0 = 10, 
                       dx = 135,
@@ -199,6 +204,7 @@
                     $('#' + eta_target).html(make_metadata_table(data_2d.metadata));
                 }
                 $("#" + cell_2d_target + " .ztransform input").change(function() {chart.ztransform((this.checked)? 'log' : 'linear')});
+                $("#" + cell_2d_target + " .showgrid input").change(function() {chart.show_grid(this.checked)});
                 
             }
             
