@@ -65,6 +65,11 @@
                     cell.append(ztransform);
                     var showgrid = $('<label />', {'class': 'showgrid'}).text('grid').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
                     cell.append(showgrid);
+                    var colormap_select = $('<label />', {'class': 'colormap'}).text('colormap').append($('<select />'));
+                    colormap.colormap_names.forEach(function(cm) {
+                      $('select', colormap_select).append($('<option />', {text: cm, value: cm, selected: (cm == 'jet')}));
+                    });
+                    cell.append(colormap_select);
                     cell.append($('<span />', {'id': 'eta' + (c+1).toFixed()}));
                     cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                     t.append(cell);
@@ -126,6 +131,7 @@
                 $('#cell1 .transform[axis=yaxis]').hide();
                 $('#cell1 .transform[axis=zaxis]').show();
                 $('#cell1 .showgrid').show();
+                $('#cell1 .colormap').show();
                 var logZselected = $('#cell1 .transform[axis=zaxis]').find('input')[0].checked;
                 var ztransform = logZselected? 'log' : 'linear';
                 
@@ -133,6 +139,7 @@
                 $('#cell2 .transform[axis=yaxis]').show();
                 $('#cell2 .transform[axis=zaxis]').hide();
                 $('#cell2 .showgrid').show();
+                $('#cell2 .colormap').hide();
                 var logYselected = $('#cell2 .transform[axis=yaxis]').find('input')[0].checked;
                 var logXselected = $('#cell2 .transform[axis=xaxis]').find('input')[0].checked;
                 var ytransform = logYselected? 'log' : 'linear';
@@ -205,6 +212,10 @@
                 }
                 $("#" + cell_2d_target + " .ztransform input").change(function() {chart.ztransform((this.checked)? 'log' : 'linear')});
                 $("#" + cell_2d_target + " .showgrid input").change(function() {chart.show_grid(this.checked)});
+                $("#" + cell_2d_target + " .colormap select").change(function() {
+                  chart.colormap(colormap.get_colormap(this.value)).redrawImage();
+                  chart.colorbar.update()
+                });
               }
               else {
                 plots['sum'].source_data(data_sum.data).update();
