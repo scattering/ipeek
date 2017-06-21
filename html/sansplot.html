@@ -26,7 +26,6 @@
         <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
         <link rel="stylesheet" href="css/xy-chart.css" />
 
-        <!-- JQPLOT -->
         <script type="text/javascript">
             var refreshtime = 60; // 1 minute refresh rate
             var refreshtimer = null;
@@ -104,8 +103,9 @@
             
             
             function showData(datalist, instr) {
-                data_2d = datalist[0];
-                data_sum = datalist[1];
+              data_2d = datalist[0];
+              data_sum = datalist[1];
+              if (plots['sum'] == null || plots['area_2d'] == null) {
                 var axes_options = {axes: {
                     xaxis: {},
                     yaxis: {}
@@ -184,8 +184,8 @@
                 $('#run_title').text(data_2d.title);
                 var plot_2d_options = {
                     "ztransform": ztransform,
-                	"aspect_ratio": 1.0,
-                	"dims": data_2d.dims,
+                  "aspect_ratio": 1.0,
+                  "dims": data_2d.dims,
                     axes: {
                         xaxis: {label: data_2d.xlabel},
                         yaxis: {label: data_2d.ylabel}
@@ -205,7 +205,11 @@
                 }
                 $("#" + cell_2d_target + " .ztransform input").change(function() {chart.ztransform((this.checked)? 'log' : 'linear')});
                 $("#" + cell_2d_target + " .showgrid input").change(function() {chart.show_grid(this.checked)});
-                
+              }
+              else {
+                plots['sum'].source_data(data_sum.data).update();
+                plots['area_2d'].source_data(data_2d.z[0])
+              }
             }
             
             /*
