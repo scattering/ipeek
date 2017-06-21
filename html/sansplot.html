@@ -1,7 +1,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-        <meta http-equiv="refresh" content="3600">
+        <meta http-equiv="refresh" content="7200">
         <title>NCNR live data</title>
         <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Salsa" />
  
@@ -105,6 +105,7 @@
             function showData(datalist, instr) {
               data_2d = datalist[0];
               data_sum = datalist[1];
+              var eta_target = 'metadata';
               if (plots['sum'] == null || plots['area_2d'] == null) {
                 var axes_options = {axes: {
                     xaxis: {},
@@ -120,7 +121,6 @@
                 var cell_1d_target = 'cell2';
                 var plot_2d_target = 'plot1';
                 var plot_1d_target = 'plot2';
-                var eta_target = 'metadata';
                 
                 $('#cell1 .transform[axis=xaxis]').hide();
                 $('#cell1 .transform[axis=yaxis]').hide();
@@ -209,6 +209,10 @@
               else {
                 plots['sum'].source_data(data_sum.data).update();
                 plots['area_2d'].source_data(data_2d.z[0])
+                $('#run_title').text(data_2d.title);
+                if (data_2d.metadata) {
+                    $('#' + eta_target).html(make_metadata_table(data_2d.metadata));
+                }
               }
             }
             
