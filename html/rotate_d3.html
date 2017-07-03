@@ -393,7 +393,8 @@
                     //chart.options(data.options)
                     chart
                       .options({aspect_ratio: aspect_ratio})
-                      .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+                      //.colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+                      .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "seismic" : "jet"))
                       .dims(data.dims)
                     if (data.xlabel) { chart.xlabel(data.xlabel); }
                     if (data.ylabel) { chart.ylabel(data.ylabel); }
