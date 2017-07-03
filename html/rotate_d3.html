@@ -391,10 +391,14 @@
                     }
                     var chart = heatmap_charts[next_target]; // new heatChart()
                     //chart.options(data.options)
+                    var colormap_lookup = {
+                        "NGBSANS": "spectral",
+                        "NG7SANS": "seismic"
+                    }
                     chart
                       .options({aspect_ratio: aspect_ratio})
                       //.colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
-                      .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "seismic" : "jet"))
+                      .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
                       .dims(data.dims)
                     if (data.xlabel) { chart.xlabel(data.xlabel); }
                     if (data.ylabel) { chart.ylabel(data.ylabel); }
