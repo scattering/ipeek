@@ -16,7 +16,7 @@ HOST_PORT = 22
 sources = [
     {"name": "DCS",
      "host_name": "solo.ncnr.nist.gov",
-     "live_datafiles": ["/home/NIST/ncnr/live_data.json"]},
+     "live_datafiles": ["/home/NIST/ncnr/livedata/live_data.json"]},
      {"name": "NSE",
      "host_name": "echo.ncnr.nist.gov",
      "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
