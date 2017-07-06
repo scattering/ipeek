@@ -62,7 +62,7 @@
                 for (var i=0; i<dx; i++) {
                     for (var j=0; j<dy; j++) {
                         var mi = (j*dx + i) * 4;
-                        var n = maskData[mi];
+                        var n = maskData[mi] / 255.0; // put it back on scale [0..1]
                         normalize += n;
                         //sum += maskData[mi] * data[min_y + j][min_x + i];
                         sum += n * data[ch - min_y - j -1][min_x + i];
@@ -139,7 +139,7 @@
                 for (var i=0; i<dx; i++) {
                     for (var j=0; j<dy; j++) {
                         var mi = (j*dx + i) * 4;
-                        var n = maskData[mi];
+                        var n = maskData[mi] / 255.0; // put it back on [0..1] scale
                         normalize += n;
                         //sum += maskData[mi] * data[min_y + j][min_x + i];
                         sum += n * data[ch - min_y - j - 1][min_x + i];
