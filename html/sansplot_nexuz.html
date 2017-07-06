@@ -1,0 +1,529 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta http-equiv="refresh" content="7200">
+        <title>NCNR live data</title>
+        <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Salsa" />
+ 
+        <!-- Reference the theme's stylesheet on the Google CDN -->
+<!--        <link href="http://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"-->
+<!--            type="text/css" rel="Stylesheet" />-->
+            
+<!--        <style>-->
+<!--         body {width:100%; height:100%; overflow:hidden, margin:0}-->
+<!--         html {width:100%; height:100%; overflow:hidden}-->
+<!--        </style>-->
+ 
+        <!-- Reference jQuery and jQuery UI from the CDN. Remember
+           that the order of these two elements is important -->
+        <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
+        <script src="js/geturlvars.js"></script>
+        <script src="js/es6-promise.min.js"></script>
+        <script src="js/zip/zip.js"></script>
+        <script src="js/zip/deflate.js"></script>
+        <script src="js/zip/inflate.js"></script>
+        <script src="js/zip/zip-fs.js"></script>
+        <script src="js/DataStream.js"></script>
+        <script src="js/nexus-zip.js"></script>
+        <script src="js/circular_sums.js"></script>
+        <script src="//cdnjs.cloudflare.com/ajax/libs/mathjs/3.14.2/math.min.js"></script>
+        
+        <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/heat-chart.js"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/colormap.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
+        <link rel="stylesheet" href="css/xy-chart.css" />
+
+        <script type="text/javascript">
+            var refreshtime = 60; // 1 minute refresh rate
+            var refreshtimer = null;
+            COLS = 4;
+            INSTRUMENTS = [];
+            INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'BT4':'FANS', 'NG7':'Reflectometer'};
+            ERRORBARS = ['BT7','BT9', 'BT4', 'NGB30SANS', 'NG7SANS', 'NGBSANS'];
+            PRECISION = 6;
+            current_instr = null;
+            plots = {};
+            colorbars = {};
+            sumplots = {};
+            maskCanvas = document.createElement('canvas');
+            
+            function onshow() {
+              if (refreshtimer == null) 
+                refreshtimer = setInterval("loadData(current_instr);", refreshtime*1000);
+            }
+            function onhide() {
+              if (refreshtimer != null) {
+                clearInterval(refreshtimer);
+                refreshtimer = null;
+              }
+            }
+            
+            math.indices = function(shape) {
+              var m = shape[0],
+                  n = shape[1];
+              var size = m*n;
+              var index_array_m = new Array(size), 
+                  index_array_n = new Array(size);
+              for (var i=0; i<n*m; i++) {
+                index_array_m[i] = i%n;
+                index_array_n[i] = i%m;
+              }
+              var indices_m = math.matrix(index_array_m), 
+                  indices_n = math.matrix(index_array_n);
+              indices_m = indices_m.reshape([shape[0], shape[1]]);
+              indices_n = math.transpose(indices_n.reshape([shape[1], shape[0]]));
+              
+              return [indices_m, indices_n];
+            } 
+              
+            math.createUnit("Ang", "1 angstrom"); // need an alias because of weird units in file
+            
+            function createTable(target, numCells) {
+                // create a table with numCells in the target
+                var t = $("#" + target);
+                for (var c=0; c < numCells; c++) {
+                    
+                    var cell = $('<div />', {'class': 'plotcell', 'id': 'cell' + (c+1).toFixed()});
+                    cell.append($('<div />', {'id': 'plot'+(c+1).toFixed(), 'class': 'plotdiv'}));
+                    var xtransform = $('<label />', {'class': 'transform xtransform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(xtransform);
+                    var ytransform = $('<label />', {'class': 'transform ytransform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(ytransform);
+                    var ztransform = $('<label />', {'class': 'transform ztransform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(ztransform);
+                    var showgrid = $('<label />', {'class': 'showgrid'}).text('grid').append($('<input />', {'type': 'checkbox', 'checked': 'checked'}));
+                    cell.append(showgrid);
+                    var colormap_select = $('<label />', {'class': 'colormap'}).text('colormap').append($('<select />'));
+                    colormap.colormap_names.forEach(function(cm) {
+                      $('select', colormap_select).append($('<option />', {text: cm, value: cm, selected: (cm == 'jet')}));
+                    });
+                    cell.append(colormap_select);
+                    cell.append($('<span />', {'id': 'eta' + (c+1).toFixed()}));
+                    cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+                    t.append(cell);
+                }
+            }
+            
+            var onresize = function() {
+                for (var p in plots) {
+                    plots[p].autofit();
+                }
+            }
+            window.onload = function() {
+                //$.ajaxSetup({ cache: false });
+                zip.useWebWorkers = false;
+                debug=false;
+                current_instr = jQuery.getUrlVar('instrument');
+                createTable('plots', 2);
+                //$('.transform').change(updateTransform);        
+                loadData(current_instr, true);
+                onshow();
+            }
+            
+            function loadData(instr, autofit) {
+              var noCache = new Date().getTime();
+              var path = "https://ncnr.nist.gov/ipeek/data/" + instr + "/";
+              var filename = "live_data.nxz";
+              getNexusZip(path, filename);
+            }
+            
+            var getNexusZip = function(path, filename) {
+              var autoscroll = false; // trigger a scroll for autoselected items.
+              var req = new XMLHttpRequest();
+              req.open('GET', path + filename);
+              req.responseType = 'blob';
+              req.onload = function() {
+                zip.createReader(new zip.BlobReader(req.response), function(reader) {
+                  // get all entries from the zip
+                  reader.getEntries(function(entries) {
+                    f = new nz.File().init(filename, entries);
+                    var entry;
+                    f.items()[0][1]
+                      .then(function(en) { entry = en; 
+                        return Promise.all([
+                          entry.get('DAS_logs/areaDetector/counts'),
+                          entry.get('DAS_logs/areaDetector/dimension'),
+                          entry.get('DAS_logs/detectorPosition/softPosition'),
+                          entry.get('DAS_logs/areaDetector/beamCenterX'),
+                          entry.get('DAS_logs/areaDetector/beamCenterY'),
+                          entry.get('DAS_logs/wavelength/wavelength'),
+                          entry.get('instrument/detector/x_pixel_size'),
+                          entry.get('instrument/detector/y_pixel_size')
+                        ])
+                      })
+                      .then(function(fields) { return Promise.all([
+                        Promise.all(fields.map(function(field) { return field.getAttrs() })),
+                        Promise.all(fields.map(function(field) { return field.getValue() })) ]) 
+                      })
+                      .then(function(result) { process_data(result); });
+                  });
+                });
+              }
+              req.send(); 
+            };
+            
+            function process_data(r) {
+              var a = r[0], c = r[1];
+              function with_units(i) { 
+                return math.unit(c[i][0][0].toString() + a[i].units);
+              }
+              var shape = c[1].map(function(d) { return d[0] });
+              var L2 = with_units(2).to('cm').toNumber();
+              var x0 = with_units(3).to('cm').toNumber(); // actually pixels.
+              var y0 = with_units(4).to('cm').toNumber(); // actually pixels.
+              var wavelength = with_units(5).to('angstrom').toNumber();
+              var xpixelsize = with_units(6).to('cm').toNumber();
+              var ypixelsize = with_units(7).to('cm').toNumber();
+              var counts = math.matrix(Array.prototype.slice.call(c[0]));
+              counts = math.transpose(counts.reshape(shape));
+              pixel_to_Q = xpixelsize / L2 * 4.0 * Math.PI / wavelength;  // assume square pixels
+              maskCanvas.width = shape[0];
+              maskCanvas.height = shape[1];
+              var qdims = {
+                xdim: shape[0],
+                xmin: -x0 * pixel_to_Q,
+                xmax: (shape[0] - x0) * pixel_to_Q,
+                ydim: shape[1],
+                ymin: -y0 * pixel_to_Q,
+                ymax: (shape[1] - y0) * pixel_to_Q
+              }
+              
+              var pdims = {
+                xdim: shape[0],
+                xmax: shape[0],
+                xmin: 0,
+                ydim: shape[1],
+                ymax: shape[1],
+                ymin: 0
+              }
+              
+              sum = multiplySumRadial(maskCanvas, counts.toArray(), qdims, 0.0, 0.0);
+              var y_with_errorbars = sum.sum.map(function(d,i) { 
+                var norm = sum.normalize[i];
+                var x = sum.xy[i][0];
+                var normed_y = sum.xy[i][1];
+                var q = x * pixel_to_Q;
+                var dy = getPoissonUncertainty(d);
+                var normed_dy = (norm == 0) ? {yupper: NaN, ylower: NaN} : {yupper: dy.yupper/norm, ylower: dy.ylower/norm} 
+                return [q, normed_y, normed_dy];
+              })
+              
+                            
+              data_2d = {
+                "type": "2d", 
+                "z": [counts.toArray()],
+                "dims": pdims,
+                "xlabel": "xpixel",
+                "ylabel": "ypixel"
+              }
+              
+              data_sum = {
+                "type": "1d",
+                "data": [y_with_errorbars]
+              }
+              
+              showData([data_2d, data_sum], current_instr);
+                
+              // xshape, yshape = self.state.data.get('areaDetector.dimension')
+              
+              //var indices = math.indices(shape);
+              //var x = indices[0], y = indices[1];
+              //var X = math.multiply(xpixelsize, math.subtract(x, x0));
+              //var Y = math.multiply(ypixelsize, math.subtract(y, y0));
+              //var r = math.sqrt(math.add(math.square(X), math.square(Y)));
+              //var theta = math.multiply(math.atan2(r, L2), 0.5) //remember to convert L2 to cm from meters
+              //var q = math.multiply(4*math.pi/wavelength, math.sin(theta));
+              //var alpha = math.atan2(Y, X);
+              //var qx = math.multiply(q, math.cos(alpha));
+              //var qy = math.multiply(q, math.sin(alpha));
+              //console.log(shape, L2, x0, y0, wavelength, xpixelsize, ypixelsize, counts);
+              //console.log(qx, qy);
+            }
+            
+            
+            function showData(datalist, instr) {
+              data_2d = datalist[0];
+              data_sum = datalist[1];
+              var eta_target = 'metadata';
+              if (plots['sum'] == null || plots['area_2d'] == null) {
+                var axes_options = {axes: {
+                    xaxis: {},
+                    yaxis: {}
+                }}
+                $.extend(true, data_2d.options, axes_options);
+                $.extend(true, data_sum.options, axes_options);
+                //var instr = data.metadata.instrument;
+                // first, plot 2d: 
+                var i = 0;
+                
+                var cell_2d_target = 'cell1';
+                var cell_1d_target = 'cell2';
+                var plot_2d_target = 'plot1';
+                var plot_1d_target = 'plot2';
+                
+                $('#cell1 .transform[axis=xaxis]').hide();
+                $('#cell1 .transform[axis=yaxis]').hide();
+                $('#cell1 .transform[axis=zaxis]').show();
+                $('#cell1 .showgrid').show();
+                $('#cell1 .colormap').show();
+                var logZselected = $('#cell1 .transform[axis=zaxis]').find('input')[0].checked;
+                var ztransform = logZselected? 'log' : 'linear';
+                
+                $('#cell2 .transform[axis=xaxis]').show();
+                $('#cell2 .transform[axis=yaxis]').show();
+                $('#cell2 .transform[axis=zaxis]').hide();
+                $('#cell2 .showgrid').show();
+                $('#cell2 .colormap').hide();
+                var logYselected = $('#cell2 .transform[axis=yaxis]').find('input')[0].checked;
+                var logXselected = $('#cell2 .transform[axis=xaxis]').find('input')[0].checked;
+                var ytransform = logYselected? 'log' : 'linear';
+                var xtransform = logXselected? 'log' : 'linear';
+
+                if ('sum' in plots && plots['sum'].destroy) {
+                    plots['sum'].destroy();
+                }
+                if ('area_2d' in plots && plots['area_2d'].destroy) {
+                    plots['area_2d'].destroy();
+                }
+                
+                plots['sum'] = null;
+                plots['area_2d'] = null;
+                
+                $('#' + plot_1d_target).empty();
+                var plot_1d_options = {
+                    'legend': {'show': false},
+                    series: [], 
+                    axes: {xaxis: {label: "x-axis"}, yaxis: {label: "y-axis"}}
+                };
+                if (ERRORBARS.indexOf(instr) > -1) {
+                    plot_1d_options.show_errorbars = true;
+                    plot_1d_options.errorbar_width = 6;
+                }
+
+                plot_1d_options.axes.xaxis.label = "Q";
+                plot_1d_options.axes.yaxis.label = "I";
+                plot_1d_options.xtransform = xtransform;
+                plot_1d_options.ytransform = ytransform;
+                var chart_1d = new xyChart.default(plot_1d_options);
+                d3.selectAll("#" + plot_1d_target + " svg").remove();
+                d3.selectAll("#" + plot_1d_target).data([data_sum.data]).call(chart_1d);
+                //$("#xscale, #yscale").change(handleChecked);
+                $("#" + cell_1d_target + " .xtransform input").change(function() {chart_1d.xtransform((this.checked)? 'log' : 'linear')});
+                $("#" + cell_1d_target + " .ytransform input").change(function() {chart_1d.ytransform((this.checked)? 'log' : 'linear')});
+                $("#" + cell_1d_target + " .showgrid input").change(function() {chart_1d.show_grid(this.checked)});
+                  var x0 = 10,
+                      y0 = 10, 
+                      dx = 135,
+                      dy = 40;
+                chart_1d.zoomRect(true);
+                
+                plots['sum'] = chart_1d;
+                //plots['sum'] = render1dplot(null, data_sum, {}, plot_1d_target, plot_1d_options);
+                
+                $('#' + plot_2d_target).empty();
+                d3.selectAll("#" + plot_2d_target + " svg").remove();
+                $('#run_title').text(data_2d.title);
+                var plot_2d_options = {
+                    "ztransform": ztransform,
+                  "aspect_ratio": 1.0,
+                  "dims": data_2d.dims,
+                    axes: {
+                        xaxis: {label: data_2d.xlabel},
+                        yaxis: {label: data_2d.ylabel}
+                    }
+                }
+                var chart = new heatChart.default(plot_2d_options);
+                chart
+                  .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
+                  .autoscale(true);
+                plots['area_2d'] = chart;
+                d3.select('#' + plot_2d_target)
+                  .data(data_2d.z)
+                  .call(chart);
+                chart.zoomScroll(true);
+                if (data_2d.metadata) {
+                    $('#' + eta_target).html(make_metadata_table(data_2d.metadata));
+                }
+                $("#" + cell_2d_target + " .ztransform input").change(function() {chart.ztransform((this.checked)? 'log' : 'linear')});
+                $("#" + cell_2d_target + " .showgrid input").change(function() {chart.show_grid(this.checked)});
+                $("#" + cell_2d_target + " .colormap select").change(function() {
+                  chart.colormap(colormap.get_colormap(this.value)).redrawImage();
+                  chart.colorbar.update()
+                });
+              }
+              else {
+                plots['sum'].source_data(data_sum.data).update();
+                plots['area_2d'].source_data(data_2d.z[0])
+                $('#run_title').text(data_2d.title);
+                if (data_2d.metadata) {
+                    $('#' + eta_target).html(make_metadata_table(data_2d.metadata));
+                }
+              }
+            }
+            
+            /*
+                    
+                    var instr_link = $('<a />', {'href': 'singleplotwindow.html?instrument=' + instr});
+                    var instr_name = instr;
+                    if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
+                    instr_link.html(instr_name);
+                    $('.instrument-name', '#' + cell_target).empty()
+                    $('.instrument-name', '#' + cell_target).append(instr_link)
+                }
+            }
+            */  
+
+            function make_metadata_table(metadata, numcols) {
+                var numcols = numcols || 3;
+                var new_table = document.createElement('table');
+                var keys = Object.keys(metadata);
+                var num_items = keys.length;
+                for (var i=0; i<num_items; i+=numcols) {
+                    var row = new_table.insertRow(-1);
+                    for (var j=0; j<numcols; j++) {
+                        var index = i + j;
+                        if (index >= num_items) { break; }
+                        var key = keys[index];
+                        
+                        var value = metadata[key];
+                        if (typeof(value) == "number") {
+                            value = value.toPrecision(PRECISION);
+                        }
+                        var label = row.insertCell(-1);
+                        label.setAttribute('class', 'metadata-label');
+                        label.innerHTML=key;
+                        var entry = row.insertCell(-1);
+                        entry.setAttribute('class', 'metadata-value');
+                        entry.innerHTML=value;
+                    }
+                }
+                return new_table;
+            }
+            
+            function getPoissonUncertainty(y) {
+              // for a poisson-distributed observable, get the range of
+              // expected actual values for a particular measured value.
+              // As described in the documentation for the error analysis
+              // on the BaBar experiment:
+
+              //4)      An alternative with some nice properties is +-0.5 + sqrt(n+0.25)
+              //i.e upper error = 0.5 + sqrt(n+0.25), lower error = -0.5 + sqrt(n+0.25).
+              //These produce the following intervals:
+              //n    low      high     cred.
+              //0 0.000000  1.000000 0.632121
+              //1 0.381966  2.618034 0.679295
+              //2 1.000000  4.000000 0.681595
+              //3 1.697224  5.302776 0.682159
+              //4 2.438447  6.561553 0.682378
+              //5 3.208712  7.791288 0.682485
+              //6 4.000000  9.000000 0.682545
+              //7 4.807418 10.192582 0.682582
+              //8 5.627719 11.372281 0.682607
+              //9 6.458619 12.541381 0.682624
+              hi = 0.5+Math.sqrt(y+0.25)
+              lo = -0.5+Math.sqrt(y+0.25)
+              return {"yupper": y+hi, "ylower": y-lo}
+            }
+        </script>
+  <style>
+    html, body, .wrapper {
+        height: 100%;
+        margin: 0;
+        font-family: Salsa !important;
+    }
+    .wrapper {
+        display: flex;
+        flex-direction: column;
+    }
+    
+    .ztransform {
+        z-index: 10;
+    }
+    .instrument-name { 
+        text-align: center;
+        font-family: "Georgia", serif;
+        font-weight: bold;
+    }
+                       
+    
+    .metadata-label {color: red}
+    .slidingDiv {
+        background-color: #99CCFF;
+        padding:20px;
+        margin-top:10px;
+        border-bottom:5px solid #3399FF;
+    }
+     
+    .show_hide {
+        display:none;
+    }
+    
+  </style>
+  <style type="text/css">
+    svg,
+    canvas {
+      position: absolute;
+      image-rendering: optimizeSpeed;
+      image-rendering: crisp-edges;
+      image-rendering: -moz-crisp-edges;
+      image-rendering: -webkit-optimize-contrast;
+      image-rendering: optimize-contrast;
+      -ms-interpolation-mode: nearest-neighbor;
+    }
+    
+    rect {
+      fill: #fff;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+    
+    #run_title {
+        text-align: center;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    
+    div#plots {
+        flex: 1;
+        height: 100%;
+        display: flex;
+        padding-bottom: 2em;
+    }
+    
+    div.plotcell {
+        flex: 1;
+        height: 100%;
+    }
+    
+    div.plotdiv {
+        height: 100%;
+    }
+    
+    header, footer, div#metadata  {
+      width: 100%;
+    }
+
+  </style>
+    </head>
+    <body id="singleplot">
+        <div class="wrapper">
+            <header>
+              <?php include("/var/www/include/navigation.inc"); ?>
+              <?php include("/var/www/include/utility.inc"); ?>
+            </header>
+            
+            <div id="run_title"></div>
+            <div id="plots"></div>
+            <div id="metadata"></div>
+            
+            <footer>
+                <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
+                <div style="float:right;"><p><? lastmod(); ?></p></div>
+            </footer>
+        </div>
+
+    </body>
+</html>
