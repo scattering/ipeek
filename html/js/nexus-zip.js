@@ -20,7 +20,8 @@ format_DataStream_types = {
 format_types = {
   "s": "String",
   "c": "Int",
-  "b": "Int", 
+  "b": "Int",
+  "?": "Int",
   "h": "Int",
   "i": "Int",
   "l": "Int",
@@ -56,20 +57,24 @@ function fmt_endianness(format_string) {
 }
 
 function dirname(path) {
-  var path = rstrip(path, "\/");
-  var pathlist = path.split("/")
-  return pathlist.slice(0, pathlist.length-1).join("/")
+  var absolute = /^\//.test(path);
+  var path = strip(path, "\/"); // remove leading and trailing slashes
+  if (path == "") { return "" }
+  var pathlist = path.split("/"); 
+  var parentpath = pathlist.slice(0, pathlist.length-1).join("/");
+  if (absolute) { parentpath = "/" + parentpath }
+  return parentpath;
 }
 
 function rstrip(str, tostrip) {
   var tostrip = (tostrip == null) ? "\\s" : tostrip;
-  var endregex = new RegExp(tostrip + tostrip + '*$')
+  var endregex = new RegExp(tostrip + '*$');
   return str.replace(endregex, '');
 }
 
 function lstrip(str, tostrip) {
   var tostrip = (tostrip == null) ? '\\s' : tostrip;
-  var startregex = new RegExp('^' + tostrip + tostrip + '*');
+  var startregex = new RegExp('^' + tostrip + '*');
   return str.replace(startregex, '');
 }
 
@@ -81,10 +86,12 @@ nz.Node = function() {}; // base class
 nz.Node.prototype = {
   _attrs_filename: ".attrs",
   _link_filename: ".link",
+  _dirlist: null,
   
   init: function(parent, path, nxclass) {
     // handling of the arguments:
     this.root = (parent == null) ? this : parent.root;
+    this.parent = parent;
     this.readonly = this.root.readonly;
     this._attrs = null; // caching spot.
     if (path[0] == "/") {
@@ -115,23 +122,24 @@ nz.Node.prototype = {
         .then(function(l) { return JSON.parse(l) });
   },
   
-  parent: function() {
-    return this.root.get(dirname(this.path));
+  dir: function(path) {
+    var path = (path == null) ? this.path : path;
+    return this.root._dirlist[path];
   },
-    
-  groupnames: function() {  
-    var that = this;
-    return this.keys().filter(function(fn) {return that.file_isdir(fn)});
+  
+  groupnames: function() {
+    return this.dir().groups;
   },
   
   fieldnames: function() {
-    var that = this;
-    return this.keys().filter(function(fn) {return !(that.file_isdir(fn))});
+    return this.dir().fields;
   },
   
   keys: function() {
+    var dir = this.dir();
+    return dir.groups.concat(dir.fields);
     //var nonkey_regex = /^[^\.]*$/;
-    return this.file_listdir().filter(function(fn) {return fn.indexOf(".") < 0});// nonkey_regex.test(fn)});
+    //return this.file_listdir().filter(function(fn) {return fn.indexOf(".") < 0});// nonkey_regex.test(fn)});
   },
   
   items: function() {
@@ -176,7 +184,8 @@ nz.Node.prototype = {
   file_isdir: function(path) {
     var path = strip(path, "/") + "/";
     // root path is "/"
-    return (path == "/" || path in this.root.zipfiles) 
+    var isdir = (path == "/" || path in this.root.zipfiles);
+    return isdir;
   },
   
   file_listdir: function(path) {
@@ -234,12 +243,14 @@ nz.File.prototype.init = function(filename, zipentries) {
   this.mode = "r";
   this.zipentries = zipentries;
   this.zipfiles = {};
-  var fn, entry;
+  var fn, entry, filelist = [];
   for (var i=0; i<zipentries.length; i++) {
     entry = zipentries[i];
-    fn = entry.filename;   
+    fn = entry.filename;
+    filelist.push("/" + fn);
     this.zipfiles[fn] = entry;
-  } 
+  }
+  this._dirlist = makeDirList(filelist);
   return this;
 }
 
@@ -321,7 +332,7 @@ nz.Field.prototype = {
           if (/[fd]/.test(attrs.format[1].toLowerCase())) {
             accessor = function(d) {return d.map(parseFloat)};
           }
-          else if (/[cbhil]/.test(attrs.format[1].toLowerCase())) {
+          else if (/[cbhil\?]/.test(attrs.format[1].toLowerCase())) {
             accessor = function(d) {return d.map(function(dd) { return parseInt(dd) })};
           }
           else if (/[s]/.test(attrs.format[1].toLowerCase())) {
@@ -343,6 +354,33 @@ nz.Field.prototype = {
     });
   },
   
+}
+
+function makeDirList(filelist) {
+  var dirlist = {};
+  function default_group(fn) {
+    if (!(fn in dirlist)) { 
+      dirlist[fn] = {groups: [], fields: []};
+    }
+    return dirlist[fn];
+  }
+  filelist.filter(function(fn) {return (/\.attrs$/.test(fn) == false && /\.link$/.test(fn) == false)})
+    .forEach(function(fn,i) {
+      var datum = {};
+      var is_group = /\/$/.test(fn);
+      if (is_group) {
+        fn = fn.slice(0, -1); 
+        // remove trailing slash from zipfile name
+        // to match hdf naming.
+        var _ = default_group(fn);
+      }
+      
+      var parent = dirname(fn);
+      //console.log('parent:', parent, 'fn:', fn);
+      var parent_group = default_group(parent);
+      ((is_group) ? parent_group.groups : parent_group.fields).push(fn);
+    });
+  return dirlist;
 }
 
 function makeSoftLink(parent, path) {
