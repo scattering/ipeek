@@ -33,7 +33,8 @@
   $(function() {
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     ZIP_REGEXP = /\.zip$/
-    dirHelper = "listftpfiles.php";
+    dirHelper = "https://ncnr.nist.gov/ipeek/listftpfiles.php";
+    data_repo = "https://ncnr.nist.gov";
     zip.useWebWorkers = false;
     data_path = ["ncnrdata"];
     datasets = [];
@@ -91,12 +92,28 @@
     }
     
     var getNexusZip = function(path, filename) {
-      var autoscroll = false; // trigger a scroll for autoselected items.
       var req = new XMLHttpRequest();
-      req.open('GET', path + filename);
+      req.open('GET', data_repo + path + filename);
       req.responseType = 'blob';
-      req.onload = function() {
-      	zip.createReader(new zip.BlobReader(req.response), function(reader) {
+      req.onload = function() { zipHandler(filename, this.response) };
+      req.send(); 
+    };
+    
+    function loadData() {
+      var file_input = document.getElementById('datafile');
+      var file = file_input.files[0]; // only one file allowed
+      datafilename = file.name;
+      zipHandler(datafilename, file);
+      $("span#loaded_file").text(datafilename);
+      file_input.value = "";
+    }
+    
+    var fileinput = document.getElementById('datafile');
+    fileinput.onchange = loadData;
+    
+    function zipHandler(filename, file) {
+      var autoscroll = false; // trigger a scroll for autoselected items.
+        zip.createReader(new zip.BlobReader(file), function(reader) {
           // get all entries from the zip
           reader.getEntries(function(entries) {
             f = new nz.File().init(filename, entries);
@@ -148,12 +165,9 @@
                 $(this).jstree(true).activate_node(selected_node);
               };
             });
-        		//console.log(filelist_to_tree(filelist));
           });
         });
-			}
-      req.send(); 
-    };
+    }
     //var fileinput = document.getElementById('sansfile');
     
     function compactDateTime(date) {
@@ -353,12 +367,13 @@
         ,	east__size:			500
         ,   south__size:        "auto"
           // RESIZE Accordion widget when panes resize
-        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
-        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
-        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	west__onresize:     $.layout.callbacks.resizePaneAccordions
+        ,	east__onresize:     $.layout.callbacks.resizePaneAccordions
+        ,	south__onresize:    $.layout.callbacks.resizePaneAccordions
       });
-		  $("#filebrowser").tablesorter();
-          window.onpopstate(); // call it on first load, too! 
+      
+      $("#filebrowser").tablesorter();
+      window.onpopstate(); // call it on first load, too! 
   }
   </script>
 <style>
@@ -501,7 +516,7 @@ canvas {
       margin-bottom: 50px;
     }
     .ui-layout-south {
-      text-align: center;
+      display: inline-block;
     }
 </style>
 </head>
@@ -510,6 +525,8 @@ canvas {
 <div id="navigation" class="ui-layout-wrapper ui-layout-west">
 </div>
 <div id="bottom_panel" class="ui-layout-south">
+    Load local file: <input type="file" id="datafile" style="display:inline-block;" />
+    <label>Loaded: <span class="loaded-file" id="loaded_file"></span></label>
 </div>
 <div id="top_panel" class="ui-layout-north">
     <div id="status">
