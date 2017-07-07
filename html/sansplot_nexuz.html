@@ -2,9 +2,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="7200">
-        <title>NCNR live data</title>
-        <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Salsa" />
- 
+        <title>NCNR live data</title> 
         <!-- Reference the theme's stylesheet on the Google CDN -->
 <!--        <link href="http://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"-->
 <!--            type="text/css" rel="Stylesheet" />-->
@@ -129,6 +127,63 @@
               getNexusZip(path, filename);
             }
             
+            function getItemsP(source, aliases) {
+              var keys = Object.keys(aliases);
+              var output = {};
+              var p = Promise.all(keys.map(function(k) { 
+                return source.get(aliases[k]) 
+              }))
+              .then(function(fields) {
+                return Promise.all([
+                  Promise.all(fields.map(function(field) { return field.getAttrs() })),
+                  Promise.all(fields.map(function(field) { return field.getValue() })) ]) 
+              })
+              .then(function(results) {
+                var attrs = results[0],
+                    values = results[1];
+                keys.forEach(function(k, i) {
+                  output[k] = {value: values[i], attrs: attrs[i]}
+                })
+                return output;
+              })
+              return p;
+            }
+            
+            async function getItems(source, aliases) {
+              var keys = Object.keys(aliases);
+              var output = {};
+              for (k in aliases) {
+                let field = await source.get(aliases[k]);
+                let value = await field.getValue();
+                let attrs = await field.getAttrs();
+                output[k] = {value: value, attrs: attrs}
+              }
+              return output
+            }
+            
+            async function getAllItems(source) {
+              let output = {};
+              let fieldnames = source.fieldnames();
+              let groupnames = source.groupnames();
+              output['attrs'] = await source.getAttrs();
+              //console.log(fieldnames, groupnames);
+              for (var ff = 0; ff < fieldnames.length; ff++) {
+                var fn = fieldnames[ff];
+                let field = await source.get(fn);
+                let value = await field.getValue();
+                let attrs = await field.getAttrs();
+                output[fn] = {value: value, attrs: attrs}
+              }
+              for (var gg = 0; gg < groupnames.length; gg++) {
+                var gn = groupnames[gg];
+                let group = await source.get(gn);
+                output[gn] = await getAllItems(group);
+              }
+              return output
+            }
+                
+              
+            
             var getNexusZip = function(path, filename) {
               var autoscroll = false; // trigger a scroll for autoselected items.
               var req = new XMLHttpRequest();
@@ -140,43 +195,38 @@
                   reader.getEntries(function(entries) {
                     f = new nz.File().init(filename, entries);
                     var entry;
-                    f.items()[0][1]
-                      .then(function(en) { entry = en; 
-                        return Promise.all([
-                          entry.get('DAS_logs/areaDetector/counts'),
-                          entry.get('DAS_logs/areaDetector/dimension'),
-                          entry.get('DAS_logs/detectorPosition/softPosition'),
-                          entry.get('DAS_logs/areaDetector/beamCenterX'),
-                          entry.get('DAS_logs/areaDetector/beamCenterY'),
-                          entry.get('DAS_logs/wavelength/wavelength'),
-                          entry.get('instrument/detector/x_pixel_size'),
-                          entry.get('instrument/detector/y_pixel_size')
-                        ])
-                      })
-                      .then(function(fields) { return Promise.all([
-                        Promise.all(fields.map(function(field) { return field.getAttrs() })),
-                        Promise.all(fields.map(function(field) { return field.getValue() })) ]) 
-                      })
-                      .then(function(result) { process_data(result); });
+                    f.get(f.groupnames()[0])
+                      .then(function(en) { 
+                        entry = en;
+                        process_entry(en);
+                      });
                   });
                 });
               }
               req.send(); 
             };
             
-            function process_data(r) {
-              var a = r[0], c = r[1];
-              function with_units(i) { 
-                return math.unit(c[i][0][0].toString() + a[i].units);
+            async function process_entry(entry) {
+              async function getValue(f) { return nz.Field.prototype.getValue.call(f); }
+              async function getAttrs(f) { return nz.Field.prototype.getAttrs.call(f); }
+              function to_units(unit) {
+                return async function(x) {
+                  let value; value = await getValue(x);
+                  let attrs; attrs = await getAttrs(x);
+                  let with_units = math.unit(value[0][0].toString() + attrs.units);
+                  return with_units.to(unit).toNumber();
+                }
               }
-              var shape = c[1].map(function(d) { return d[0] });
-              var L2 = with_units(2).to('cm').toNumber();
-              var x0 = with_units(3).to('cm').toNumber(); // actually pixels.
-              var y0 = with_units(4).to('cm').toNumber(); // actually pixels.
-              var wavelength = with_units(5).to('angstrom').toNumber();
-              var xpixelsize = with_units(6).to('cm').toNumber();
-              var ypixelsize = with_units(7).to('cm').toNumber();
-              var counts = math.matrix(Array.prototype.slice.call(c[0]));
+              let shape = await entry.get('DAS_logs/areaDetector/dimension').then(getValue);
+              shape = shape.map(function(d) { return d[0] });
+              let L2 = await entry.get('DAS_logs/detectorPosition/softPosition').then(to_units('cm'));
+              let x0 = await entry.get('DAS_logs/areaDetector/beamCenterX').then(to_units('cm'));
+              let y0 = await entry.get('DAS_logs/areaDetector/beamCenterY').then(to_units('cm'));
+              let wavelength = await entry.get('DAS_logs/wavelength/wavelength').then(to_units('angstrom'));
+              let xpixelsize = await entry.get('instrument/detector/x_pixel_size').then(to_units('cm'));
+              let ypixelsize = await entry.get('instrument/detector/x_pixel_size').then(to_units('cm'));
+              let counts = await entry.get('DAS_logs/areaDetector/counts').then(getValue);
+              counts = math.matrix(Array.prototype.slice.call(counts));
               counts = math.transpose(counts.reshape(shape));
               pixel_to_Q = xpixelsize / L2 * 4.0 * Math.PI / wavelength;  // assume square pixels
               maskCanvas.width = shape[0];
@@ -199,7 +249,7 @@
                 ymin: 0
               }
               
-              sum = multiplySumRadial(maskCanvas, counts.toArray(), qdims, 0.0, 0.0);
+              let sum = multiplySumRadial(maskCanvas, counts.toArray(), qdims, 0.0, 0.0);
               var y_with_errorbars = sum.sum.map(function(d,i) { 
                 var norm = sum.normalize[i];
                 var x = sum.xy[i][0];
@@ -225,9 +275,8 @@
               }
               
               showData([data_2d, data_sum], current_instr);
-                
+            }
               // xshape, yshape = self.state.data.get('areaDetector.dimension')
-              
               //var indices = math.indices(shape);
               //var x = indices[0], y = indices[1];
               //var X = math.multiply(xpixelsize, math.subtract(x, x0));
@@ -240,7 +289,6 @@
               //var qy = math.multiply(q, math.sin(alpha));
               //console.log(shape, L2, x0, y0, wavelength, xpixelsize, ypixelsize, counts);
               //console.log(qx, qy);
-            }
             
             
             function showData(datalist, instr) {
@@ -431,7 +479,7 @@
     html, body, .wrapper {
         height: 100%;
         margin: 0;
-        font-family: Salsa !important;
+        font-family: Arial, Helvetica, sans-serif !important; 
     }
     .wrapper {
         display: flex;
@@ -520,7 +568,9 @@
             <div id="metadata"></div>
             
             <footer>
+<!--
                 <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
+-->
                 <div style="float:right;"><p><? lastmod(); ?></p></div>
             </footer>
         </div>
