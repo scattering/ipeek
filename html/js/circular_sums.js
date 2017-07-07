@@ -1,3 +1,5 @@
+"use strict";
+
     function multiplySumArc(maskCanvas, data, dims, center_x_coord, center_y_coord, r1_coord, r2_coord) {
          //var maskCanvas = document.getElementById('mask');
          var dxpos = (dims.xmax - dims.xmin) / (dims.xdim);
@@ -52,8 +54,8 @@
             dy = max_y - min_y;
             //console.log(min_x, max_x, min_y, max_y, dx, dy);
             
-            sum = 0;
-            normalize = 0;
+            var sum = 0;
+            var normalize = 0;
             
             if (dx > 0 && dy > 0) {                
                 var maskData = maskCtx.getImageData(min_x,min_y,dx,dy).data;
@@ -72,7 +74,8 @@
             angle_list[s] = angle;
             sum_list[s] = sum;
             normalize_list[s] = normalize;
-            xy_list[s] = [degrees(angle), (normalize == 0)? NaN : sum/normalize];
+            var y = (normalize == 0)? NaN : sum/normalize;
+            xy_list[s] = [degrees(angle), y];
             angle += stepsize;
             maskCtx.fillRect(min_x,min_y,dx,dy);
          }
@@ -129,8 +132,8 @@
             dy = max_y - min_y;
             //console.log(min_x, max_x, min_y, max_y, dx, dy);
             
-            sum = 0;
-            normalize = 0;
+            var sum = 0;
+            var normalize = 0;
             
             if (dx > 0 && dy > 0) {                
                 var maskData = maskCtx.getImageData(min_x,min_y,dx,dy).data;
@@ -149,7 +152,8 @@
             radius_list[s] = r;
             sum_list[s] = sum;
             normalize_list[s] = normalize;
-            xy_list[s] = [r, (normalize == 0)? NaN : sum/normalize];
+            var y = (normalize == 0)? NaN : sum/normalize;
+            xy_list[s] = [r, y];
             maskCtx.fillRect(min_x,min_y,dx,dy);
          }
          return {xy: xy_list, radius: radius_list, sum: sum_list, normalize: normalize_list}
