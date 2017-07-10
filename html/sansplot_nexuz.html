@@ -3,17 +3,6 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="7200">
         <title>NCNR live data</title> 
-        <!-- Reference the theme's stylesheet on the Google CDN -->
-<!--        <link href="http://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"-->
-<!--            type="text/css" rel="Stylesheet" />-->
-            
-<!--        <style>-->
-<!--         body {width:100%; height:100%; overflow:hidden, margin:0}-->
-<!--         html {width:100%; height:100%; overflow:hidden}-->
-<!--        </style>-->
- 
-        <!-- Reference jQuery and jQuery UI from the CDN. Remember
-           that the order of these two elements is important -->
         <script src="//code.jquery.com/jquery-1.11.1.min.js"></script> 
         <script src="js/geturlvars.js"></script>
         <script src="js/es6-promise.min.js"></script>
@@ -46,6 +35,31 @@
             colorbars = {};
             sumplots = {};
             maskCanvas = document.createElement('canvas');
+            
+            metadata_configs = [
+              {nexus: 'DAS_logs/experiment/instrument', label: 'instrument'},
+              {nexus: 'DAS_logs/experiment/description', label: 'experimentDesc'},
+              {nexus: 'DAS_logs/experiment/proposalId', label: 'experimentID'},
+              {nexus: 'DAS_logs/experiment/participants', label: 'participants'},
+              //{nexus: 'DAS_logs/trajectory/name', label: 'trajectory'},
+              {nexus: 'control/count_time_preset', label: 'count time preset'},
+              {nexus: 'control/count_time', label: 'count time'},
+              {nexus: 'DAS_logs/trajectory/experimentScanID', label: 'filenumber'}
+              /*
+              {nexus: ['control.count_time_preset', 'control.count_time'], label: 'eta', callback: function(t) {
+                  if (Math.abs(t[0] - t[1]) < 0.5) { return 'finished' }
+                  var now = new Date();
+                  var eta = now.getTime() + (t[0] - t[1])*1000; // seconds to milliseconds
+                  var then = new Date(eta);
+                  var datestring = then.getHours.toFixed() + ':' + then.getMinutes().toFixed();
+                  datestring += ' ' + (then.getMonth() + 1).toFixed();
+                  datestring += '/' + (then.getDate() + 1).toFixed();
+                  datestring += '/' + then.getFullYear().toFixed();
+                  return datestring
+                }
+              }
+              */
+            ];
             
             function onshow() {
               if (refreshtimer == null) 
@@ -226,6 +240,9 @@
               let xpixelsize = await entry.get('instrument/detector/x_pixel_size').then(to_units('cm'));
               let ypixelsize = await entry.get('instrument/detector/x_pixel_size').then(to_units('cm'));
               let counts = await entry.get('DAS_logs/areaDetector/counts').then(getValue);
+              let title = await entry.get('DAS_logs/trajectoryData/fileName').then(getValue);
+              let description = await entry.get('DAS_logs/trajectoryData/description').then(getValue);
+              title += ': ' + description;
               counts = math.matrix(Array.prototype.slice.call(counts));
               counts = math.transpose(counts.reshape(shape));
               pixel_to_Q = xpixelsize / L2 * 4.0 * Math.PI / wavelength;  // assume square pixels
@@ -260,13 +277,16 @@
                 return [q, normed_y, normed_dy];
               })
               
+              let metadata = await get_metadata(entry, metadata_configs);
                             
               data_2d = {
                 "type": "2d", 
                 "z": [counts.toArray()],
                 "dims": pdims,
                 "xlabel": "xpixel",
-                "ylabel": "ypixel"
+                "ylabel": "ypixel",
+                "title": title,
+                "metadata": metadata
               }
               
               data_sum = {
@@ -275,6 +295,7 @@
               }
               
               showData([data_2d, data_sum], current_instr);
+              onresize();
             }
               // xshape, yshape = self.state.data.get('areaDetector.dimension')
               //var indices = math.indices(shape);
@@ -410,18 +431,16 @@
                 }
               }
             }
-            
-            /*
-                    
-                    var instr_link = $('<a />', {'href': 'singleplotwindow.html?instrument=' + instr});
-                    var instr_name = instr;
-                    if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
-                    instr_link.html(instr_name);
-                    $('.instrument-name', '#' + cell_target).empty()
-                    $('.instrument-name', '#' + cell_target).append(instr_link)
-                }
+             
+            async function get_metadata(source, config) {
+              var metadata = {};
+              for (var i=0; i<config.length; i++) {
+                var c = config[i];
+                let value = await source.get(c.nexus).then(function(n) { return n.getValue() });
+                metadata[c.label] = value[0];
+              }
+              return metadata;
             }
-            */  
 
             function make_metadata_table(metadata, numcols) {
                 var numcols = numcols || 3;
