@@ -21,7 +21,8 @@ format_DataStream_types = {
 format_types = {
   "s": "String",
   "c": "Int",
-  "b": "Int", 
+  "b": "Int",
+  "?": "Int",
   "h": "Int",
   "i": "Int",
   "l": "Int",
@@ -124,7 +125,10 @@ nz.Node.prototype = {
     
   groupnames: function() {  
     var that = this;
-    return this.keys().filter(function(fn) {return that.file_isdir(fn)});
+    return this.keys().filter(function(fn) {
+      var path = (fn[0] == "/") ? fn : rstrip(that.path, "/") + "/" + fn;
+      return that.file_isdir(path)
+    });
   },
   
   fieldnames: function() {
@@ -293,7 +297,7 @@ nz.Field.prototype = {
         if (/[fd]/.test(attrs.format[1].toLowerCase())) {
           accessor = function(d) {return d.map(parseFloat)};
         }
-        else if (/[cbhil]/.test(attrs.format[1].toLowerCase())) {
+        else if (/[cbhil\?]/.test(attrs.format[1].toLowerCase())) {
           accessor = function(d) {return d.map(parseInt)};
         }
         else {
