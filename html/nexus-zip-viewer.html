@@ -141,9 +141,9 @@
               });
               f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
               if (!isdir) {
-                f.get(id).then(nz.getValue).then(function(v) {
+                f.get(id).then(nz.getValueString).then(function(s) {
                     //$("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
-                    $("#device_values").html('<pre class="value">' + d3.tsv.format(v) + '</pre>')
+                    $("#device_values").html('<pre class="value">' + s + '</pre>')
                 });    
               } else {
                 $("#device_values").html("<pre>Group</pre>")

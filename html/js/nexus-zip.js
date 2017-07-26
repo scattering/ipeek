@@ -293,6 +293,32 @@ nz.Field.prototype = {
     };
   },
   
+  getValueString: function() {
+    var root = this.root,
+        that = this,
+        path = lstrip(this.path, "/"),
+        attrs,
+        format_string;
+        
+    return this.getAttrs().then(function(a) {
+      attrs = a;
+      if (attrs.binary) {
+        return that.getValue().then(function(v) { return d3.tsv.format(v) })
+      }
+      else {
+        return root.file_readText(path).then(function(s) {
+          if (/[s]/.test(attrs.format[1].toLowerCase())) { 
+            return s.replace(/\\n/g, '\n')
+                    .replace(/\\t/g, '\t')
+                    .replace(/\\r/g, '\r');
+          } else {
+            return s;
+          }
+        });
+      }
+    });
+  },
+  
   getValue: function() {
     var root = this.root,
         path = lstrip(this.path, "/"),
@@ -399,6 +425,12 @@ function getValue(field) {
   else return field.getValue();
 }
 nz.getValue = getValue
+
+function getValueString(field) {
+  if (field == null) { return null }
+  else return field.getValueString();
+}
+nz.getValueString = getValueString
 
 function getAttrs(field) {
   return field.getAttrs();
