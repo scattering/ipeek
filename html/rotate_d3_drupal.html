@@ -1,0 +1,585 @@
+<html>
+    <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta http-equiv="refresh" content="3600">
+        <title>NCNR live data</title>
+        
+        <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/redmond/jquery-ui.css" />
+        <link href="//fonts.googleapis.com/css?family=Homemade+Apple" rel='stylesheet' type='text/css'>
+        <script src="//code.jquery.com/jquery-2.1.4.min.js"></script> 
+        <script src="//code.jquery.com/ui/1.11.4/jquery-ui.min.js"></script>
+        <script src="js/es6-promise.min.js"></script>
+        <script type="text/javascript">
+            if (typeof jQuery == 'undefined')
+                {
+                    // then the CDN is down...
+                    document.write(unescape("%3Cscript src='js/jquery-1.11.1.min.js' type='text/javascript'%3E%3C/script%3E"));
+                    document.write(unescape("%3Cscript src='js/jquery-ui-1.10.4.custom.min.js' type='text/javascript'%3E%3C/script%3E"));
+                    document.write(unescape("%3Clink href='css/start/jquery-ui-1.10.4.custom.min.css' type='text/css' rel='stylesheet' /%3E"));    
+                }
+        </script>
+        
+        <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
+  
+        <script type="text/javascript">
+            var refreshtime = 10; // refresh rate
+            var refreshtimer = null;
+            var refreshindex = 0;
+            SKIP_PAUSE = 2;
+            
+            COLS = 1;
+            INSTRUMENTS = ['BT1', 'BT4', 'BT5', 'BT7', 'BT8', 'DCS', 'MACS', 'MAGIK', 'NGBSANS', 'NGB30SANS', 'NG2', 'NG7', 'NG7SANS', 'NSE', 'PBR', 'PHADES', 'SPINS'];
+            LOGY_INSTRUMENTS = ['NG7']; // or override from plot options
+            LOGX_INSTRUMENTS = [];
+            Y_TRANSFORM = {};
+            X_TRANSFORM = {};
+            $.each(INSTRUMENTS, function(index, instr) {
+               Y_TRANSFORM[instr] = (LOGY_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
+               X_TRANSFORM[instr] = (LOGX_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
+            });
+            
+            // targets for single plot per-instrument.  Defaults to singleplotwindow.html?instrument=<instrument_name>
+            SINGLEPLOTS = {
+                NG7SANS: 'sansplot.html?instrument=NG7SANS',
+                NGBSANS: 'sansplot.html?instrument=NGBSANS',
+                NGB30SANS: 'sansplot.html?instrument=NGB30SANS'
+            }
+            
+            if (localStorage && localStorage.Y_TRANSFORM) {
+                var stored_y_transform = {};
+                try { 
+                    stored_y_transform = JSON.parse(localStorage['Y_TRANSFORM']);
+                } catch (e) {}
+                $.extend(true, Y_TRANSFORM, stored_y_transform);
+                localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+            }
+                
+            INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
+            // http://www.ncnr.nist.gov/instruments/chrns_small_logo.jpg
+            CHRNS_INSTRUMENTS = ['MACS', 'NSE', 'NGB30SANS', 'BT5', 'NG2'];
+            ERRORBARS = ['BT7','BT9', 'BT4', 'NGD', 'CGD', 'MAGIK', 'PBR', 'NSE', 'SPINS', 'NG7', 'PHADES'];
+            plots = {};
+            colorbars = {};
+            data = null;
+            current_instr = null;
+            current_target = 'plot1';
+            next_target = 'plot0';
+            
+            function modulo(x,y) {
+                // this always returns a positive number for positive y, x
+                return ((x % y) + y) % y
+            }
+            
+            function refresh() {
+                refreshindex += 1;
+                refreshindex = modulo(refreshindex, INSTRUMENTS.length);
+                loadSingle(refreshindex);
+            }
+            
+            function loadSingle(index) {
+                var index = index == null? refreshindex : index;
+                var instr = INSTRUMENTS[index];
+                current_instr = instr;
+                $('.instrument-button').removeClass('ui-state-highlight');
+                $('#' + instr + '_button').addClass('ui-state-highlight');
+                var yislog = (Y_TRANSFORM[instr] == 'log');
+                $('#logtransform').prop('checked', yislog);
+                var noCache = new Date().getTime();
+                return new Promise(function(resolve, reject) {
+                  $.ajax({
+                      dataType: "text",
+                      url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
+                      data: { "noCache": noCache },
+                      success: function(result) { var data = eval(result); resolve(showData(data)); },
+                      error: function(e) { resolve(showData([{}])); }
+                  });
+                });
+            }
+            
+            function play() {
+              if (refreshtimer == null)
+                refreshtimer = setInterval("refresh();", refreshtime*1000);
+                refresh();
+            }
+            
+            function stop() {
+              if (refreshtimer != null) {
+                clearInterval(refreshtimer);
+                refreshtimer = null;
+              }
+            }
+            
+            
+            function jump(instr_index) {
+                if (refreshtimer != null) {
+                    clearInterval(refreshtimer);
+                }
+                refreshindex = modulo(instr_index, INSTRUMENTS.length);
+                loadSingle(refreshindex);
+                if (refreshtimer != null) {
+                    refreshtimer = setTimeout(function() { 
+                            refreshtimer = setInterval("refresh();", refreshtime*1000);
+                            refresh();
+                        },
+                        SKIP_PAUSE*refreshtime*1000
+                    );
+                }
+            }
+            
+            function popout_single(event, instr) {
+                if (instr == null) {
+                    var instr = current_instr;
+                }
+                var href = (instr in SINGLEPLOTS) ? SINGLEPLOTS[instr] : 'singleplotwindow.html?instrument=' + instr;
+                window.open(href);
+            }
+            
+            function createPlotRegion(target) {
+                // create a plotting region in the target
+                var cell = $('<div />', {'class': 'plotcell', 'id': 'cell1'});
+                //cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+                cell.append($('<div />', {'class': 'run-title'}))
+                var wrapper = $('<div />', {'class': 'plotwrapper', 'id': 'wrapper', 'class': 'wrapper'});
+                cell.append(wrapper);
+                var plot0_div = $('<div />', {'id': 'plot0', 'class': 'plotdiv', 'style': "display:none;"});
+                wrapper.append(plot0_div);
+                var plot1_div = $('<div />', {'id': 'plot1', 'class': 'plotdiv'});
+                wrapper.append(plot1_div);
+                var transform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
+                cell.append(transform);
+                cell.append($('<span />', {'id': 'eta1'}));
+                $('#'+target).append(cell);
+            }
+            
+            function createInstrumentList(targetid) {
+                var target = $('#' + targetid), button;
+                var multibutton = $( "<button />", { id:"gridview", text:"grid" });
+                target.append($(multibutton));
+                $(multibutton).button({
+                    icons: {primary: "ui-icon-calculator"}
+                })
+                .click(function() { window.location.href="multiplotwindow.html"; });
+                
+                
+                $.each(INSTRUMENTS, function(index, instr) {
+                    button = $('<button />', {'id': instr+'_button', text:instr, value:instr, class:'instrument-button'});
+                    var button_opts = {};
+                    if (CHRNS_INSTRUMENTS.indexOf(instr) > -1) { 
+                        button.addClass('CHRNS-instrument-button'); 
+                        //button_opts.icons = {primary: "ui-icon-arrowthick-1-e"};
+                        button_opts.icons = {primary: "chrns-icon"};
+                    };
+                    button.click(function() {
+                        if ($(this).hasClass("ui-state-highlight")) {
+                            popout_single(null, instr);
+                        }
+                        jump(index);
+                    })
+                    button.dblclick({instr: instr}, popout_single);
+                    target.append($(button));
+                    $(button).button(button_opts).off('mouseenter mouseleave');
+                });
+                target.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+            }
+            
+            fitPlots = function() {
+                $('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
+                $('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
+                for (var p in plots) {
+                    plots[p].replot();
+                }
+            }
+            
+            window.onload = function() {
+                debug=false;
+                createInstrumentList('instrument_list');
+                createPlotRegion('content_table');
+                $('.transform').change(updateTransform);
+                //refresh();
+                //loadSingle(0);
+                refreshindex = -1;
+                play();
+                fitPlots();
+            }
+            
+            
+            function updateTransform(ev) {
+                var logselected = ev.target.checked;
+                var transform = logselected? 'log' : 'lin';
+                Y_TRANSFORM[current_instr] = transform;
+                if (localStorage && localStorage != null) {
+                    localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+                }
+                if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
+                if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
+                if (plots[next_target] && plots[next_target].ztransform) {plots[next_target].ztransform((transform == "log")? "log" : "linear");}
+                else if (plots[next_target] && plots[next_target].ytransform) {plots[next_target].ytransform((transform == "log")? "log" : "linear").update();}
+            }
+            
+            var heatmap_charts = {
+              'plot0': new heatChart.default({}),
+              'plot1': new heatChart.default({})
+            }
+            var xy_charts = {
+              'plot0': new xyChart.default({}),
+              'plot1': new xyChart.default({})
+            }
+            
+            function showData(datalist) {
+                var data = (datalist && datalist.length) ? datalist[0] : {};
+                var i=0;
+                if ($('#plot0').css('display') == 'none') {
+                    current_target = 'plot1';
+                    next_target = 'plot0';
+                } else {
+                    current_target = 'plot0';
+                    next_target = 'plot1';
+                }
+                var cell_target = 'cell' + (i+1).toFixed();
+                var eta_target = 'eta' + (i+1).toFixed();
+                var logselected = $('#' + cell_target).find('input')[0].checked;
+                var transform = logselected? 'log' : 'lin';
+                
+                //if (plot && plot.destroy) { plot.destroy() }
+                
+                $('#' + next_target).show( "drop", { direction: "right" }, 1000);
+                $('#' + cell_target + ' .run-title').text(data.title || "");
+                if (data.type == '1d') {
+                    var options = {};
+                    options.show_errorbars = (ERRORBARS.indexOf(current_instr) > -1);
+                    options.ytransform = (logselected) ? "log" : "linear";
+                    options.series = "0";
+                    var chart = xy_charts[next_target];
+                    chart
+                      .options(options)
+                      .options(data.options)
+                      //.ytransform(options.ytransform)
+                      .zoomRect(true);
+                    plots[next_target] = chart;
+                    d3.select("#" + next_target)
+                      .data([data.data])
+                      .call(chart);
+                    chart.ytransform(options.ytransform);
+                    //plots[next_target] = plotD3(next_target, data, options);
+                    if (data.metadata) {
+                        $('#' + eta_target).html(make_metadata_table(data.metadata));
+                    }
+                } else if (data.type == '2d') {
+                    $('#' + next_target).empty();
+                    var aspect_ratio = null;
+                    if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
+                      aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
+                    }
+                    var chart = heatmap_charts[next_target]; // new heatChart()
+                    //chart.options(data.options)
+                    var colormap_lookup = {
+                        "NGBSANS": "spectral",
+                        "NG7SANS": "seismic"
+                    }
+                    chart
+                      .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
+                      .dims(data.dims)
+                    if (data.xlabel) { chart.xlabel(data.xlabel); }
+                    if (data.ylabel) { chart.ylabel(data.ylabel); }
+                    plots[next_target] = chart;
+                    d3.select("#"+next_target)
+                      .data(data.z)
+                      .call(chart);
+                    chart.zoomScroll(true)
+                      .aspect_ratio(aspect_ratio)
+                      .ztransform((transform == "log")? "log" : "linear")
+                    if (data.metadata) {
+                        $('#' + eta_target).html(make_metadata_table(data.metadata));
+                    }
+                } else {
+                    // this will get triggered if data is missing or has a type other than 1d or 2d
+                    $('#' + next_target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
+                    $('#' + eta_target).empty(); 
+                }
+                var instr = current_instr;
+                var instr_name = instr;
+                var href = (instr in SINGLEPLOTS) ? SINGLEPLOTS[instr] : 'singleplotwindow.html?instrument=' + instr;
+                var instr_link = $('<a />', {'href': href});
+                if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
+                instr_link.html(instr_name);
+                $('#instrument_list div.instrument-name').empty()
+                $('#instrument_list div.instrument-name').append(instr_link)
+                if (CHRNS_INSTRUMENTS.indexOf(instr) > -1) {
+                    var chrns_link =  $('<a />', {'href': 'http://www.ncnr.nist.gov/programs/CHRNS/'});
+                    var img = $('<img />', {
+                        'src': 'css/chrns_transparent.png',
+                        'height': '32px',
+                        'css': { 'vertical-align': 'middle' }
+                    });
+                    chrns_link.append(img);
+                    $('#instrument_list div.instrument-name').append(chrns_link);
+                }
+                
+                $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
+                    function() { 
+                        var cb = colorbars[current_target];
+                        var pl = plots[current_target];
+                        if (cb && cb.destroy) {
+                            cb.destroy();
+                        }
+                        cb = null;
+                        if (pl && pl.destroy) {
+                            pl.destroy();
+                        }
+                        pl = null;
+                        $(this).empty();
+                    });
+                
+            }
+
+            function make_metadata_table(metadata, numcols) {
+                var numcols = numcols || 4;
+                var new_table = document.createElement('table');
+                var keys = Object.keys(metadata);
+                keys.sort();
+                var num_items = keys.length;
+                for (var i=0; i<num_items; i+=numcols) {
+                    var row = new_table.insertRow(-1);
+                    for (var j=0; j<numcols; j++) {
+                        var index = i + j;
+                        if (index >= num_items) { break; }
+                        var key = keys[index];
+                        
+                        var value = metadata[key];
+                        var label = row.insertCell(-1);
+                        label.setAttribute('class', 'metadata-label');
+                        label.innerHTML=key;
+                        var entry = row.insertCell(-1);
+                        entry.setAttribute('class', 'metadata-value');
+                        entry.innerHTML=value;
+                    }
+                }
+                return new_table;
+            }
+        </script>
+        <style>
+            body {
+                height: 100%;
+                font-family: Helvetica,Arial,sans-serif;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
+            }
+            
+            div.top {
+                background: url(//nist.gov/sites/all/themes/nist_style/images/build/bg_pattern.png) repeat #1574b3;
+            }
+            
+            div.section-header {
+                background: linear-gradient(to right,rgba(0,0,0,0),#12659c);
+            }
+            
+            @media screen and (min-width: 1200px)            
+            .section-header__main {
+                padding-right: 11.2px;
+                padding-right: 0.7rem;
+                padding-left: 11.2px;
+                padding-left: 0.7rem;
+            }
+            .section-header__main {
+                max-width: 1200px;
+                margin: 0 auto;
+                padding-right: 27.2px;
+                padding-right: 1.7rem;
+                padding-left: 27.2px;
+                padding-left: 1.7rem;
+                position: relative;
+                color: white;
+            }
+            
+            h2.section-header__title {
+                text-transform: uppercase;
+                margin-top: 0;
+                margin-bottom: 0;
+                padding-top: 20px;
+                padding-top: 1.25rem;
+                padding-bottom: 20px;
+                padding-bottom: 1.25rem;
+                
+                font-size: 1.65rem;
+                font-style: normal;
+            }
+            h2.section-header__title a {
+                text-decoration: none;
+                color: white;
+            }
+            
+            #toolbar {
+                text-align: center;
+            }
+            #instrument_list { 
+                text-align: center;
+                font-size: 15px;
+            }
+            .ui-state-highlight {
+                border: 3px solid red;
+            }
+            .active-instrument {
+                background-color: "red";
+            }
+            .instrument-name {
+                text-align: center;
+                /* font-family: "Georgia", serif; */
+                font-size: 125%;
+                font-weight: bold;
+            }
+            .instrument-name img {
+                padding-left: 20px;
+            }
+            .instrument-button .ui-button-text {
+                padding-left: 0.5em !important;
+                padding-right: 0.5em;
+            }
+            .no-data {
+                font-family: 'Homemade Apple', cursive;
+                font-size: 5em;
+                text-align: center;
+                position: relative;
+                top: 50%;
+                transform: translateY(-50%);
+            }
+            .CHRNS-instrument-button .ui-button-text {
+                padding-left: 2.0em !important;
+            }
+            .chrns-icon {
+                width: 24px !important;
+                height: 12px !important;
+                margin-top: -4px !important;
+                background-image: url('css/chrns_arrow.png') !important;
+                background-size: 100% !important;
+            }    
+            #instruments tr { margin-bottom: 30px; }
+            div { 
+                user-select: none; 
+                -webkit-user-select: none; 
+                -moz-user-select: none;
+            }
+            #content_table{
+                position: relative;
+                flex: 1;
+                margin: 0;
+                overflow-y: scroll;
+                overflow-x: hidden;
+            }
+    
+            .wrapper { 
+                position: relative;
+                display: block;
+            }
+            .plotdiv {
+                width: 90%;
+                position: absolute;
+                top: 0;
+                left: 0;
+            }
+            
+            .metadata-label {color: red}
+            
+            .slidingDiv {
+                background-color: #99CCFF;
+                padding:20px;
+                margin-top:10px;
+                border-bottom:5px solid #3399FF;
+            }
+             
+            .show_hide {
+                display:none;
+            }
+            
+            .run-title {
+                text-align: center;
+                padding-left: 20px;
+                padding-right: 20px;
+            }
+            
+        </style>
+    <style type="text/css">
+      svg,
+      canvas {
+        position: absolute;
+        image-rendering: optimizeSpeed;
+        image-rendering: crisp-edges;
+        image-rendering: -moz-crisp-edges;
+        image-rendering: -webkit-optimize-contrast;
+        image-rendering: optimize-contrast;
+        -ms-interpolation-mode: nearest-neighbor;
+      }
+      .line {
+        fill: none;
+        stroke-width: 1.5px;
+      }
+    
+      .highlight {
+        stroke-width: 4.5px;
+      }
+      .axis-label {
+        font-size: 18px;
+      }
+
+      .axis .tick text {
+        font: 14px sans-serif;
+      }
+
+      .axis path,
+      .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+      }
+      
+      .axis-label {
+          fill: black;
+      }
+
+      .grid .tick {
+          stroke: lightgrey;
+          opacity: 0.7;
+      }
+      .grid path {
+            stroke-width: 0;
+            fill: none;
+      }
+      rect {
+        fill: none;
+        user-select: none; 
+        -webkit-user-select: none; 
+        -moz-user-select: none;
+      }
+
+      rect.zoom {
+        stroke: steelblue;
+        fill-opacity: 0.5;
+      }
+    </style>
+    </head>
+    <body id="woot">
+        <div class="top">
+          <div class="section-header">
+              <div class="section-header__main">
+                  <h2 class="section-header__title"><a href="https://www.nist.gov/ncnr">NIST Center for Neutron Research</a></h2>
+              </div>
+          </div>    
+      </div>
+    <div id="instrument_list"></div>
+    <div id="content_table"></div>
+        
+    <div class="footer">
+<!--
+    <div style="float:left;"><span class="signature">Brian B. Maranville</span>(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</div>
+-->
+    <div style="float:right;"><p><? lastmod(); ?></p></div>
+    </div>
+
+    </body>
+</html>
