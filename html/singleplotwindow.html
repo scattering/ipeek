@@ -3,9 +3,7 @@
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="3600">
         <title>NCNR live data</title>
-        
-        <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Arimo" />
-        <link href='//fonts.googleapis.com/css?family=Open+Sans:400,300' rel='stylesheet' type='text/css'>
+
         <link href='//fonts.googleapis.com/css?family=Homemade+Apple' rel='stylesheet' type='text/css'>
         <!-- Reference the theme's stylesheet on the Google CDN -->
         <!-- this link was unreliable lately...
@@ -27,11 +25,11 @@
                 }
         </script>
         
-        <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js" charset="utf-8"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/heat-chart.js"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/colormap.js" charset="utf-8"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
+        <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
         <script src="js/geturlvars.js"></script>
         
 
@@ -392,7 +390,12 @@
         <style>
             body {
                 height: 100%;
-                font-family: 'Open Sans' !important;
+                font-family: Helvetica,Arial,sans-serif;
+                margin: 0;
+                padding: 0;
+                display: flex;
+                flex-direction: column;
+                overflow: hidden;
             }
             #instruments { 
                 width: 100%;
@@ -434,19 +437,6 @@
              
             .show_hide {
                 display:none;
-            }
-            .jqplot-table-legend-swatch {
-                width: 10;
-                height: 10;
-            }
-            .jqplot-series-shadowCanvas {
-                display: none;
-            }
-            .jqplot-yaxis-label {
-                transform: rotate(-90deg);
-            }
-            .jqplot-yaxis-tick {
-                right: 5px !important;
             }
         </style>
         <style type="text/css">
@@ -497,6 +487,10 @@
         fill: none;
         stroke: #000;
         shape-rendering: crispEdges;
+      }
+      
+      .axis-label {
+          fill: black;
       }
 
       .grid .tick {
