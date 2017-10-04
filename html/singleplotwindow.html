@@ -324,7 +324,7 @@
                           aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
                         }
                         var chart = heatmap_charts[plot_target]; // new heatChart()
-                        chart.options(data.options);
+                        //chart.options(data.options);
                         if (data.xlabel) { chart.xlabel(data.xlabel); }
                         if (data.ylabel) { chart.ylabel(data.ylabel); }
                         chart
@@ -395,7 +395,6 @@
                 padding: 0;
                 display: flex;
                 flex-direction: column;
-                overflow: hidden;
             }
             #instruments { 
                 width: 100%;
