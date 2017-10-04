@@ -28,11 +28,11 @@
                 }
         </script>
         
-        <script src="//d3js.org/d3.v3.min.js" charset="utf-8"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/jquery-extend.js" charset="utf-8"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/heat-chart.js"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/colormap.js" charset="utf-8"></script>
-        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/lib/xy-chart.js"></script>
+        <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
+        <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
 
         <script type="text/javascript">
             var refreshtime = 10; // refresh rate
@@ -396,7 +396,7 @@
                         "NG7SANS": "seismic"
                     }
                     chart
-                      .options({aspect_ratio: aspect_ratio})
+                      //.options({aspect_ratio: aspect_ratio})
                       //.colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                       .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
                       .dims(data.dims)
@@ -407,6 +407,7 @@
                       .data(data.z)
                       .call(chart);
                     chart.zoomScroll(true)
+                      .aspect_ratio(aspect_ratio)
                       .ztransform((transform == "log")? "log" : "linear")
                     if (data.metadata) {
                         $('#' + eta_target).html(make_metadata_table(data.metadata));
