@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='utf-8' />
+    <script src="//code.jquery.com/jquery-1.12.4.js"></script>
+    <script src="js/citation-0.3.4.js"></script>
+    <style>
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        header, div.options {
+            text-align: center;
+        }
+        
+        div.options > div {
+            display: inline-block;
+        }
+        div.input-options {
+            float: right;
+        }
+        #doi_list {
+            width: 100%;
+            min-height: 10em;
+            
+        }
+        div.progress {
+            height: 2em;
+        }
+        .preformatted {
+            font-family: monospace;
+            white-space: pre;
+        }
+    </style>
+    <script>
+        var Cite;
+        DELIMITERS = /[,\s]+/
+        retriever_headers = {
+            html: {"Accept": "application/vnd.citationstyles.csl+json"},
+            bibtex: {"Accept": "application/x-bibtex"},
+            apa: {"Accept": "text/x-bibliography; style=apa"},
+            //apa: {"Accept": "text/x-bibliography; style=harvard3"},
+            aps: {"Accept": "text/x-bibliography; style=american-physics-society"}
+        }
+        options = {
+            ncnr: {
+                format: "string",
+                type: "html",
+                style: "citation-ncnr",
+                prepend: '', // <li class="bibentry">',
+                append: function(entry) { return '&nbsp;&nbsp;<a class="direct-link" href="' + entry.URL + '">direct link</a>' }
+            },
+            aps: {
+                format: "string",
+                type: "html",
+                style: "citation-aps"
+            },
+            apa: {
+                format: "string",
+                type: "html",
+                style: "citation-apa_local"
+            },
+            bibtex: {
+                format: "string",
+                type: "string", 
+                style: "bibtex"
+            }
+        }
+        
+        function retrieve(doi_list, output_type) {
+            var target = $("div.output");
+            //if (output_type != "html") {
+            //    target.addClass("preformatted")
+            //} else {
+            //    target.removeClass("preformatted")
+            //}
+            target.empty();
+            var chain = Promise.resolve();
+            doi_list.forEach(function(d) {
+                chain = chain.then(function() {
+                    var p = new Promise(function(resolve, reject) {
+                        $.get({
+                            url: "https://doi.org/" + d, 
+                            headers: retriever_headers[output_type],
+                            success: function(result) {
+                                console.log(result);
+                                target.html(target.html() + result + '\n');
+                                resolve(result);
+                            },
+                            error: function(e) { reject(e) }
+                        })
+                    })
+                    return p
+                })
+            });
+        }
+        function retrieve2(doi_list, output_type) {
+            var topts = options[output_type];
+            Cite.async(doi_list).then(function(data) {
+                var target = $("div.output");
+                if (topts.type != "html") {
+                    target.addClass("preformatted")
+                } else {
+                    target.removeClass("preformatted")
+                }
+                
+                target.empty();
+                console.log(data);
+                target.html(data.get(topts));
+            })
+        }
+        function convert() {
+            var input = $("textarea#doi_list").val();
+            var strip_quotes = $("input#strip_quotes").prop("checked");
+            var doi_list = input.split(DELIMITERS).filter(function(d) { return d != '' })
+            if (strip_quotes) {
+                doi_list = doi_list.map(function(d) { return d.replace(/^["']/, '').replace(/["']$/, '') });
+            }
+            var output_type = $('input[name="output_type"]:checked').attr("value");
+            retrieve2(doi_list, output_type);
+            //console.log(output_type);
+            //console.log(doi_list);
+        }
+        $(document).ready(function() {
+            Cite = require('citation-js');
+            $.get({
+                url: "js/NCNR.csl",
+                contentType: "text/plain",
+                success: function(csl) {
+                    var templateName = 'ncnr'
+                    var template = csl // The actual XML file
+                    //console.log(template);
+                    Cite.CSL.register.addTemplate(templateName, template)
+                }
+            })
+            $.get({
+                url: "js/american-physics-society.csl",
+                contentType: "text/plain",
+                success: function(csl) {
+                    var templateName = 'aps'
+                    var template = csl // The actual XML file
+                    //console.log(template);
+                    Cite.CSL.register.addTemplate(templateName, template)
+                }
+            })
+             $.get({
+                url: "js/apa.csl",
+                contentType: "text/plain",
+                success: function(csl) {
+                    var templateName = 'apa_local'
+                    var template = csl // The actual XML file
+                    //console.log(template);
+                    Cite.CSL.register.addTemplate(templateName, template)
+                }
+            })
+
+            $("button#go").on("click", convert);
+        });
+    </script>
+</head>
+<body>
+    <header><h2>DOI to bibliography</h2></header>
+    <div class="options">
+        <div class="output-options">
+            <b>Format:&nbsp;</b>
+            <label>ncnr<input type="radio" name="output_type" value="ncnr" checked /></label>
+            <label>bibtex<input type="radio" name="output_type" value="bibtex" /></label>
+            <label>apa<input type="radio" name="output_type" value="apa" /></label>
+            <label>aps<input type="radio" name="output_type" value="aps" /></label>
+        </div>
+        <div class="input-options">
+            <label class="input-options">strip quote marks<input type="checkbox" id="strip_quotes" checked></label>
+        </div>
+    </div>
+    
+    <div class="doi-list-div">
+        <label>List of DOIs to convert (comma, space, newline or tab delimited)</label>
+        <textarea id="doi_list"></textarea>
+    </div>
+    <div class="go">
+        <button id="go">Convert</button>
+    </div>
+    <div class="output-div">
+        <label>Output:</label>
+        <div class="output"></div>
+    </div>
+</body>
+</html>
