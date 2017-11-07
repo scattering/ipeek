@@ -1,5 +1,6 @@
 <html>
 <head>
+  <meta name="viewport" content="width=500, initial-scale=1"> 
   <link rel="icon" type="image/png" href="css/appicon.png" />
   <link rel="stylesheet" href="css/layout-default-latest.css" />
   <link rel="stylesheet" type="text/css" href="//fonts.googleapis.com/css?family=Open+Sans" />
@@ -75,7 +76,7 @@
     if (mainTable == null) {
       mainTable = $("table#experiments").dataTable({
         data: data,
-        select: true,
+        select: false,
         /*
         dom: 'lfrtBip',
         buttons: [
@@ -103,7 +104,7 @@
         */
         columns: [
           { data: 'title', title: 'title', render: renderTitle },
-          { data: 'author', title: 'authors', render: renderAuthors, width: "25%" },
+          { data: 'author', title: 'authors', render: renderAuthors },
           { data: 'is-referenced-by-count', title: 'citations', defaultContent: '--' },
           { data: function(r) { return r['container-title-short'] || r['container-title'] || '--'}, title: 'journal'},
           { data: 'volume', title: 'volume', defaultContent: '--', className: "column-volume"},
@@ -160,7 +161,7 @@
       var result = data.map(function(a) {
           return (a.given || "") + " " + (a.family || "")
         }).join(", ")
-      return result
+      return "<span class=\"author\">" + result + "</span>"
       //return ellipsize(result, type, row);
       //}
     }
@@ -263,10 +264,7 @@
       $("select#instrument").val(instrument).selectmenu("refresh");
   }
   
-  $.getJSON('https://ncnr.nist.gov/ipeek/experiment_lookup.json', function(result) {
-      experiment_lookup = result;
-      change_instrument(instrument);
-  })
+  change_instrument(instrument);
         
   $('.current-experiment-id').click( function() {
             if (mainTable && mainTable.api) {
@@ -293,6 +291,7 @@
   <style type="text/css">
     body {
         font-family: Arial, Helvetica, sans-serif;
+        font-size: 16px;
     }
     #login {
         top: 28%;
@@ -301,15 +300,15 @@
     }
     #north_panel {
         background-color: LightGreen;
-        height: 15px;
-  padding: 5px;
+        height: 1em;
+        padding: 5px;
     }
     #north_panel.connected {
         background-color: LightGreen;
     }
     div.header {
         display: inline-block;
-  margin: 0;
+        margin: 0;
     }
     
     div.instrument-name {
@@ -326,7 +325,7 @@
     
     .control-buttons {
         float: right;
-        font-size: 14pt;
+        font-size: 80%;
         font-weight: bold;
     }
     .control-buttons .stop-button {
@@ -336,6 +335,10 @@
     
     table.dataTable thead tr {
         font-weight: bold;
+    }
+    
+    table.dataTable tbody tr {
+        font-weight: normal;
     }
     
     .ui-layout-north h3 {
