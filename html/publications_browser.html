@@ -141,11 +141,13 @@
     
     function renderYear(d, type, row) {
       console.log(type);
+      var t = (d["date-parts"] || [[]])[0];
+      var ts = new Date(t.join("-"));
+      var datestring = ts.toISOString();
       if (type !== 'display' ) {
-        var ts = (d["date-parts"] || [[]])[0].join("-");
-        return (new Date(ts)).getTime();
+        return datestring;
       }
-      return ((d["date-parts"] || [])[0] || [])[0] || "missing";
+      return "<span class=\"year\" title=\"" + datestring + "\">" + (t || [""])[0] + "</span>";
     }
     
     function renderDataPaths(d, type, row) {
