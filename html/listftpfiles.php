@@ -28,6 +28,6 @@ function list_files($dir)
         $path .= join("/", $_POST["pathlist"]);
         $path = realpath($path);
     }
-    if (!(strpos($path, $allowed_path) === 0)) { echo "illegal request: ".$path; }
+    if (!(strpos($path, $allowed_path) === 0)) { echo '{"error": "illegal request", "path": "' . $path . '"}'; }
     else { echo json_encode(list_files($path)); }
 ?>
