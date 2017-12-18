@@ -101,6 +101,9 @@
             window.onload = function() {
                 //$.ajaxSetup({ cache: false });
                 debug=false;
+                if (jQuery.getUrlVar('noheader') != "true") {
+                    $("header").css("display", "block");
+                }
                 current_instr = jQuery.getUrlVar('instrument');
                 if (current_instr) { current_instr = current_instr.toUpperCase(); }
                 var testing_string = jQuery.getUrlVar('testing');
@@ -517,10 +520,60 @@
         fill-opacity: 0.5;
       }
     </style>
+    <style id="drupal_header">
+        header.top {
+            display: none;
+            background: url(//nist.gov/sites/all/themes/nist_style/images/build/bg_pattern.png) repeat #1574b3;
+        }
+
+        div.section-header {
+            background: linear-gradient(to right,rgba(0,0,0,0),#12659c);
+        }
+
+        @media screen and (min-width: 1200px)
+        .section-header__main {
+            padding-right: 11.2px;
+            padding-right: 0.7rem;
+            padding-left: 11.2px;
+            padding-left: 0.7rem;
+        }
+        .section-header__main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding-right: 27.2px;
+            padding-right: 1.7rem;
+            padding-left: 27.2px;
+            padding-left: 1.7rem;
+            position: relative;
+            color: white;
+        }
+
+        h2.section-header__title {
+            text-transform: uppercase;
+            margin-top: 0;
+            margin-bottom: 0;
+            padding-top: 20px;
+            padding-top: 1.25rem;
+            padding-bottom: 20px;
+            padding-bottom: 1.25rem;
+            font-size: 1.65rem;
+            font-style: normal;
+        }
+        
+        h2.section-header__title a {
+            text-decoration: none;
+            color: white;
+        }
+    </style>
     </head>
     <body id="singleplot">
-    <?php include("/var/www/include/navigation.inc"); ?>
-    <?php include("/var/www/include/utility.inc"); ?>
+      <header class="top">
+          <div class="section-header">
+              <div class="section-header__main">
+                  <h2 class="section-header__title"><a href="https://www.nist.gov/ncnr">NIST Center for Neutron Research</a></h2>
+              </div>
+          </div>    
+      </header>
     <input type="file" style="display: none;" id="plotfile"></input>
 
         <div id="content_table"></div>
