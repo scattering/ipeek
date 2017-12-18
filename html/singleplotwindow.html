@@ -45,6 +45,7 @@
             colorbars = {};
             noheader=true;
             nofooter=true;
+            nometadata=false;
             
             function onshow() {
               if (refreshtimer == null) 
@@ -111,6 +112,8 @@
                     $("footer").css("display", "block");
                     nofooter = false;
                 }
+                nometadata = jQuery.getUrlVar('nometadata') || false;
+
                 current_instr = jQuery.getUrlVar('instrument');
                 if (current_instr) { current_instr = current_instr.toUpperCase(); }
                 var testing_string = jQuery.getUrlVar('testing');
@@ -353,7 +356,7 @@
                         chart.ztransform(ztransform);
                         chart.aspect_ratio(aspect_ratio);
                         chart.zoomScroll(true);
-                        if (data.metadata) {
+                        if (data.metadata && !nometadata) {
                             $('#' + eta_target).html(make_metadata_table(data.metadata));
                         }
                     } else {
