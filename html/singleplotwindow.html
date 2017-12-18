@@ -58,34 +58,27 @@
               }
             }
             
-            function createTable(target, cols, numCells) {
-                // create a table with numCells in the target
-                var table = $('<table />', {'id': 'instruments'});
-                $('#'+target).append(table);
-                var cells = 0;
-                for (var r=0; cells < numCells; r++) {
-                    var row = $('<tr />');
-                    table.append(row);
-                    for (var c=0; c<cols && cells < numCells; c++) {
-                        var cell = $('<td />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
-                        cell.append($('<div />', {'class': 'run-title'}))
-                        cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
-                        var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
-                        cell.append(xtransform);
-                        var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
-                        cell.append(ytransform);
-                        var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
-                        cell.append(ztransform);
-                        var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
-                        cell.append(showline);
-                        var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
-                        cell.append(showmarker);
-                        cell.append($('<span />', {'id': 'eta' + (cells+1).toFixed()}));
-                        cell.append($('<div />', {'id': 'status' + (cells+1).toFixed()}));
-                        cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
-                        row.append(cell);
-                        cells++;
-                    }
+            function createTable(target, cols, numCells) {               
+                for (var cells=0; cells < numCells; cells++) {
+                    var cell = $('<div />', {'class': 'plotcell', 'id': 'cell' + (cells+1).toFixed()});
+                    cell.append($('<div />', {'class': 'run-title'}))
+                    cell.append($('<div />', {'id': 'plot'+(cells+1).toFixed(), 'class': 'plotdiv'}));
+                    var transforms = $('<div />', {'class': 'transforms'});
+                    cell.append(transforms);
+                    var xtransform = $('<label />', {'class': 'transform', 'axis': 'xaxis'}).text('logX').append($('<input />', {'type': 'checkbox'}));
+                    transforms.append(xtransform);
+                    var ytransform = $('<label />', {'class': 'transform', 'axis': 'yaxis'}).text('logY').append($('<input />', {'type': 'checkbox'}));
+                    transforms.append(ytransform);
+                    var ztransform = $('<label />', {'class': 'transform', 'axis': 'zaxis'}).text('logZ').append($('<input />', {'type': 'checkbox'}));
+                    transforms.append(ztransform);
+                    var showline = $('<label />',  {'class': 'showline'}).text('show line').append($('<input />', {'type': 'checkbox'}));
+                    transforms.append(showline);
+                    var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
+                    transforms.append(showmarker);
+                    cell.append($('<div />', {'id': 'eta' + (cells+1).toFixed(), 'class': 'metadata'}));
+                    cell.append($('<div />', {'id': 'status' + (cells+1).toFixed()}));
+                    cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
+                    $("#" + target).append(cell);
                 }
             }
             
@@ -95,7 +88,7 @@
                 //var new_width = (1.0/COLS * 100);
                 //$('.plotcell').width(new_width.toFixed() + '%')
                 //$('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
-                $('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
+                //$('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
                 for (var p in plots) {
                     plots[p].autofit();
                 }
@@ -112,14 +105,14 @@
                     $("footer").css("display", "block");
                     nofooter = false;
                 }
-                nometadata = jQuery.getUrlVar('nometadata') || false;
+                nometadata = (jQuery.getUrlVar('nometadata') == "true");
 
                 current_instr = jQuery.getUrlVar('instrument');
                 if (current_instr) { current_instr = current_instr.toUpperCase(); }
                 var testing_string = jQuery.getUrlVar('testing');
                 testing_mode = (testing_string != null && testing_string.toLowerCase() == 'true');
                 INSTRUMENTS = [current_instr];
-                createTable('content_table', 1, 1);
+                createTable('content', 1, 1);
                 var transform = 'lin';
                 var xislog = false;
                 var yislog = false;
@@ -251,7 +244,9 @@
             
             function showData(datalist, instr) {
                 var data = datalist[0];
-                
+                if (!nometadata) {
+                    $("div.metadata").css("display", "block");
+                };
                 
                 //var instr = data.metadata.instrument;
                 var i = INSTRUMENTS.indexOf(instr);
@@ -318,7 +313,7 @@
                           .data([data.data])
                           .call(chart);
                         chart.ytransform(ytransform);
-                        if (data.metadata) {
+                        if (data.metadata && !nometadata) {
                             $('#' + eta_target).html(make_metadata_table(data.metadata));
                         }
                         if (data.status) {
@@ -415,7 +410,7 @@
                 display: none;
             }
             #instruments { 
-                width: 100%;
+                width: 90%;
             }
             .instrument-name { 
                 text-align: center;
@@ -423,16 +418,35 @@
                 font-weight: bold;
             }
             
-            div#content_table {
+            div#content {
+                /*width: 100%;*/
+                padding-right: 15px;
+                padding-left: 5px;
                 flex: 1;
-                overflow: hidden;
+                display: flex;
+                flex-direction: column;
             }
-            
-            #instruments tr { margin-bottom: 30px; }
+            div.plotcell {
+                flex: 1;
+                display: flex;
+                flex-direction: column;
+            }
+            div.plotdiv {
+                flex: 1;
+                width: 100%;
+            }
+            div.metadata {
+                display: none;
+                height: 15em;
+                overflow: auto;
+            }
             div { 
                 user-select: none; 
                 -webkit-user-select: none; 
                 -moz-user-select: none;
+            }
+            div.transforms {
+                min-height 1.5em;
             }
             .no-data {
                 font-family: 'Homemade Apple', cursive;
@@ -590,7 +604,7 @@
       </header>
       <input type="file" style="display: none;" id="plotfile"></input>
 
-      <div id="content_table"></div>
+      <div id="content"></div>
         
       <footer>
         <div style="float:right;"><p><? lastmod(); ?></p></div>
