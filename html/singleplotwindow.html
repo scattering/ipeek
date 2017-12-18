@@ -370,7 +370,7 @@
                       $('.instrument-name', '#' + cell_target).append(instr_link)
                     }
                     if (!($("span#render_complete").length)) {
-                        $("body").append("<span />", {id: "render_complete", style: "display:none"})
+                        $("body").append($("<span />", {id: "render_complete", style: "display:none"}));
                     }
                 }
             }  
