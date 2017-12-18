@@ -43,6 +43,8 @@
             current_instr = null;
             plots = {};
             colorbars = {};
+            noheader=true;
+            nofooter=true;
             
             function onshow() {
               if (refreshtimer == null) 
@@ -103,6 +105,11 @@
                 debug=false;
                 if (jQuery.getUrlVar('noheader') != "true") {
                     $("header").css("display", "block");
+                    noheader = false;
+                }
+                if (jQuery.getUrlVar('nofooter') != "true") {
+                    $("footer").css("display", "block");
+                    nofooter = false;
                 }
                 current_instr = jQuery.getUrlVar('instrument');
                 if (current_instr) { current_instr = current_instr.toUpperCase(); }
@@ -360,8 +367,10 @@
                     var instr_name = instr;
                     if (instr in INSTRUMENT_NAMES) { instr_name += ": " + INSTRUMENT_NAMES[instr]; }
                     instr_link.html(instr_name);
-                    $('.instrument-name', '#' + cell_target).empty()
-                    $('.instrument-name', '#' + cell_target).append(instr_link)
+                    if (!nofooter) {
+                      $('.instrument-name', '#' + cell_target).empty()
+                      $('.instrument-name', '#' + cell_target).append(instr_link)
+                    }
                 }
             }  
 
@@ -398,6 +407,9 @@
                 padding: 0;
                 display: flex;
                 flex-direction: column;
+            }
+            header, footer {
+                display: none;
             }
             #instruments { 
                 width: 100%;
@@ -522,7 +534,6 @@
     </style>
     <style id="drupal_header">
         header.top {
-            display: none;
             background: url(//nist.gov/sites/all/themes/nist_style/images/build/bg_pattern.png) repeat #1574b3;
         }
 
@@ -574,14 +585,12 @@
               </div>
           </div>    
       </header>
-    <input type="file" style="display: none;" id="plotfile"></input>
+      <input type="file" style="display: none;" id="plotfile"></input>
 
-        <div id="content_table"></div>
+      <div id="content_table"></div>
         
-    <div class="footer">
-    <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
-    <div style="float:right;"><p><? lastmod(); ?></p></div>
-    </div>
-
+      <footer>
+        <div style="float:right;"><p><? lastmod(); ?></p></div>
+      </footer>
     </body>
 </html>
