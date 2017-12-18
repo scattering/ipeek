@@ -43,9 +43,10 @@
             current_instr = null;
             plots = {};
             colorbars = {};
-            noheader=true;
-            nofooter=true;
+            noheader=false;
+            nofooter=false;
             nometadata=false;
+            notitle=false;
             
             function onshow() {
               if (refreshtimer == null) 
@@ -97,15 +98,12 @@
             window.onload = function() {
                 //$.ajaxSetup({ cache: false });
                 debug=false;
-                if (jQuery.getUrlVar('noheader') != "true") {
-                    $("header").css("display", "block");
-                    noheader = false;
-                }
-                if (jQuery.getUrlVar('nofooter') != "true") {
-                    $("footer").css("display", "block");
-                    nofooter = false;
-                }
                 nometadata = (jQuery.getUrlVar('nometadata') == "true");
+                notitle = (jQuery.getUrlVar('notitle') == "true");
+                noheader = (jQuery.getUrlVar('noheader') == "true");
+                nofooter = (jQuery.getUrlVar('nofooter') == "true");
+                if (!noheader) { $("header").css("display", "block") }
+                if (!nofooter) { $("footer").css("display", "block") }
 
                 current_instr = jQuery.getUrlVar('instrument');
                 if (current_instr) { current_instr = current_instr.toUpperCase(); }
@@ -269,7 +267,7 @@
                     //    plots[instr].destroy();
                     //}
                     plots[instr] = null;
-                    $('#' + cell_target + ' .run-title').text(data.title);
+                    if (!notitle) { $('#' + cell_target + ' .run-title').text(data.title) }
                     if (data.type == '1d') {
                         $('.showline').show();
                         $('.showmarker').show();
