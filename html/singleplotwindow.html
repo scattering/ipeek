@@ -2,6 +2,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="3600">
+        <meta name="author" content="Brian B. Maranville">
         <title>NCNR live data</title>
 
         <link href='//fonts.googleapis.com/css?family=Homemade+Apple' rel='stylesheet' type='text/css'>
@@ -77,7 +78,7 @@
                     var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
                     transforms.append(showmarker);
                     cell.append($('<div />', {'id': 'eta' + (cells+1).toFixed(), 'class': 'metadata'}));
-                    cell.append($('<div />', {'id': 'status' + (cells+1).toFixed()}));
+                    cell.append($('<div />', {'id': 'status' + (cells+1).toFixed(), 'class': 'metadata'}));
                     cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
                     $("#" + target).append(cell);
                 }
@@ -269,6 +270,12 @@
                     plots[instr] = null;
                     if (!notitle) { $('#' + cell_target + ' .run-title').text(data.title) }
                     if (data.type == '1d') {
+                        if (data.metadata && !nometadata) {
+                            $('#' + eta_target).html(make_metadata_table(data.metadata));
+                        }
+                        if (data.status && !nometadata) {
+                            $('#' + status_target).html(data.status);
+                        }
                         $('.showline').show();
                         $('.showmarker').show();
                         $('.transform[axis=xaxis]').show();
@@ -311,13 +318,14 @@
                           .data([data.data])
                           .call(chart);
                         chart.ytransform(ytransform);
+                        
+                    } else if (data.type == '2d') {
                         if (data.metadata && !nometadata) {
                             $('#' + eta_target).html(make_metadata_table(data.metadata));
                         }
-                        if (data.status) {
-                            $('#' + status_target).html(data.status);
-                        }
-                    } else if (data.type == '2d') {
+                        //if (data.status && !nometadata) {
+                        //    $('#' + status_target).html(data.status);
+                        //}
                         $('.showline').hide();
                         $('.showmarker').hide();
                         $('.transform[axis=xaxis]').hide();
@@ -349,9 +357,6 @@
                         chart.ztransform(ztransform);
                         chart.aspect_ratio(aspect_ratio);
                         chart.zoomScroll(true);
-                        if (data.metadata && !nometadata) {
-                            $('#' + eta_target).html(make_metadata_table(data.metadata));
-                        }
                     } else {
                         // this will get triggered if data is missing or has a type other than 1d or 2d
                         $('#' + next_target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
@@ -439,7 +444,7 @@
             }
             div.metadata {
                 display: none;
-                height: 15em;
+                max-height: 15em;
                 overflow: auto;
             }
             div { 
@@ -608,8 +613,11 @@
 
       <div id="content"></div>
         
-      <footer>
-        <div style="float:right;"><p><? lastmod(); ?></p></div>
-      </footer>
+      <footer></footer>
+      <script>
+        var author = document.querySelector("meta[name='author']").getAttribute("content");
+        var footer_html = "Last modified " + document.lastModified + " by website owner: NCNR (attn: " + author + ")";
+        document.querySelector("footer").innerHTML = footer_html;
+      </script>
     </body>
 </html>

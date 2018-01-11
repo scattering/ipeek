@@ -2,6 +2,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="3600">
+        <meta name="author" content="Brian B. Maranville">
         <title>NCNR live data</title>
         
         <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/redmond/jquery-ui.css" />
@@ -574,12 +575,15 @@
     <div id="instrument_list"></div>
     <div id="content_table"></div>
         
-    <div class="footer">
 <!--
     <div style="float:left;"><span class="signature">Brian B. Maranville</span>(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</div>
 -->
-    <div style="float:right;"><p><? lastmod(); ?></p></div>
-    </div>
+    <footer></footer>
+    <script>
+      var author = document.querySelector("meta[name='author']").getAttribute("content");
+      var footer_html = "Last modified " + document.lastModified + " by website owner: NCNR (attn: " + author + ")";
+      document.querySelector("footer").innerHTML = footer_html;
+    </script>
 
     </body>
 </html>
