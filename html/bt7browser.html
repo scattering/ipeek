@@ -5,19 +5,17 @@
   <meta charset="utf-8" />
   <title>BT7 data reader</title>
   <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
-  <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <link rel="stylesheet" href="//code.jquery.com/ui/1.12.1/themes/smoothness/jquery-ui.css">
   <link rel="stylesheet" href="css/layout-default-latest.css" />
-  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
-  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="//code.jquery.com/jquery-1.12.4.min.js"></script> 
+  <script src="//code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
   <script src="js/jquery.layout-latest.js"></script>
   <script src="js/jquery.tablesorter.min.js"></script>
     
     <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
-  <script>
-    exports = {}; // compatibility with node scripts
-  </script>
   <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
   <script>
   $(function() {
@@ -67,7 +65,7 @@
       for (var i=0; i<b; i++) {
         output += body_lines[i].trimLeft().replace(/\s+/g, "\t") + "\n"
       }
-      data = d3.tsv.parse(output);
+      data = d3.tsvParse(output);
       return {column_names: column_names, data: data};
     }
     
