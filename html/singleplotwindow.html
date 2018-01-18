@@ -92,7 +92,9 @@
                 //$('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
                 //$('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
                 for (var p in plots) {
+                  if (plots[p] && plots[p].autofit) {
                     plots[p].autofit();
+                  }
                 }
             }
             
@@ -135,15 +137,15 @@
                     .on('change', uploadData);
                 }
                 else {
-                    loadData();
+                    loadData(null, true);
                     onshow();
                 }
                 
                 //loadData(INSTRUMENTS);
-                fitPlots();
+                //fitPlots();
             }
             
-            function loadData(instruments) {
+            function loadData(instruments, autofit) {
                 var instruments = instruments || INSTRUMENTS;
                 for (var i=0; i<instruments.length; i++) {
                     var instr = instruments[i];
@@ -153,7 +155,11 @@
                       dataType: "text",
                       url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json",
                       data: { "noCache": noCache },
-                      success: function(result) { var data = eval(result); showData(data, instr); },
+                      success: function(result) { 
+                          var data = eval(result); 
+                          showData(data, instr);
+                          if (autofit) { fitPlots(); }
+                      },
                       error: function(e) { resolve(showData([{}])); }
                     });
                 }
@@ -267,7 +273,7 @@
                     //if (instr in plots && plots[instr].destroy) {
                     //    plots[instr].destroy();
                     //}
-                    plots[instr] = null;
+                    plots[plot_target] = null;
                     if (!notitle) { $('#' + cell_target + ' .run-title').text(data.title) }
                     if (data.type == '1d') {
                         if (data.metadata && !nometadata) {
@@ -413,7 +419,8 @@
                 flex-direction: column;
             }
             header, footer {
-                display: none;
+                /*display: none;*/
+                min-height: 1em;
             }
             #instruments { 
                 width: 90%;
