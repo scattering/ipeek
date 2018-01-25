@@ -12,6 +12,12 @@ function list_files($dir)
         if(is_file("$dir/$value")) {
             $files_list[] = $value;
             $files_metadata[$value] = array('mtime' => filemtime("$dir/$value"));
+            $zip = zip_open("$dir/$value");
+            $is_zipfile = is_resource($zip);
+            array('is_zipfile' => $is_zipfile);
+            if ($is_zipfile) {
+                zip_close($zip);
+            }
             continue;}
         if(is_dir("$dir/$value")) {$subdir_list[]=$value;continue;}
     } 
