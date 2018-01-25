@@ -14,7 +14,7 @@ function list_files($dir)
             $files_metadata[$value] = array('mtime' => filemtime("$dir/$value"));
             $zip = zip_open("$dir/$value");
             $is_zipfile = is_resource($zip);
-            array('is_zipfile' => $is_zipfile);
+            $files_metadata[$value]['is_zipfile'] = $is_zipfile;
             if ($is_zipfile) {
                 zip_close($zip);
             }
