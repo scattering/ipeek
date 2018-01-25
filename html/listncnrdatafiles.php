@@ -12,12 +12,6 @@ function list_files($dir)
         if(is_file("$dir/$value")) {
             $files_list[] = $value;
             $files_metadata[$value] = array('mtime' => filemtime("$dir/$value"));
-            $zip = zip_open("$dir/$value");
-            $is_zipfile = is_resource($zip);
-            array('is_zipfile' => $is_zipfile);
-            if ($is_zipfile) {
-                zip_close($zip);
-            }
             continue;}
         if(is_dir("$dir/$value")) {$subdir_list[]=$value;continue;}
     } 
@@ -34,6 +28,6 @@ function list_files($dir)
         $path .= join("/", $_POST["pathlist"]);
         $path = realpath($path);
     }
-    if (!(strpos($path, $allowed_path) === 0)) { echo "illegal request: ".$path; }
+    if (!(strpos($path, $allowed_path) === 0)) { echo '{"error": "illegal request", "path": "' . $path . '"}'; }
     else { echo json_encode(list_files($path)); }
 ?>
