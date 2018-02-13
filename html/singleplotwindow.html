@@ -2,6 +2,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="3600">
+        <meta name="viewport" content="width=device-width; initial-scale=1.0;" />
         <meta name="author" content="Brian B. Maranville">
         <title>NCNR live data</title>
 
@@ -48,6 +49,7 @@
             nofooter=false;
             nometadata=false;
             notitle=false;
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
             function onshow() {
               if (refreshtimer == null) 
@@ -77,6 +79,8 @@
                     transforms.append(showline);
                     var showmarker = $('<label />', {'class': 'showmarker'}).text('show points').append($('<input />', {'type': 'checkbox'}));
                     transforms.append(showmarker);
+                    var resetzoom = $('<button />', {'class': 'resetzoom'}).text('reset zoom');
+                    transforms.append(resetzoom);
                     cell.append($('<div />', {'id': 'eta' + (cells+1).toFixed(), 'class': 'metadata'}));
                     cell.append($('<div />', {'id': 'status' + (cells+1).toFixed(), 'class': 'metadata'}));
                     cell.append($('<div />', {'class': 'instrument-name ui-state-default'}));
@@ -131,7 +135,8 @@
                 $('.transform[axis=yaxis] input').prop('checked', yislog).change(updateTransform);
                 $('.transform[axis=zaxis] input').prop('checked', zislog).change(updateTransform);
                 $('.showline input').prop('checked', showline).change(updateShowLine);
-                $('.showmarker input').prop('checked', showmarker).change(updateShowMarker);   
+                $('.showmarker input').prop('checked', showmarker).change(updateShowMarker);
+                $('.resetzoom').click(resetZoom);
                 if (testing_mode) {
                     $('#plotfile').show()
                     .on('change', uploadData);
@@ -240,6 +245,11 @@
                 plots[next_target].update();
             }
             
+            function resetZoom(ev) {
+                var next_target = 'plot1';
+                plots[next_target].resetzoom();
+            }
+            
             var heatmap_charts = {
               'plot1': new heatChart.default({margin: {left: 90, bottom: 75}})
             }
@@ -311,7 +321,7 @@
                         var chart = xy_charts[plot_target];
                         chart
                           .options(data.options)
-                          .zoomRect(true);
+                          //.zoomRect(!isMobile);
                         if (data.xlabel) { chart.xlabel(data.xlabel); }
                         if (data.ylabel) { chart.ylabel(data.ylabel); }
                         plots[plot_target] = chart;
@@ -362,7 +372,7 @@
                           .call(chart);
                         chart.ztransform(ztransform);
                         chart.aspect_ratio(aspect_ratio);
-                        chart.zoomScroll(true);
+                        //chart.zoomScroll(!isMobile);
                     } else {
                         // this will get triggered if data is missing or has a type other than 1d or 2d
                         $('#' + next_target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
@@ -420,7 +430,7 @@
             }
             header, footer {
                 /*display: none;*/
-                min-height: 1em;
+                /*min-height: 1em;*/
             }
             #instruments { 
                 width: 90%;
@@ -433,9 +443,11 @@
             
             div#content {
                 /*width: 100%;*/
+                position: relative;
                 padding-right: 2px;
                 padding-left: 2px;
-                overflow: hidden;
+                /*overflow: hidden;*/
+                min-height: 600px;
                 flex: 1;
                 display: flex;
                 flex-direction: column;
