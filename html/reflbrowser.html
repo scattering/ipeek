@@ -198,7 +198,7 @@
         return handler
     }
     
-    dirHelper = "https://ncnr.nist.gov/instruments/magik/listftpfiles.php";
+    dirHelper = "https://ncnr.nist.gov/ipeek/listftpfiles.php";
     $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
     
     showSANSData = function(data) {    
