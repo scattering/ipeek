@@ -4,29 +4,29 @@
 <head>
   <meta charset="utf-8" />
   <title>ICP data reader</title>
-  <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
+  <!-- <link rel="stylesheet" href="https://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
   <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
-  <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
+  <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot/jquery.jqplot.min.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasTextRenderer.min.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisLabelRenderer.min.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.canvasAxisTickRenderer.min.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot/plugins/jqplot.cursor.min.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.errorbarRenderer.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.InteractiveLegend.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.FixedAspect.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.GracefulAxisRenderer.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.touchEvents.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.heatmapRenderer.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/plugins/jqplot.colorbarRenderer.js"></script>
 
     <script type="text/javascript" src="plotting_api2.js"></script>
     <script src="js/geturlvars.js"></script>
-<!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
-    <script type="text/javascript" src="http://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
+<!--    <script src="https://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/interactors_plugin_base.js"></script>
+    <script type="text/javascript" src="https://ncnr.nist.gov/instruments/magik/jqplot.science/interactors/rectangle_interactor_plugin.js"></script>
   <script>
     exports = {}; // compatibility with node scripts
   </script>
@@ -190,7 +190,7 @@
                   var selected = $(".ui-selected", this);
                   if (selected.length > 0) {
                     var last = selected.slice(-1)[0];
-                    getData('http://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
+                    getData('https://ncnr.nist.gov/pub/' + pathlist.join('/') + '/' + last.getAttribute('filename'));
                   } 
                 }
             });
@@ -198,7 +198,7 @@
         return handler
     }
     
-    dirHelper = "http://ncnr.nist.gov/instruments/magik/listftpfiles.php";
+    dirHelper = "https://ncnr.nist.gov/instruments/magik/listftpfiles.php";
     $.post(dirHelper, {'pathlist': data_path}, updateFileBrowserPane("navigation", data_path));
     
     showSANSData = function(data) {    
