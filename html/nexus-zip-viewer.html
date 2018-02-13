@@ -9,6 +9,7 @@
   <link rel="stylesheet" href="css/layout-default-latest.css" />
   <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
   <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
   <script src="js/es6-promise.min.js"></script>
   <script src="js/zip/zip.js"></script>
   <script src="js/zip/deflate.js"></script>
@@ -21,14 +22,12 @@
   <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
   <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
   <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
-  
-    <script src="js/geturlvars.js"></script>
+  <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
-  <script>
-    exports = {}; // compatibility with node scripts
-  </script>
-  <script src="//cdnjs.cloudflare.com/ajax/libs/d3/3.5.6/d3.min.js" charset="utf-8"></script>
-  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science/xy-chart.js"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
   <script>
   $(function() {
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
@@ -39,6 +38,7 @@
     data_path = ["ncnrdata"];
     datasets = [];
     selected_node = "";
+    chart = null;
     
     getUrlVars = function(){
       var vars = [], hash;
@@ -139,16 +139,71 @@
               f.get(id).then(function(item) { 
                   $("#link_target").html( (item.orig_path == null || item.path == null) ? "" : "<pre>link to: " + item.path + "</pre>" );
               });
-              f.get(id).then(nz.getAttrs).then(function(a) {$("#device_attrs").html("<pre>" + JSON.stringify(a).replace(">", "&gt;").replace("<", "&lt;") + "</pre>")});
-              if (!isdir) {
-                f.get(id).then(nz.getValueString).then(function(s) {
-                    //$("#device_values").html("<pre>" + JSON.stringify(v.reduce(function(a, b) {return a.concat(b)}), null, 2) + "</pre>")
-                    $("#device_values").html('<pre class="value">' + s + '</pre>')
-                });    
-              } else {
-                $("#device_values").html("<pre>Group</pre>")
-                data.instance.toggle_node(data.node); 
-              }
+              f.get(id).then(function(item) {
+                item.getAttrs().then(function(a) {
+                  $("#device_attrs")
+                    .html("<pre>" + JSON.stringify(a, null, 2).replace(">", "&gt;").replace("<", "&lt;") + "</pre>");
+                  $("#device_values").height('auto');
+                  if (!isdir) {
+                    if (a.shape && a.shape.length && a.shape.length > 1) {
+                      item.getValue().then(function(v) {
+                        $("#device_values").empty().height(300);
+                        var xdim = a.shape.slice(-2)[0];
+                        var ydim = a.shape.slice(-1)[0];
+                        var z = [];
+                        var index = 0;
+                        var zmax = -Infinity;
+                        var zmin = Infinity;
+                        for (var i=0; i<xdim; i++) {
+                          var row = [];
+                          z.push(row);
+                          for (var j=0; j<ydim; j++) {
+                            var zz = v[index++];
+                            zmax = Math.max(zz, zmax);
+                            zmin = Math.min(zz, zmin);
+                            row.push(zz);
+                          }
+                        }
+                        var dims = {
+                          xmin: 0,
+                          xmax: xdim,
+                          ymin: 0,
+                          ymax: ydim,
+                          zmin: zmin,
+                          zmax: zmax
+                        };
+                        if (chart && chart.destroy) { chart.destroy() }
+                        var plot_2d_options = {
+                          "ztransform": 'log',
+                          "aspect_ratio": 1.0,
+                          "dims": dims,
+                            axes: {
+                                xaxis: {label: 'x'},
+                                yaxis: {label: 'y'}
+                            }
+                        }
+                        chart = new heatChart.default(plot_2d_options);
+                        chart
+                          .colormap(colormap.get_colormap("jet"))
+                          .autoscale(true);
+                        d3.select('#device_values')
+                          .data([z])
+                          .call(chart);
+                        chart.zoomScroll(true);
+                      });
+                      //$("#device_values").html('<pre class="value"> binary array </pre>');
+                    }
+                    else {
+                      item.getValueString().then(function(s) {
+                        $("#device_values").html('<pre class="value">' + s + '</pre>');
+                      });
+                    }
+                  } else {
+                    $("#device_values").html("<pre>Group</pre>");
+                    data.instance.toggle_node(data.node);
+                  }
+                });
+              })
             });
             $("#treediv").bind("activate_node.jstree", function(a,b) {
               if (autoscroll) {

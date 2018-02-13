@@ -1,4 +1,8 @@
 /* require("DataStream.js"); */
+/* require("d3"); */
+
+var d3_tsvFormat = (d3.tsvFormat) ? d3.tsvFormat : d3.tsv.format;
+var d3_tsvParseRows = (d3.tsvParseRows) ? d3.tsvParseRows : d3.tsv.parseRows;
 
 nz = {};
 
@@ -303,7 +307,7 @@ nz.Field.prototype = {
     return this.getAttrs().then(function(a) {
       attrs = a;
       if (attrs.binary) {
-        return that.getValue().then(function(v) { return d3.tsv.format(v) })
+        return that.getValue().then(function(v) { return d3_tsvFormat(v) })
       }
       else {
         return root.file_readText(path).then(function(s) {
@@ -374,7 +378,7 @@ nz.Field.prototype = {
             throw ("unknown format for data in " + path + ": " + attrs.format[1])
             accessor = function(d) {return d}
           }
-          return d3.tsv.parseRows(text, accessor);
+          return d3_tsvParseRows(text, accessor);
         });
       }
     });
