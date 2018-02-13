@@ -2,6 +2,7 @@
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
         <meta http-equiv="refresh" content="3600">
+        <meta name="viewport" content="width=device-width; initial-scale=1.0;" />
         <meta name="author" content="Brian B. Maranville">
         <title>NCNR live data</title>
         
@@ -38,10 +39,12 @@
             LOGX_INSTRUMENTS = [];
             Y_TRANSFORM = {};
             X_TRANSFORM = {};
+            Z_TRANSFORM = {};
             $.each(INSTRUMENTS, function(index, instr) {
                Y_TRANSFORM[instr] = (LOGY_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
                X_TRANSFORM[instr] = (LOGX_INSTRUMENTS.indexOf(instr) >= 0) ? 'log' : 'lin';
             });
+            var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             
             // targets for single plot per-instrument.  Defaults to singleplotwindow.html?instrument=<instrument_name>
             SINGLEPLOTS = {
@@ -50,14 +53,20 @@
                 NGB30SANS: 'sansplot.html?instrument=NGB30SANS'
             }
             
-            if (localStorage && localStorage.Y_TRANSFORM) {
-                var stored_y_transform = {};
-                try { 
-                    stored_y_transform = JSON.parse(localStorage['Y_TRANSFORM']);
-                } catch (e) {}
-                $.extend(true, Y_TRANSFORM, stored_y_transform);
-                localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
+            function syncPersistent(key) {
+                if (localStorage && localStorage[key]) {
+                    var stored_keyval = {};
+                    try { 
+                        stored_keyval = JSON.parse(localStorage[key]);
+                    } catch (e) {}
+                    $.extend(true, window[key], stored_keyval);
+                    localStorage[key] = JSON.stringify(window[key]);
+                }
             }
+            
+            syncPersistent('Y_TRANSFORM');
+            syncPersistent('X_TRANSFORM');
+            syncPersistent('Z_TRANSFORM');
                 
             INSTRUMENT_NAMES = {'CGD': 'MAGIK', 'NGD': 'PBR', 'NG2':'HFBS', 'NG4': 'DCS', 'BT4':'FANS', 'NG7':'Reflectometer'}
             // http://www.ncnr.nist.gov/instruments/chrns_small_logo.jpg
@@ -150,7 +159,7 @@
                 wrapper.append(plot0_div);
                 var plot1_div = $('<div />', {'id': 'plot1', 'class': 'plotdiv'});
                 wrapper.append(plot1_div);
-                var transform = $('<label />').text('logY').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
+                var transform = $('<label />').text('log scale').append($('<input />', {'type': 'checkbox', 'class': 'transform', 'id': 'logtransform'}));
                 cell.append(transform);
                 cell.append($('<span />', {'id': 'eta1'}));
                 $('#'+target).append(cell);
@@ -188,8 +197,8 @@
             }
             
             fitPlots = function() {
-                $('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
-                $('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
+                //$('.wrapper, .plotdiv').width(($('.plotcell').width() - 10).toFixed() + 'px');
+                //$('.wrapper, .plotdiv').height(($(window).height() - 250).toFixed() + 'px');
                 for (var p in plots) {
                     plots[p].replot();
                 }
@@ -198,7 +207,7 @@
             window.onload = function() {
                 debug=false;
                 createInstrumentList('instrument_list');
-                createPlotRegion('content_table');
+                createPlotRegion('content');
                 $('.transform').change(updateTransform);
                 //refresh();
                 //loadSingle(0);
@@ -207,100 +216,38 @@
                 fitPlots();
             }
             
+            var plots_next = [], plots_current = [], colorbars_next = [], colorbars_current = [];
+            var target_index = 1;
+            var targets = ['plot0', 'plot1'];
             
             function updateTransform(ev) {
                 var logselected = ev.target.checked;
-                var transform = logselected? 'log' : 'lin';
+                var transform = logselected? 'log' : 'linear';
                 Y_TRANSFORM[current_instr] = transform;
                 if (localStorage && localStorage != null) {
                     localStorage['Y_TRANSFORM'] = JSON.stringify(Y_TRANSFORM);
                 }
+                plots_next.forEach(function(pl) {
+                    if (pl && pl.ztransform) { pl.ztransform(transform) }
+                    else if (pl && pl.ytransform) { pl.ytransform(transform) }
+                });
                 if (plots[next_target] && plots[next_target].setTransform) {plots[next_target].setTransform(transform)};
                 if (colorbars[next_target]) { colorbars[next_target].plugins._interactor.zoomMax() };
                 if (plots[next_target] && plots[next_target].ztransform) {plots[next_target].ztransform((transform == "log")? "log" : "linear");}
                 else if (plots[next_target] && plots[next_target].ytransform) {plots[next_target].ytransform((transform == "log")? "log" : "linear").update();}
             }
             
-            var heatmap_charts = {
-              'plot0': new heatChart.default({}),
-              'plot1': new heatChart.default({})
-            }
-            var xy_charts = {
-              'plot0': new xyChart.default({}),
-              'plot1': new xyChart.default({})
-            }
-            
             function showData(datalist) {
-                var data = (datalist && datalist.length) ? datalist[0] : {};
-                var i=0;
-                if ($('#plot0').css('display') == 'none') {
-                    current_target = 'plot1';
-                    next_target = 'plot0';
-                } else {
-                    current_target = 'plot0';
-                    next_target = 'plot1';
-                }
-                var cell_target = 'cell' + (i+1).toFixed();
-                var eta_target = 'eta' + (i+1).toFixed();
+                
+                var current_target = targets[target_index];
+                target_index = (target_index + 1) % targets.length;
+                var next_target = targets[target_index];
+                
+                var cell_target = 'cell1';
+                var eta_target = 'eta1';
                 var logselected = $('#' + cell_target).find('input')[0].checked;
                 var transform = logselected? 'log' : 'lin';
                 
-                //if (plot && plot.destroy) { plot.destroy() }
-                
-                $('#' + next_target).show( "drop", { direction: "right" }, 1000);
-                $('#' + cell_target + ' .run-title').text(data.title || "");
-                if (data.type == '1d') {
-                    var options = {};
-                    options.show_errorbars = (ERRORBARS.indexOf(current_instr) > -1);
-                    options.ytransform = (logselected) ? "log" : "linear";
-                    options.series = "0";
-                    var chart = xy_charts[next_target];
-                    chart
-                      .options(options)
-                      .options(data.options)
-                      //.ytransform(options.ytransform)
-                      .zoomRect(true);
-                    plots[next_target] = chart;
-                    d3.select("#" + next_target)
-                      .data([data.data])
-                      .call(chart);
-                    chart.ytransform(options.ytransform);
-                    //plots[next_target] = plotD3(next_target, data, options);
-                    if (data.metadata) {
-                        $('#' + eta_target).html(make_metadata_table(data.metadata));
-                    }
-                } else if (data.type == '2d') {
-                    $('#' + next_target).empty();
-                    var aspect_ratio = null;
-                    if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
-                      aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
-                    }
-                    var chart = heatmap_charts[next_target]; // new heatChart()
-                    //chart.options(data.options)
-                    var colormap_lookup = {
-                        "NGBSANS": "spectral",
-                        "NG7SANS": "seismic"
-                    }
-                    chart
-                      .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
-                      .dims(data.dims)
-                    if (data.xlabel) { chart.xlabel(data.xlabel); }
-                    if (data.ylabel) { chart.ylabel(data.ylabel); }
-                    plots[next_target] = chart;
-                    d3.select("#"+next_target)
-                      .data(data.z)
-                      .call(chart);
-                    chart.zoomScroll(true)
-                      .aspect_ratio(aspect_ratio)
-                      .ztransform((transform == "log")? "log" : "linear")
-                    if (data.metadata) {
-                        $('#' + eta_target).html(make_metadata_table(data.metadata));
-                    }
-                } else {
-                    // this will get triggered if data is missing or has a type other than 1d or 2d
-                    $('#' + next_target).empty().append('<div class="no-data">Ceci n\'est pas data</div>');
-                    $('#' + eta_target).empty(); 
-                }
                 var instr = current_instr;
                 var instr_name = instr;
                 var href = (instr in SINGLEPLOTS) ? SINGLEPLOTS[instr] : 'singleplotwindow.html?instrument=' + instr;
@@ -320,20 +267,111 @@
                     $('#instrument_list div.instrument-name').append(chrns_link);
                 }
                 
-                $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
-                    function() { 
-                        var cb = colorbars[current_target];
-                        var pl = plots[current_target];
-                        if (cb && cb.destroy) {
-                            cb.destroy();
+                try {
+                    var metadata = datalist[0].metadata;
+                    if (metadata) {
+                        $('#' + eta_target).html(make_metadata_table(metadata));
+                    }
+                    
+                    $('#' + next_target).show( "drop", { direction: "right" }, 1000 );
+                    $('#' + cell_target + ' .run-title').text(datalist[0].title || "");
+                    
+                    var plot_divs = [];
+                    plots_current = plots_next;
+                    colorbars_current = colorbars_next;
+                    plots_next = [];
+                    colorbars_next = [];
+                
+                    for (var p=0; p<datalist.length; p++) {
+                        var pd = $("<div />", {"class": "subplot", "id": "subplot_" + p.toFixed(0)});
+                        $("div#" + cell_target + " div#" + next_target).append(pd);
+                        plot_divs.push(pd[0]);
+                    }
+                    for (var di=0; di<datalist.length; di++) {
+                        var data = datalist[di];
+
+                        if (data.type == '1d') {
+                            if (data.metadata) {
+                                $('#' + eta_target).html(make_metadata_table(data.metadata));
+                            }
+                            var options = {};
+                            options.show_errorbars = (ERRORBARS.indexOf(current_instr) > -1);
+                            options.ytransform = (logselected) ? "log" : "linear";
+                            options.series = "0";
+                            
+                            var chart = new xyChart.default({});
+                            chart
+                              .options(options)
+                              .options(data.options)
+                              //.ytransform(options.ytransform)
+                              //.zoomRect(!isMobile);
+                            plots_next.push(chart);
+                            //d3.select("#" + next_target)
+                            d3.select(plot_divs[di])
+                              .data([data.data])
+                              .call(chart);
+                            chart.ytransform(options.ytransform);
+                            //plots[next_target] = plotD3(next_target, data, options);
+                        } else if (data.type == '2d') {
+                            if (data.metadata) {
+                                $('#' + eta_target).html(make_metadata_table(data.metadata));
+                            }
+                            //$('#' + next_target).empty();
+                            var aspect_ratio = null;
+                            if ((((data.options || {}).fixedAspect || {}).fixAspect || null) == true) {
+                              aspect_ratio = ((data.options || {}).fixedAspect || {}).aspectRatio || null;
+                            }
+                            //var chart = heatmap_charts[next_target]; // new heatChart()
+                            var chart = new heatChart.default({colorbar_width: 100});
+                            //chart.options(data.options)
+                            var colormap_lookup = {
+                                "NGBSANS": "spectral",
+                                "NG7SANS": "seismic"
+                            }
+                            chart
+                              .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
+                              .dims(data.dims)
+                            if (data.xlabel) { chart.xlabel(data.xlabel); }
+                            if (data.ylabel) { chart.ylabel(data.ylabel); }
+                            plots_next.push(chart);
+                            d3.select(plot_divs[di])
+                              .data(data.z)
+                              .call(chart);
+                            chart 
+                              //.zoomScroll(!isMobile)
+                              .aspect_ratio(aspect_ratio)
+                              .ztransform((transform == "log")? "log" : "linear")
+                            
                         }
-                        cb = null;
-                        if (pl && pl.destroy) {
-                            pl.destroy();
-                        }
-                        pl = null;
-                        $(this).empty();
-                    });
+                    }
+                }
+                catch (e) {
+                    // this will get triggered if data is missing or has a type other than 1d or 2d
+                    $('#' + next_target).show( "drop", { direction: "right" }, 1000 );
+                    $('#' + next_target).empty().append('<div class="no-data subplot">Ceci n\'est pas data</div>');
+                    $('#' + eta_target).empty(); 
+                }
+                finally {
+                    $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
+                        function() { 
+                            var cbs = colorbars_current;
+                            var pls = plots_current;
+                            var cb, pl;
+                            while ((cb = cbs.pop()) != null) {
+                                if (cb && cb.destroy) {
+                                    cb.destroy();
+                                }
+                                cb = null;
+                            }
+                            while ((pl = pls.pop()) != null) {
+                                if (pl && pl.destroy) {
+                                    pl.destroy();
+                                }
+                                pl = null;
+                            }
+                            $(this).empty();
+                        });
+                }
                 
             }
 
@@ -364,13 +402,9 @@
         </script>
         <style>
             body {
-                height: 100%;
                 font-family: Helvetica,Arial,sans-serif;
                 margin: 0;
                 padding: 0;
-                display: flex;
-                flex-direction: column;
-                overflow: hidden;
             }
             
             header.top {
@@ -381,7 +415,7 @@
                 background: linear-gradient(to right,rgba(0,0,0,0),#12659c);
             }
             
-            @media screen and (min-width: 1200px)            
+            /*@media screen and (min-width: 1200px)*/
             .section-header__main {
                 padding-right: 11.2px;
                 padding-right: 0.7rem;
@@ -466,24 +500,54 @@
                 -webkit-user-select: none; 
                 -moz-user-select: none;
             }
-            #content_table{
-                position: relative;
-                flex: 1;
-                margin: 0;
-                overflow-y: scroll;
-                overflow-x: hidden;
-            }
-    
-            .wrapper { 
-                position: relative;
-                display: block;
-            }
-            .plotdiv {
-                width: 90%;
-                position: absolute;
-                top: 0;
-                left: 0;
-            }
+            
+            
+            /*@media only screen and (min-width: 1000px) {*/
+                /* for desktop */
+                body {
+                    height: 100%;
+                    overflow: hidden;
+                    display: flex;
+                    flex-direction: column;
+                }
+                #content {
+                    position: relative;
+                    flex: 1;
+                    margin: 0;
+                    overflow-y: auto;
+                    overflow-x: hidden;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .wrapper { 
+                    position: relative;
+                    margin-left: 1em;
+                    margin-right: 1em;
+                    flex: 1;
+                    min-height: 500px;
+                    overflow-y: hidden;
+                    overflow-x: hidden;
+                }
+                
+                .plotcell { 
+                    flex: 1;
+                    display: flex;
+                    flex-direction: column;
+                }
+                .plotdiv {
+                    width: 100%;
+                    height: 100%;
+                    position: absolute;
+                    
+                    display: flex;
+                    flex-flow: row wrap;
+                }
+                
+                .subplot {
+                    height: auto;
+                    flex: 1;
+                }
+            /*}*/
             
             .metadata-label {color: red}
             
@@ -499,6 +563,7 @@
             }
             
             .run-title {
+                font-size: 1em;
                 text-align: center;
                 padding-left: 20px;
                 padding-right: 20px;
@@ -573,7 +638,7 @@
           </div>    
       </header>
     <div id="instrument_list"></div>
-    <div id="content_table"></div>
+    <div id="content"></div>
         
 <!--
     <div style="float:left;"><span class="signature">Brian B. Maranville</span>(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</div>
