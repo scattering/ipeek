@@ -1,9 +1,10 @@
 <html>
     <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
         <meta http-equiv="refresh" content="3600">
-        <meta name="viewport" content="width=device-width; initial-scale=1.0;" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <meta name="author" content="Brian B. Maranville">
+        <meta name="reply-to" content="brian.maranville@nist.gov">
         <title>NCNR live data</title>
         
         <link rel="stylesheet" href="//code.jquery.com/ui/1.11.4/themes/redmond/jquery-ui.css" />
@@ -411,6 +412,10 @@
                 background: url(//nist.gov/sites/all/themes/nist_style/images/build/bg_pattern.png) repeat #1574b3;
             }
             
+            footer {
+                text-align: right;
+            }
+            
             div.section-header {
                 background: linear-gradient(to right,rgba(0,0,0,0),#12659c);
             }
@@ -646,7 +651,8 @@
     <footer></footer>
     <script>
       var author = document.querySelector("meta[name='author']").getAttribute("content");
-      var footer_html = "Last modified " + document.lastModified + " by website owner: NCNR (attn: " + author + ")";
+      var author_email = document.querySelector("meta[name='reply-to']").getAttribute("content");
+      var footer_html = "Website owner: NCNR (attn: <a href=\"mailto:" + author_email + "\">" + author + "</a>)";
       document.querySelector("footer").innerHTML = footer_html;
     </script>
 
