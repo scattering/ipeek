@@ -332,11 +332,12 @@
                             chart
                               .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
                               .dims(data.dims)
+                            var flattened = flatten_data(data.z[0]);
                             if (data.xlabel) { chart.xlabel(data.xlabel); }
                             if (data.ylabel) { chart.ylabel(data.ylabel); }
                             plots_next.push(chart);
                             d3.select(plot_divs[di])
-                              .data(data.z)
+                              .data([flattened.data])
                               .call(chart);
                             chart 
                               //.zoomScroll(!isMobile)
@@ -350,7 +351,8 @@
                     // this will get triggered if data is missing or has a type other than 1d or 2d
                     $('#' + next_target).show( "drop", { direction: "right" }, 1000 );
                     $('#' + next_target).empty().append('<div class="no-data subplot">Ceci n\'est pas data</div>');
-                    $('#' + eta_target).empty(); 
+                    $('#' + eta_target).empty();
+                    console.log(e);
                 }
                 finally {
                     $('#' + current_target).hide( "drop", { direction: "left" }, 1000, 
@@ -374,6 +376,21 @@
                         });
                 }
                 
+            }
+            
+            function flatten_data(data) {
+              // assumes row-major array order
+              var ydim = data.length;
+              var xdim;
+              var unrolled = [], p=0;
+              for (let j=0; j<ydim; j++) {
+                let row = data[j];
+                xdim = row.length;
+                for (let i=0; i<xdim; i++) {
+                  unrolled[p++] = row[i];
+                }
+              }
+              return { data: unrolled, xdim: xdim, ydim: ydim }
             }
 
             function make_metadata_table(metadata, numcols) {

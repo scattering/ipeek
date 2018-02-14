@@ -150,44 +150,61 @@
                         $("#device_values").empty().height(300);
                         var xdim = a.shape.slice(-2)[0];
                         var ydim = a.shape.slice(-1)[0];
-                        var z = [];
-                        var index = 0;
-                        var zmax = -Infinity;
-                        var zmin = Infinity;
-                        for (var i=0; i<xdim; i++) {
-                          var row = [];
-                          z.push(row);
-                          for (var j=0; j<ydim; j++) {
-                            var zz = v[index++];
-                            zmax = Math.max(zz, zmax);
-                            zmin = Math.min(zz, zmin);
-                            row.push(zz);
-                          }
-                        }
                         var dims = {
                           xmin: 0,
                           xmax: xdim,
+                          xdim: xdim,
                           ymin: 0,
                           ymax: ydim,
-                          zmin: zmin,
-                          zmax: zmax
+                          ydim: ydim
                         };
+                        if (a.binary) {
+                        } else {
+                          
+                          var z = (a.shape.length > 2) ? v[0] : v;
+                          var flattened = flatten_data_f(z).data;
+                          console.log(dims);
+                          
+                          var zmin = Infinity;
+                          var zmax = -Infinity;
+                          var zz;
+                          for (var i=0; i<data.length; i++) {
+                            zz = flattened[i];
+                            zmin = Math.min(zmin, zz);
+                            zmax = Math.max(zmax, zz);
+                          }
+                          /*
+                          //var row;
+                          for (var i=0; i<z.length; i++) {
+                            let row = z[i];
+                            for (var j=0; j<row.length; j++) {
+                              let zz = row[j];
+                              zmin = Math.min(zmin, zz);
+                              zmax = Math.max(zmax, zz);
+                            }
+                          }
+                          */
+                          //dims.zmin = zmin;
+                          //dims.zmax = zmax;
+                        }
+                        
                         if (chart && chart.destroy) { chart.destroy() }
                         var plot_2d_options = {
                           "ztransform": 'log',
                           "aspect_ratio": 1.0,
-                          "dims": dims,
-                            axes: {
-                                xaxis: {label: 'x'},
-                                yaxis: {label: 'y'}
-                            }
+                          "autoscale": true,
+                          axes: {
+                            xaxis: {label: 'x'},
+                            yaxis: {label: 'y'}
+                          }
                         }
                         chart = new heatChart.default(plot_2d_options);
                         chart
                           .colormap(colormap.get_colormap("jet"))
-                          .autoscale(true);
+                          .autoscale(true)
+                          .dims(dims);
                         d3.select('#device_values')
-                          .data([z])
+                          .data([flattened])
                           .call(chart);
                         chart.zoomScroll(true);
                       });
@@ -224,6 +241,37 @@
         });
     }
     //var fileinput = document.getElementById('sansfile');
+    
+    function flatten_data(data) {
+      // assumes row-major array order
+      var ydim = data.length;
+      var xdim;
+      var unrolled = [], p=0;
+      for (let j=0; j<ydim; j++) {
+        let row = data[j];
+        xdim = row.length;
+        for (let i=0; i<xdim; i++) {
+          unrolled[p++] = row[i];
+        }
+      }
+      return { data: unrolled, xdim: xdim, ydim: ydim }
+    }
+    
+    function flatten_data_f(data) {
+      // assumes column-major array order
+      var xdim = data.length;
+      var ydim;
+      var unrolled = [], p=0;
+      for (let i=0; i<xdim; i++) {
+        let column = data[i];
+        ydim = column.length;
+        for (let j=0; j<ydim; j++) {
+          let index = j * xdim + i;
+          unrolled[index] = column[j];
+        }
+      }
+      return { data: unrolled, xdim: xdim, ydim: ydim }
+    }
     
     function compactDateTime(date) {
         var outstring = '';

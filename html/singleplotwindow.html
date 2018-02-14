@@ -367,8 +367,9 @@
                         d3.selectAll("#" + plot_target + " div.colorbar-container")
                           .remove();
                         d3.selectAll("#" + plot_target + " svg").remove();
+                        var flattened = flatten_data(data.z[0]);
                         d3.select("#"+plot_target)
-                          .data(data.z)
+                          .data([flattened.data])
                           .call(chart);
                         chart.ztransform(ztransform);
                         chart.aspect_ratio(aspect_ratio);
@@ -393,7 +394,22 @@
                     }
                 }
             }  
-
+            
+            function flatten_data(data) {
+              // assumes row-major array order
+              var ydim = data.length;
+              var xdim;
+              var unrolled = [], p=0;
+              for (let j=0; j<ydim; j++) {
+                let row = data[j];
+                xdim = row.length;
+                for (let i=0; i<xdim; i++) {
+                  unrolled[p++] = row[i];
+                }
+              }
+              return { data: unrolled, xdim: xdim, ydim: ydim }
+            }
+            
             function make_metadata_table(metadata, numcols) {
                 var numcols = numcols || 4;
                 var new_table = document.createElement('table');

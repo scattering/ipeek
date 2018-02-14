@@ -203,8 +203,9 @@
                   .colormap(colormap.get_colormap(current_instr == "NGBSANS" ? "spectral" : "jet"))
                   .autoscale(true);
                 plots['area_2d'] = chart;
+                var flattened = flatten_data(data_2d.z[0]);
                 d3.select('#' + plot_2d_target)
-                  .data(data_2d.z)
+                  .data([flattened.data])
                   .call(chart);
                 chart.zoomScroll(true);
                 if (data_2d.metadata) {
@@ -238,7 +239,22 @@
                 }
             }
             */  
-
+            
+            function flatten_data(data) {
+              // assumes row-major array order
+              var ydim = data.length;
+              var xdim;
+              var unrolled = [], p=0;
+              for (let j=0; j<ydim; j++) {
+                let row = data[j];
+                xdim = row.length;
+                for (let i=0; i<xdim; i++) {
+                  unrolled[p++] = row[i];
+                }
+              }
+              return { data: unrolled, xdim: xdim, ydim: ydim }
+            }
+            
             function make_metadata_table(metadata, numcols) {
                 var numcols = numcols || 3;
                 var new_table = document.createElement('table');
