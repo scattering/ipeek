@@ -333,7 +333,9 @@
                         d3.select("#" + plot_target)
                           .data([data.data])
                           .call(chart);
-                        chart.ytransform(ytransform);
+                        chart
+                          .ytransform(ytransform)
+                          .zoomRect(!isMobile);
                         
                     } else if (data.type == '2d') {
                         if (data.metadata && !nometadata) {

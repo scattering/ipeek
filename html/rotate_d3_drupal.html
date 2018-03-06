@@ -311,7 +311,9 @@
                             d3.select(plot_divs[di])
                               .data([data.data])
                               .call(chart);
-                            chart.ytransform(options.ytransform);
+                            chart
+                              .ytransform(options.ytransform)
+                              .zoomRect(!isMobile);
                             //plots[next_target] = plotD3(next_target, data, options);
                         } else if (data.type == '2d') {
                             if (data.metadata) {
