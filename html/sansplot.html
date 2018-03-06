@@ -220,7 +220,8 @@
               }
               else {
                 plots['sum'].source_data(data_sum.data).update();
-                plots['area_2d'].source_data(data_2d.z[0])
+                var flattened = flatten_data(data_2d.z[0]);
+                plots['area_2d'].source_data(flattened.data)
                 $('#run_title').text(data_2d.title);
                 if (data_2d.metadata) {
                     $('#' + eta_target).html(make_metadata_table(data_2d.metadata));
