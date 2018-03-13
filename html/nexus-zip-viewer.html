@@ -32,8 +32,8 @@
   $(function() {
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     ZIP_REGEXP = /\.zip$/
-    dirHelper = "https://ncnr.nist.gov/ipeek/listftpfiles.php";
-    data_repo = "https://ncnr.nist.gov";
+    dirHelper = "/ipeek/listftpfiles.php";
+    data_repo = "";
     zip.useWebWorkers = false;
     data_path = ["ncnrdata"];
     datasets = [];
@@ -159,7 +159,11 @@
                           ydim: ydim
                         };
                         if (a.binary) {
-                        } else {
+                          var size = xdim * ydim;
+                          var flattened = v.slice(0, size);
+                          
+                        } 
+                        else {
                           
                           var z = (a.shape.length > 2) ? v[0] : v;
                           var flattened = flatten_data_f(z).data;
