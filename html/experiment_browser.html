@@ -80,7 +80,18 @@
 	      data: data,
 	      columns: [
 	        { data: 'id', title: 'id' },
-		{ data: 'creationTimeStamp', title: 'Creation Timestamp', render: renderTimestamps },
+		{
+		    data: 'creationTimeStamp',
+		    title: 'Created',
+		    width: '6em',
+		    render: renderTimestamps
+		},
+		{
+                    data: 'openTimeStamps',
+                    title: 'Opened (days)',
+		    width: '8em',
+                    render: renderOpenTimeStamps
+		},
 		{ data: 'paths', title: 'Data Paths', render: renderDataPaths },
 		{ data: 'participants', title: 'Participants' },
 		{ data: 'localContact', title: 'Local Contact' },
@@ -101,7 +112,7 @@
 	      mainTable.api().clear();
 	      mainTable.api().rows.add(data);
 	  }
-	  mainTable.api().order([[1, "desc"]]).draw(); // sort by date, descending;
+	  mainTable.api().order([[2, "desc"]]).draw(); // sort by date, descending;
       });
     }
     
@@ -134,6 +145,53 @@
 	month = (month.length < 2) ? "0" + month : month;
 	day = (day.length < 2) ? "0" + day : day;
 	return year + "-" + month + "-" + day;
+    }
+    
+    function renderOpenTimeStamps(data, type, row) {
+	if ( type !== 'display' ) {
+	    return data.slice(-1)[0] || 0;
+        }
+	
+	var rdata = data.slice().reverse();
+	var min_experiment_days = 0.1; // minimum time between open and closed, in days
+	var oc = openClosePairs(row.openTimeStamps, row.closeTimeStamps, min_experiment_days);
+	//return oc.map(function(o) {
+	return oc.map(function(o) {
+	    if (o[0]) {
+		var d = new Date(o[0]);
+		var year = d.getFullYear().toFixed(0);
+		var month = (d.getMonth() + 1).toFixed(0);
+		var day = d.getDate().toFixed(0);
+		month = (month.length < 2) ? "0" + month : month;
+		day = (day.length < 2) ? "0" + day : day;
+		var dlength = (o[1]) ? ((o[1] - o[0]) / (1000*60*60*24)).toFixed(1) : "?";
+		return year + "-" + month + "-" + day + " (" + dlength + ")";
+	    }
+	    else {
+		return ""
+	    }
+	}).join('<br>')
+    }
+    
+    function openClosePairs(ots, cts, min_days) {
+	// opentimestamps, closetimestamps
+	var min_days = min_days || 0.0;
+	var pairs = [];
+	var min_t = min_days * 1000 * 60 * 60 * 24; // days to ms
+	var oi, o, ci=-1, c = null;
+	for (var oi=0; oi<ots.length; oi++) {
+	    o = ots[oi];
+	    while (!(c >= o) && ci < (cts.length - 1)) {
+		c = cts[++ci];
+	    }
+	    var onext = ots[oi+1] || Infinity;
+	    if (c == null  || c > onext) {
+		pairs.push([o, null])
+	    } else if ((c - o) >= min_t) {
+		pairs.push([o, c])
+	    }
+	}
+	return pairs;
     }
     
     link_renderers.raw = function(p, clientPath) {
