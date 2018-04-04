@@ -187,8 +187,11 @@
 	    var onext = ots[oi+1] || Infinity;
 	    if (c == null  || c > onext) {
 		pairs.push([o, null])
-	    } else if ((c - o) >= min_t) {
-		pairs.push([o, c])
+	    } else if ((c - o) >= 0) {
+		if ((c - o) >= min_t) {
+		    pairs.push([o, c])
+		}
+		c = null;
 	    }
 	}
 	return pairs;
