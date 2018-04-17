@@ -32,6 +32,8 @@ sources = [
       "host_name": "ng7sans.ncnr.nist.gov"},
      {"name": "PHADES",
       "host_name": "cts.ncnr.nist.gov"},
+     {"name": "VSANS",
+      "host_name": "vsans.ncnr.nist.gov"},
 ]
 output = {}
 output_filelike = {}
