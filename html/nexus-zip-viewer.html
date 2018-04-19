@@ -166,7 +166,7 @@
                         else {
                           
                           var z = (a.shape.length > 2) ? v[0] : v;
-                          var flattened = flatten_data_f(z).data;
+                          var flattened = flatten_data(z).data;
                           console.log(dims);
                           
                           var zmin = Infinity;
@@ -197,6 +197,7 @@
                           "ztransform": 'log',
                           "aspect_ratio": 1.0,
                           "autoscale": true,
+                          //"source_order": "F",
                           axes: {
                             xaxis: {label: 'x'},
                             yaxis: {label: 'y'}
