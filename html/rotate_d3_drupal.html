@@ -343,7 +343,7 @@
                             chart
                               .colormap(colormap.get_colormap(colormap_lookup[current_instr] || "jet"))
                               .dims(data.dims)
-                            var flattened = flatten_data(data.z[0]);
+                            var flattened = flatten_data_f(data.z[0]);
                             if (data.xlabel) { chart.xlabel(data.xlabel); }
                             if (data.ylabel) { chart.ylabel(data.ylabel); }
                             plots_next.push(chart);
@@ -389,21 +389,22 @@
                 
             }
             
-            function flatten_data(data) {
-              // assumes row-major array order
-              var ydim = data.length;
-              var xdim;
+            function flatten_data_f(data) {
+              // to column-major array order
+              var xdim = data.length;
+              var ydim;
               var unrolled = [], p=0;
-              for (let j=0; j<ydim; j++) {
-                let row = data[j];
-                xdim = row.length;
-                for (let i=0; i<xdim; i++) {
-                  unrolled[p++] = row[i];
+              for (let i=0; i<xdim; i++) {
+                let column = data[i];
+                ydim = column.length;
+                for (let j=0; j<ydim; j++) {
+                  let index = j * xdim + i;
+                  unrolled[index] = column[j];
                 }
               }
               return { data: unrolled, xdim: xdim, ydim: ydim }
             }
-
+            
             function make_metadata_table(metadata, numcols) {
                 var numcols = numcols || 4;
                 var new_table = document.createElement('table');

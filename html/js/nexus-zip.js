@@ -60,6 +60,10 @@ function fmt_endianness(format_string) {
   }
 }
 
+function basename(path) {
+  return strip(path, "\/").split("/").slice(-1)[0];
+}
+
 function dirname(path) {
   var absolute = /^\//.test(path);
   var path = strip(path, "\/"); // remove leading and trailing slashes
@@ -406,9 +410,10 @@ function makeDirList(filelist) {
       }
       
       var parent = dirname(fn);
+      var base = basename(fn);
       //console.log('parent:', parent, 'fn:', fn);
       var parent_group = default_group(parent);
-      ((is_group) ? parent_group.groups : parent_group.fields).push(fn);
+      ((is_group) ? parent_group.groups : parent_group.fields).push(base);
     });
   return dirlist;
 }

@@ -248,7 +248,7 @@
     //var fileinput = document.getElementById('sansfile');
     
     function flatten_data(data) {
-      // assumes row-major array order
+      // to row-major array order
       var ydim = data.length;
       var xdim;
       var unrolled = [], p=0;
@@ -263,7 +263,7 @@
     }
     
     function flatten_data_f(data) {
-      // assumes column-major array order
+      // to column-major array order
       var xdim = data.length;
       var ydim;
       var unrolled = [], p=0;
