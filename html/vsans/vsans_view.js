@@ -16,13 +16,14 @@ window.onload = function(){
     camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10000 );
   
   scene.add(camera);
+  scene.background = new THREE.Color("grey");
   var renderer = new THREE.WebGLRenderer();
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( window.innerWidth, window.innerHeight );
 	document.body.appendChild( renderer.domElement );
   
   var controls = new THREE.OrbitControls( camera );
-  controls.target.z = -1000;
+  controls.target.z = -750;
   
 
   //controls.addEventListener( 'change', render );
@@ -168,6 +169,7 @@ window.onload = function(){
           //image.position.set( 0, 0, -values.distance[0][0])
           images.push(image);
           if (images.length == numImages) { render() }
+          scene.add(image);
           //console.log(values.distance[0][0],flattened, texture);
         })
       }
@@ -224,7 +226,7 @@ window.onload = function(){
   function render() {
     //console.log(imagesLoaded, numImages, images.length);
     if( ! imagesLoaded && images.length === numImages){
-      images.forEach(function(image){ scene.add(image); });
+      //images.forEach(function(image){ scene.add(image); });
       imagesLoaded = true;
       document.body.classList.add('imagesLoaded');      
     }
