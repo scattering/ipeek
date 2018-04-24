@@ -10,14 +10,25 @@ window.onload = function(){
     images = [],
     keyDown = [],
     starPaths=[],
-    loadingBar = document.getElementById('loadingBar'),
-    speedCoeff = document.getElementById('speedCoeff').value || 0.5,
+    speedCoeff=0.5,
     yaxis = new THREE.Vector3(0,1,0),
-    loader =  new THREE.TextureLoader().setCrossOrigin('anonymous'),
     scene = new THREE.Scene().add( new THREE.AmbientLight(0xffffff) ),
-    camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10000 ),
-    renderer = new THREE.WebGLRenderer();
+    camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10000 );
+  
+  scene.add(camera);
+  var renderer = new THREE.WebGLRenderer();
+  renderer.setPixelRatio( window.devicePixelRatio );
+  renderer.setSize( window.innerWidth, window.innerHeight );
+	document.body.appendChild( renderer.domElement );
+  
+  var controls = new THREE.OrbitControls( camera );
+  controls.target.z = -1000;
+  
 
+  //controls.addEventListener( 'change', render );
+  controls.update();
+  window.camera = camera;
+  window.controls = controls;
   loadImages();
   function loadImages(){
     if(!imagesLoaded) return(false);
@@ -26,16 +37,17 @@ window.onload = function(){
     images.forEach(function(image){ scene.remove(image); });
     images = [];
     imagesLoaded = false;
-    loadingBar.style.width = 0 + '%';
     document.body.classList.remove('imagesLoaded');
 
     //Preload
     //numImages = 1 * ( document.getElementById('numImages').value || 12 );
     //galleryRadius = 1024 * numImages / Math.PI / 1.8;
+    galleryRadius = 10000;
     //var galleryPhi = 2 * Math.PI / numImages;
     //if( camera.position.length() > galleryRadius ){ camera.position.set(0,0,0); }
     numImages = 8;
     camera.position.set(0,0,0);
+    controls.update();
     //camera.rotation.x = 0.2;
 
     //Load
@@ -87,21 +99,36 @@ window.onload = function(){
             let value = await det.get(k).then(function(field) { return (field == null) ? [[null]] : field.getValue() });
             values[k] = value;
           }
-          let d1 = await entry.get('DAS_logs/carriage1Trans/softPosition').then(function(field) { return field.getValue() });
-          let d2 = await entry.get('DAS_logs/carriage2Trans/softPosition').then(function(field) { return field.getValue() });
+          console.log(values);
+          //let d1 = await entry.get('DAS_logs/carriage1Trans/softPosition').then(function(field) { return field.getValue() });
+          //let d2 = await entry.get('DAS_logs/carriage2Trans/softPosition').then(function(field) { return field.getValue() });
           let z_offset = (values.setback || [[0]])[0][0];
-          let size_x = values.x_pixel_size[0][0] * values.pixel_num_x[0][0]; // mm
-          let size_y = values.y_pixel_size[0][0] * values.pixel_num_y[0][0]; // mm
+          var x_pixel_size, y_pixel_size;
+          let inline_pixel_size = 0.75;
+          if (values.tube_orientation[0][0].toUpperCase() == "VERTICAL") {
+            x_pixel_size = values.x_pixel_size[0][0] / 10; // mm to cm
+            y_pixel_size = inline_pixel_size; // a made-up number
+          } else {
+            x_pixel_size = inline_pixel_size; // a made-up number
+            y_pixel_size = values.y_pixel_size[0][0] / 10; // mm to cm
+          }
+          let size_x = x_pixel_size * values.pixel_num_x[0][0];
+          let size_y = y_pixel_size * values.pixel_num_y[0][0];
+          let x_offset = x_pixel_size/2; // cm
+          let y_offset = y_pixel_size/2; // cm
           let dim_x = parseInt(values.pixel_num_x[0][0]);
           let dim_y = parseInt(values.pixel_num_y[0][0]);
+          let z = -(values.distance[0][0] + z_offset);
+          let solid_angle_correction = Math.pow(z, 2) / 1e6;
           let flattened = flatten_data_f(values.data);
+          let corrected = flattened.data.map(function(d) { return Math.log(d * solid_angle_correction) });  
           let datasize = flattened.data.length;
           let plotdata = new Uint8ClampedArray(datasize);
           let texture_data = new Uint8Array(3*datasize);
           var p=0;
           var c;
           for (var i=0; i<datasize; i++) {
-            plotdata[i] = flattened.data[i]*1;
+            plotdata[i] = corrected[i]*40;
             c = cmap_array[plotdata[i]];
             texture_data[p++] = c.r;
             texture_data[p++] = c.g;
@@ -110,7 +137,7 @@ window.onload = function(){
           var texture = new THREE.DataTexture( texture_data, values.pixel_num_x[0][0], values.pixel_num_y[0][0], THREE.RGBFormat );
           texture.needsUpdate = true;
           var image = new THREE.Mesh(
-            new THREE.PlaneGeometry(size_x/10, size_y/10), // distance in cm
+            new THREE.PlaneGeometry(size_x, size_y), // distance in cm
             //new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} )
             new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
           );
@@ -119,58 +146,34 @@ window.onload = function(){
           //image.minFilter = THREE.NearestFilter;
           image.overdraw = true;
           image.rotation.y = 0; //- ind * galleryPhi;
-          let z = -(((sname[0] == 'F') ? d1[0][0] : d2[0][0]) + z_offset);
-          console.log(z);
-          //let z = -values.distance[0][0];
+          //let z = -(((sname[0] == 'F') ? d1[0][0] : d2[0][0]) + z_offset);
+          //console.log(z);
+          
           let position_key = sname[1];
           if (position_key == 'T') {
-            image.position.set(0, size_y/10/2.0 + values.vertical_offset[0][0] + values.panel_gap[0][0]/2, z);
+            image.position.set(-x_offset, size_y/2.0 + y_offset + values.vertical_offset[0][0] + values.panel_gap[0][0]/10/2, z);
           }
           else if (position_key == 'B') {
-            image.position.set(0, -size_y/10/2.0 + values.vertical_offset[0][0] - values.panel_gap[0][0]/2, z);
+            image.position.set(-x_offset, -size_y/2.0 + y_offset + values.vertical_offset[0][0] - values.panel_gap[0][0]/10/2, z);
           }
           else if (position_key == 'L') {
-            image.position.set(-size_x/10/2.0 + values.lateral_offset[0][0] + values.panel_gap[0][0]/2, z);
+            image.position.set(-size_x/2.0 + x_offset + values.lateral_offset[0][0] - values.panel_gap[0][0]/10/2, -y_offset, z);
+            //image.position.set(-size_x/10/2, 0, z);
           }
           else if (position_key == 'R') {
-            image.position.set(size_x/10/2.0 + values.lateral_offset[0][0] - values.panel_gap[0][0]/2, z);
+            image.position.set(size_x/2.0 + x_offset + values.lateral_offset[0][0] + values.panel_gap[0][0]/10/2, -y_offset, z);
+            //image.position.set(size_x/10/2, 0, z);
           }
           //image.position.set( galleryRadius * Math.sin( ind * galleryPhi ), 0, - galleryRadius * Math.cos( ind * galleryPhi ) );
           //image.position.set( 0, 0, -values.distance[0][0])
           images.push(image);
-          console.log(values.distance[0][0],flattened, texture);
+          if (images.length == numImages) { render() }
+          //console.log(values.distance[0][0],flattened, texture);
         })
       }
     });
       
-    //for(var i=0; i < numImages; i++){ loadImage(i); }
-    function loadImage(ind){
-      loader.load(
-        'https://unsplash.it/1024/512/?random&nocache' + ind + Date.now(),
-        function ( texture ) {
-          var image = new THREE.Mesh(
-            new THREE.PlaneGeometry(1024, 512), 
-            new THREE.MeshBasicMaterial({ map: texture })
-          );
-          //image.minFilter = THREE.LinearFilter;
-          image.magFilter = THREE.NearestFilter;
-          image.minFilter = THREE.NearestFilter;
-          image.overdraw = true;
-          image.rotation.y = 0; //- ind * galleryPhi;
-          //image.position.set( galleryRadius * Math.sin( ind * galleryPhi ), 0, - galleryRadius * Math.cos( ind * galleryPhi ) );
-          image.position.set( 0, 0, 1000)
-          images.push(image);
-          loadingBar.style.width = Math.round( 100 * images.length / numImages ) + '%';
-        },
-        function ( xhr ) {
-          console.log( (xhr.loaded / xhr.total * 100) + '% loaded' );
-        },
-        function ( xhr ) {
-          console.log( 'An error happened' );
-          loadImage(ind);
-        }
-      );
-    }
+    
     return true;
   }
   function flatten_data(data) {
@@ -215,46 +218,25 @@ window.onload = function(){
     return _colormap_array;
   };
 
-  loadStars();
-  function loadStars(){
-    var starSpace = new THREE.Geometry();
-    for(var i=0; i<1000; i++){
-      starSpace.vertices.push( new THREE.Vector3( 0.5 - Math.random(), 0.5 - Math.random(), 0.5 - Math.random() ).normalize().multiplyScalar(4000 + (2000 * Math.random())));
-      starSpace.colors.push(new THREE.Color( Math.random(), Math.random(), Math.random()));
-      starPaths.push( { 'axis': new THREE.Vector3(0.5 - Math.random(), 0.5 - Math.random(), 0.5 - Math.random() ), 'speed' : 0.0015 * Math.random() } );
-    }
-    starCloud = new THREE.Points(
-      starSpace,
-      new THREE.PointsMaterial({ size: 12,vertexColors: THREE.VertexColors})
-    );
-    scene.add(starCloud);
-  }
-  function moveStars(){
-    starCloud.geometry.vertices.forEach(function(vertex,i){
-      vertex.applyAxisAngle( starPaths[i]['axis'], starPaths[i]['speed'] );
-    });
-  }
-
   renderer.setSize(window.innerWidth, window.innerHeight);
   document.body.appendChild(renderer.domElement);
   render();
   function render() {
-    console.log(imagesLoaded, numImages, images.length);
+    //console.log(imagesLoaded, numImages, images.length);
     if( ! imagesLoaded && images.length === numImages){
       images.forEach(function(image){ scene.add(image); });
       imagesLoaded = true;
       document.body.classList.add('imagesLoaded');      
     }
 
-    keyNav();
-
-    moveStars();
-    starCloud.geometry.verticesNeedUpdate = true;
+    controls.update();
+    //keyNav();
     
     renderer.render(scene, camera);
     requestAnimationFrame( render );
   }
-
+  
+  /*
   // Nav
   document.addEventListener(
     'keydown',
@@ -339,41 +321,20 @@ window.onload = function(){
     },
     false
   );
+  
+  document.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    console.log(e, camera.zoom);
+    if (e.shiftKey) {
+      camera.position.z += e.deltaY/2;
+    } else {
+      camera.zoom *= (1 - e.deltaY/200);
+      camera.updateProjectionMatrix();
+    }
+  });
 
   //UI
-  document.getElementById('close').addEventListener(
-    'click',
-    function(){ this.parentNode.style.display = 'none'; },
-    false
-  );
-  document.getElementById('minMax').addEventListener(
-    'click',
-    function(){
-      this.parentNode.classList.toggle('hidden');
-      this.blur();
-    },
-    false
-  );
-  document.getElementById('speedCoeff').addEventListener(
-    'change',
-    function(){ 
-      speedCoeff = this.value;
-      document.getElementById('speedCoeffLabel').innerHTML = 'Speed: ' + Math.round( this.value * 100 ) + '%';
-      this.blur();
-    },
-    false
-  );  
-  document.getElementById('numImages').addEventListener(
-    'change',
-    function(){
-      if( loadImages() ){
-        document.getElementById('numImagesLabel').innerHTML = 'Images: ' + this.value;
-      }
-      else{ this.value = numImages; }
-      this.blur();
-    },
-    false
-  );  
+
   document.getElementById('loadImages').addEventListener(
     'click',
     function(){
@@ -383,6 +344,7 @@ window.onload = function(){
     false
   );
 
+  
   window.addEventListener(
     'resize',
     function () {
@@ -392,4 +354,5 @@ window.onload = function(){
     }, 
     false
   );
+  */
 };
