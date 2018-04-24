@@ -1,0 +1,65 @@
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+
+  <title>VSANS</title>
+  <meta name="author" content="Brian B. Maranville">
+
+  <!--[if lt IE 9]>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv.js"></script>
+  <![endif]-->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/85/three.min.js"></script>
+  <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+  <script src="../js/es6-promise.min.js"></script>
+  <script src="../js/zip/zip.js"></script>
+  <script src="../js/zip/deflate.js"></script>
+  <script src="../js/zip/inflate.js"></script>
+  <script src="../js/zip/zip-fs.js"></script>
+  <script src="../js/DataStream.js"></script>
+  <script src="../js/nexus-zip.js"></script>
+  <script src="//ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8">></script>
+  <script src="vsans_view.js"></script>
+
+</head>
+<body>
+
+  <div id="bullseye">
+    <i class="fa fa-bullseye"></i>
+  </div>
+  
+  <div id="spinner">
+    <i class="fa fa-spinner fa-pulse"></i><br>
+    <div id="loading"><div id="loadingBar"></div></div>
+  </div>
+
+  <div id="controls">
+    <div class="rangeDiv">
+      <div class="left">0</div>
+      <div class="label" id="speedCoeffLabel">Speed: 50%</div>
+      <div class="right">100</div>
+      <input type="range" id="speedCoeff" value="0.5" min="0" max="1" step="0.01">
+    </div>
+    <div class="rangeDiv">
+      <div class="left">2</div>
+      <div class="label" id="numImagesLabel">Images: 12</div>
+      <div class="right">20</div>
+      <input type="range" id="numImages" value="12" min="2" max="20" step="1">
+    </div>
+    <button id="loadImages">Load New Images</button>
+    <div id="minMax"><i class="fa fa-caret-down"></i></div>
+  </div>
+
+  <div id="instructions">
+    <div id="close"><i class="fa fa-window-close"></i></div>
+    <table class="text">
+      <tr><th colspan="2">Click/drag mouse OR use arrow keys.<br><br></th></tr>
+      <tr><td align="center"><i class="fa fa-arrow-up"></i> / <i class="fa fa-arrow-down"></i></td><td>Zoom</td></tr>
+      <tr><td align="center"><i class="fa fa-arrow-left"></i> / <i class="fa fa-arrow-right"></i></td><td>Rotate</td></tr>
+      <tr><td align="center">Shift + <i class="fa fa-arrow-left"></i> / <i class="fa fa-arrow-right"></i></td><td>Pan</td></tr>
+      <tr><td align="center">Dash<br><i class="fa fa-minus"></i></td><td>Turn around</td></tr>
+    </table>
+  </div>
+</body>
+</html>
