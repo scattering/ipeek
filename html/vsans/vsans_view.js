@@ -1,54 +1,72 @@
 "use strict"
 window.onload = function(){
   zip.useWebWorkers = false;
+  var container = document.getElementById('dataviewer');
+  var w = container.offsetWidth-4;
+  var h = container.offsetHeight-4;
   var numImages,
     galleryRadius,
     starCloud,
     origin,
-    imagesLoaded = true,
+    imagesLoaded = false,
     mouseDown = false,
     images = [],
     keyDown = [],
     starPaths=[],
-    speedCoeff=0.5,
+    speedCoeff=0.2,
     yaxis = new THREE.Vector3(0,1,0),
     scene = new THREE.Scene().add( new THREE.AmbientLight(0xffffff) ),
-    camera = new THREE.PerspectiveCamera( 45, window.innerWidth / window.innerHeight, 0.1, 10000 );
+    camera = new THREE.PerspectiveCamera( 45, w/h, 0.1, 10000 );
   
   scene.add(camera);
-  scene.background = new THREE.Color("grey");
+  scene.background = new THREE.Color("white");
   var renderer = new THREE.WebGLRenderer();
+  window.renderer = renderer;
+  container.appendChild(renderer.domElement);
+  var element = renderer.domElement;
   renderer.setPixelRatio( window.devicePixelRatio );
-  renderer.setSize( window.innerWidth, window.innerHeight );
-	document.body.appendChild( renderer.domElement );
+  renderer.setSize( w, h );
   
-  var controls = new THREE.OrbitControls( camera );
-  controls.target.z = -750;
+  /*
+  var controls = new THREE.OrbitControls( camera, renderer.domElement );
+  //controls.target.set(0,0,-1);
+  controls.enableZoom = false;
+  controls.enablePan = false;
+	controls.enableDamping = true;
+	controls.rotateSpeed = - 0.03;
+  controls.saveState();
+  controls.enabled = false;
+  */
   
-
-  //controls.addEventListener( 'change', render );
-  controls.update();
   window.camera = camera;
-  window.controls = controls;
+  var reset_position = {};
+  function save_view() {
+    reset_position.zoom = camera.zoom;
+    reset_position.z = camera.position.z;
+    reset_position.angle_x = camera.rotation.x;
+    reset_position.angle_y = camera.rotation.y;
+  }
+  save_view();
+  
+  function restore_view() {
+    camera.zoom = reset_position.zoom;
+    camera.position.z = reset_position.z;
+    camera.rotation.x = reset_position.angle_x;
+    camera.rotation.y = reset_position.angle_y;
+    camera.updateProjectionMatrix();
+  }
+  
   loadImages();
   function loadImages(){
-    if(!imagesLoaded) return(false);
+    //if(!imagesLoaded) return(false);
 
     //Unload
     images.forEach(function(image){ scene.remove(image); });
     images = [];
-    imagesLoaded = false;
     document.body.classList.remove('imagesLoaded');
 
-    //Preload
-    //numImages = 1 * ( document.getElementById('numImages').value || 12 );
-    //galleryRadius = 1024 * numImages / Math.PI / 1.8;
-    galleryRadius = 10000;
-    //var galleryPhi = 2 * Math.PI / numImages;
-    //if( camera.position.length() > galleryRadius ){ camera.position.set(0,0,0); }
-    numImages = 8;
-    camera.position.set(0,0,0);
-    controls.update();
+    //camera.position.set(0,0,0.1);
+    //controls.update();
     //camera.rotation.x = 0.2;
 
     //Load
@@ -64,6 +82,7 @@ window.onload = function(){
       "rearAreaDetector"
     ];
     var short_detectors = ["MB", "MT", "ML", "MR", "FT", "FB", "FL", "FR"];
+    numImages = short_detectors.length;
     
     var myRequest = new Request('https://ncnr.nist.gov/ipeek/data/VSANS/live_data.nxz');
     var filename = "live_data";
@@ -87,7 +106,7 @@ window.onload = function(){
           });
       })
     }).then(function(entry) {
-      console.log(entry);
+      var fov = 0;
       for(var i=0; i < short_detectors.length; i++){ loadDetector(i); }
       async function loadDetector(ind){
         var sname = short_detectors[i];
@@ -96,13 +115,21 @@ window.onload = function(){
         entry.get("instrument/" + dname).then(async function(det) {
           // get all values:
           let values = {};
+          let attrs = {};
           for (let k of det.keys()) {
-            let value = await det.get(k).then(function(field) { return (field == null) ? [[null]] : field.getValue() });
-            values[k] = value;
+            let f = await det.get(k).then(function(field) { 
+              if (field == null) {
+                return [[[null]], null]
+              } else {
+                return Promise.all([field.getValue(), field.getAttrs()]);
+              }
+              //return (field == null) ? {[[null]] : field.getValue() });
+            });
+            //let value = await det.get(k).then(function(field) { return (field == null) ? [[null]] : field.getValue() });
+            values[k] = f[0];
+            attrs[k] = f[1];
           }
-          console.log(values);
-          //let d1 = await entry.get('DAS_logs/carriage1Trans/softPosition').then(function(field) { return field.getValue() });
-          //let d2 = await entry.get('DAS_logs/carriage2Trans/softPosition').then(function(field) { return field.getValue() });
+          //console.log(values);
           let z_offset = (values.setback || [[0]])[0][0];
           var x_pixel_size, y_pixel_size;
           let inline_pixel_size = 0.75;
@@ -113,28 +140,45 @@ window.onload = function(){
             x_pixel_size = inline_pixel_size; // a made-up number
             y_pixel_size = values.y_pixel_size[0][0] / 10; // mm to cm
           }
-          let size_x = x_pixel_size * values.pixel_num_x[0][0];
-          let size_y = y_pixel_size * values.pixel_num_y[0][0];
-          let x_offset = x_pixel_size/2; // cm
-          let y_offset = y_pixel_size/2; // cm
           let dim_x = parseInt(values.pixel_num_x[0][0]);
           let dim_y = parseInt(values.pixel_num_y[0][0]);
+          let size_x = x_pixel_size * dim_x;
+          let size_y = y_pixel_size * dim_y;
+          let x_offset = x_pixel_size/2; // cm
+          let y_offset = y_pixel_size/2; // cm
           let z = -(values.distance[0][0] + z_offset);
+          let angle_subtended_y = 2*180/Math.PI * Math.atan2(size_y/2, -z);
+          fov = Math.max(fov, angle_subtended_y);
+          camera.fov = fov;
           let solid_angle_correction = Math.pow(z, 2) / 1e6;
-          let flattened = flatten_data_f(values.data);
-          let corrected = flattened.data.map(function(d) { return Math.log(d * solid_angle_correction) });  
-          let datasize = flattened.data.length;
-          let plotdata = new Uint8ClampedArray(datasize);
+          let flattened = (attrs.data.binary) ? Array.prototype.slice.call(values.data) : (flatten_data(values.data)).data;
+          let corrected = flattened.map(function(d) { return Math.log(d * solid_angle_correction) });  
+          let datasize = flattened.length;
+          //let plotdata = new Uint8ClampedArray(datasize);
+          let plotdata = new Uint8ClampedArray(1);          
           let texture_data = new Uint8Array(3*datasize);
           var p=0;
-          var c;
-          for (var i=0; i<datasize; i++) {
+          var c, i, q;
+          for (let yi=0; yi<dim_y; yi++) {
+            for (let xi=0; xi<dim_x; xi++) {
+              q = yi + dim_y * xi;
+              plotdata[0] = corrected[q] * 40;
+              c = cmap_array[plotdata[0]];
+              texture_data[p++] = c.r;
+              texture_data[p++] = c.g;
+              texture_data[p++] = c.b;
+            }
+          }
+          
+          /*
+            for (var i=0; i<datasize; i++) {
             plotdata[i] = corrected[i]*40;
             c = cmap_array[plotdata[i]];
             texture_data[p++] = c.r;
             texture_data[p++] = c.g;
             texture_data[p++] = c.b;
           }
+          */
           var texture = new THREE.DataTexture( texture_data, values.pixel_num_x[0][0], values.pixel_num_y[0][0], THREE.RGBFormat );
           texture.needsUpdate = true;
           var image = new THREE.Mesh(
@@ -168,7 +212,7 @@ window.onload = function(){
           //image.position.set( galleryRadius * Math.sin( ind * galleryPhi ), 0, - galleryRadius * Math.cos( ind * galleryPhi ) );
           //image.position.set( 0, 0, -values.distance[0][0])
           images.push(image);
-          if (images.length == numImages) { render() }
+          if (images.length == numImages) { camera.updateProjectionMatrix(); render() }
           scene.add(image);
           //console.log(values.distance[0][0],flattened, texture);
         })
@@ -220,113 +264,29 @@ window.onload = function(){
     return _colormap_array;
   };
 
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
   render();
   function render() {
     //console.log(imagesLoaded, numImages, images.length);
     if( ! imagesLoaded && images.length === numImages){
-      //images.forEach(function(image){ scene.add(image); });
+      camera.updateProjectionMatrix();
       imagesLoaded = true;
       document.body.classList.add('imagesLoaded');      
     }
-
-    controls.update();
-    //keyNav();
-    
     renderer.render(scene, camera);
     requestAnimationFrame( render );
   }
   
-  /*
-  // Nav
-  document.addEventListener(
-    'keydown',
+  element.addEventListener(
+    'dblclick',
     function(e){ 
-      keyDown[e.key]=true;
-      if( e.key === '-' ) camera.rotation.y += Math.PI;
-    },
-    false
-  );
-  document.addEventListener(
-    'keyup',
-    function(e){ keyDown[e.key]=false; },
-    false
-  );
-  function keyNav(){
-    var newPos = new THREE.Vector3(0,0,0);
-    if( keyDown['ArrowLeft'] || keyDown['ArrowRight'] || keyDown['ArrowUp'] || keyDown['ArrowDown'] ){
-      document.body.classList.add('keyDown');
-      if( keyDown['ArrowUp'] || keyDown['ArrowDown'] ){
-        newPos.add( camera.getWorldDirection().multiplyScalar( keyDown['ArrowUp'] ? 1 : -1 ) );
-      }
-      if( keyDown['ArrowLeft'] || keyDown['ArrowRight']){
-        if( keyDown['Shift'] ){
-          newPos.add( camera.getWorldDirection().applyAxisAngle( yaxis, (keyDown['ArrowLeft'] ? 1 : -1) * Math.PI / 2));
-        } else {
-          camera.rotation.y += (keyDown['ArrowLeft'] ? 1 : -1) * speedCoeff * Math.PI / 60;
-        }
-      }
-      newPos
-        .normalize()
-        .multiplyScalar( speedCoeff * 7 * numImages )
-        .add( camera.position );
-      if( newPos.length() < 0.95 * galleryRadius ){
-        camera.position.set( newPos.x, 0, newPos.z );
-      }
-    }
-    else{
-      document.body.classList.remove('keyDown')
-    }
-  } 
-  document.addEventListener(
-    'mousedown', 
-    function(e){
-      if(!mouseDown){
-        mouseDown = e;
-        origin = { 'angle' : camera.rotation.y, 'position' : camera.position };
-        document.body.classList.add('mouseDown');
-      }
-    },
-    false
-  );
-  document.addEventListener(
-    'mouseup',
-    function(e){ 
-      mouseDown = false;
-      document.body.classList.remove('mouseDown');
-    },
-    false
-  );
-  document.addEventListener(
-    'mousemove',
-    function(e){
-      var newPos;
-      if(mouseDown){
-        newPos = camera.getWorldDirection()
-          .multiplyScalar( e.clientY - mouseDown.clientY );
-        if(keyDown['Shift']){
-          newPos.add( camera.getWorldDirection()
-            .applyAxisAngle( yaxis, - Math.PI / 2)
-            .multiplyScalar( e.clientX - mouseDown.clientX ) 
-          );
-        } else {
-          camera.rotation.y = origin['angle'] + ( 1.5 * speedCoeff * Math.PI * ( e.clientX - mouseDown.clientX ) / window.innerWidth );
-        }
-        newPos
-          .multiplyScalar( speedCoeff * galleryRadius / window.innerWidth / 10 ) 
-          .add( origin['position'] );    
-        if( newPos.length() < 0.95 * galleryRadius ){
-          camera.position.set( newPos.x, 0, newPos.z);
-        }
-      }
+      //controls.reset();
+      restore_view();
     },
     false
   );
   
-  document.addEventListener('wheel', function(e) {
+  element.addEventListener('wheel', function(e) {
     e.preventDefault();
-    console.log(e, camera.zoom);
     if (e.shiftKey) {
       camera.position.z += e.deltaY/2;
     } else {
@@ -334,27 +294,36 @@ window.onload = function(){
       camera.updateProjectionMatrix();
     }
   });
-
-  //UI
-
-  document.getElementById('loadImages').addEventListener(
-    'click',
-    function(){
-      loadImages();
-      this.blur();
+  
+  element.addEventListener(
+    'mousedown', 
+    function(e){
+      if(!mouseDown){
+        mouseDown = e;
+        origin = { 'angle_y' : camera.rotation.y, 'angle_x': camera.rotation.x, 'position' : camera.position };
+        element.classList.add('mouseDown');
+      }
     },
     false
   );
-
-  
-  window.addEventListener(
-    'resize',
-    function () {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize( window.innerWidth, window.innerHeight );
-    }, 
+  element.addEventListener(
+    'mouseup',
+    function(e){ 
+      mouseDown = false;
+      element.classList.remove('mouseDown');
+    },
     false
   );
-  */
+  element.addEventListener(
+    'mousemove',
+    function(e){
+      var newPos;
+      if(mouseDown){
+        camera.rotation.y = origin['angle_y'] + ( speedCoeff * Math.PI * ( e.clientX - mouseDown.clientX ) / window.innerWidth );
+        camera.rotation.x = origin['angle_x'] + ( speedCoeff * Math.PI * ( e.clientY - mouseDown.clientY ) / window.innerHeight );
+      }
+    },
+    false
+  );
+  
 };

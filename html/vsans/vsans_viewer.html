@@ -23,9 +23,19 @@
   <script src="TrackballControls.js"></script>
   <script src="OrbitControls.js"></script>
   <script src="vsans_view.js"></script>
-
+  <style>
+    html, body {
+      height: 100%;
+    }
+    div#dataviewer {
+      width: 75%;
+      height: 80%;
+      border: 2px solid blue;
+    }
+  </style>
 </head>
 <body>
+  <div id="dataviewer"></div>
   <div id="controls">
 <!--
     <button id="loadImages">Load New Images</button>
