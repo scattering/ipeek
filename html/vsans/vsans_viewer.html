@@ -26,17 +26,33 @@
   <style>
     html, body {
       height: 100%;
+      font-family: arial, helvetica, sans-serif;
+      margin: 0px;
+    }
+    div.wrapper {
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+    }
+    div#title {
+      text-align: center;
     }
     div#dataviewer {
-      width: 75%;
-      height: 80%;
+      flex: 1;
+      margin: 8px;
+      padding: -4px;
       border: 2px solid blue;
     }
   </style>
 </head>
 <body>
-  <div id="dataviewer"></div>
-  <div id="controls">
+  <div class="wrapper">
+    <div id="title">
+      <h1>VSANS live data</h1>
+    </div>
+    <div id="dataviewer"></div>
+    <div id="controls">
+  </div>
 <!--
     <button id="loadImages">Load New Images</button>
 -->

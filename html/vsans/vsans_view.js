@@ -2,8 +2,8 @@
 window.onload = function(){
   zip.useWebWorkers = false;
   var container = document.getElementById('dataviewer');
-  var w = container.offsetWidth-4;
-  var h = container.offsetHeight-4;
+  var w = container.offsetWidth-8;
+  var h = container.offsetHeight-8;
   var numImages,
     galleryRadius,
     starCloud,
@@ -148,7 +148,8 @@ window.onload = function(){
           let y_offset = y_pixel_size/2; // cm
           let z = -(values.distance[0][0] + z_offset);
           let angle_subtended_y = 2*180/Math.PI * Math.atan2(size_y/2, -z);
-          fov = Math.max(fov, angle_subtended_y);
+          let angle_subtended_x = 2*180/Math.PI * Math.atan2(size_x/2, -z);
+          fov = Math.max(fov, angle_subtended_y, h/w*angle_subtended_x);
           camera.fov = fov;
           let solid_angle_correction = Math.pow(z, 2) / 1e6;
           let flattened = (attrs.data.binary) ? Array.prototype.slice.call(values.data) : (flatten_data(values.data)).data;
