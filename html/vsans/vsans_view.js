@@ -82,7 +82,12 @@ window.onload = function(){
       "rearAreaDetector"
     ];
     var short_detectors = ["MB", "MT", "ML", "MR", "FT", "FB", "FL", "FR"];
+    //var short_detectors = ["MB", "MT", "ML", "FT", "FB", "FL", "FR"];
     numImages = short_detectors.length;
+    var tube_coefficients = {
+      "HORIZONTAL": [-266.0, 4.16, 0.0],
+      "VERTICAL": [-521.0, 8.14, 0.0]
+    }
     
     var myRequest = new Request('https://ncnr.nist.gov/ipeek/data/VSANS/live_data.nxz');
     var filename = "live_data";
@@ -133,12 +138,19 @@ window.onload = function(){
           let z_offset = (values.setback || [[0]])[0][0];
           var x_pixel_size, y_pixel_size;
           let inline_pixel_size = 0.75;
-          if (values.tube_orientation[0][0].toUpperCase() == "VERTICAL") {
+          var orientation = values.tube_orientation[0][0].toUpperCase();
+          var coeffs = tube_coefficients[orientation];
+          var lateral_offset = 0;
+          var vertical_offset = 0;
+          let panel_gap = values.panel_gap[0][0]/10; // mm to cm;
+          if (orientation == "VERTICAL") {
             x_pixel_size = values.x_pixel_size[0][0] / 10; // mm to cm
-            y_pixel_size = inline_pixel_size; // a made-up number
+            y_pixel_size = coeffs[1] / 10; // mm to cm 
+            lateral_offset = values.lateral_offset[0][0]; // already cm
           } else {
-            x_pixel_size = inline_pixel_size; // a made-up number
+            x_pixel_size = coeffs[1] / 10;
             y_pixel_size = values.y_pixel_size[0][0] / 10; // mm to cm
+            vertical_offset = values.vertical_offset[0][0]; // already cm
           }
           let dim_x = parseInt(values.pixel_num_x[0][0]);
           let dim_y = parseInt(values.pixel_num_y[0][0]);
@@ -197,25 +209,21 @@ window.onload = function(){
           
           let position_key = sname[1];
           if (position_key == 'T') {
-            image.position.set(-x_offset, size_y/2.0 + y_offset + values.vertical_offset[0][0] + values.panel_gap[0][0]/10/2, z);
+            image.position.set(-x_offset,  size_y/2.0 + y_offset + vertical_offset + panel_gap/2, z);
           }
           else if (position_key == 'B') {
-            image.position.set(-x_offset, -size_y/2.0 + y_offset + values.vertical_offset[0][0] - values.panel_gap[0][0]/10/2, z);
+            image.position.set(-x_offset, -size_y/2.0 + y_offset + vertical_offset - panel_gap/2, z);
           }
           else if (position_key == 'L') {
-            image.position.set(-size_x/2.0 + x_offset + values.lateral_offset[0][0] - values.panel_gap[0][0]/10/2, -y_offset, z);
-            //image.position.set(-size_x/10/2, 0, z);
+            image.position.set(-size_x/2.0 + x_offset + lateral_offset - panel_gap/2, -y_offset, z);
           }
           else if (position_key == 'R') {
-            image.position.set(size_x/2.0 + x_offset + values.lateral_offset[0][0] + values.panel_gap[0][0]/10/2, -y_offset, z);
-            //image.position.set(size_x/10/2, 0, z);
+            image.position.set( size_x/2.0 + x_offset + lateral_offset + panel_gap/2, -y_offset, z);
           }
-          //image.position.set( galleryRadius * Math.sin( ind * galleryPhi ), 0, - galleryRadius * Math.cos( ind * galleryPhi ) );
-          //image.position.set( 0, 0, -values.distance[0][0])
+
           images.push(image);
           if (images.length == numImages) { camera.updateProjectionMatrix(); render() }
           scene.add(image);
-          //console.log(values.distance[0][0],flattened, texture);
         })
       }
     });
