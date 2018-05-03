@@ -35,7 +35,16 @@
       flex-direction: column;
     }
     div#title {
+      user-select: none;
       text-align: center;
+      vertical-align: center;
+    }
+    div#title h1 {
+      display: inline-block;
+      margin: 0.67em;
+    }
+    div#title label.view-control {
+      margin: 0.67em;
     }
     div#dataviewer {
       flex: 1;
@@ -49,6 +58,7 @@
   <div class="wrapper">
     <div id="title">
       <h1>VSANS live data</h1>
+      <label class="view-control">Unlock view from sample<input type="checkbox" id="unlock_view"></label>
     </div>
     <div id="dataviewer"></div>
     <div id="controls">

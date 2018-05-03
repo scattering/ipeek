@@ -27,16 +27,16 @@ window.onload = function(){
   renderer.setPixelRatio( window.devicePixelRatio );
   renderer.setSize( w, h );
   
-  /*
-  var controls = new THREE.OrbitControls( camera, renderer.domElement );
-  //controls.target.set(0,0,-1);
-  controls.enableZoom = false;
+  var locked_view = true;
+  var controls = new THREE.OrbitControls( camera, element );
+  controls.target.set(0,0,-750);
+  controls.enableZoom = true;
   controls.enablePan = false;
 	controls.enableDamping = true;
 	controls.rotateSpeed = - 0.03;
   controls.saveState();
   controls.enabled = false;
-  */
+  
   
   window.camera = camera;
   var reset_position = {};
@@ -288,13 +288,15 @@ window.onload = function(){
   element.addEventListener(
     'dblclick',
     function(e){ 
-      //controls.reset();
+      e.preventDefault();
       restore_view();
+      controls.reset();
     },
     false
   );
   
   element.addEventListener('wheel', function(e) {
+    if (!locked_view) { return }
     e.preventDefault();
     if (e.shiftKey) {
       camera.position.z += e.deltaY/2;
@@ -307,6 +309,7 @@ window.onload = function(){
   element.addEventListener(
     'mousedown', 
     function(e){
+      if (!locked_view) { return }
       if(!mouseDown){
         mouseDown = e;
         origin = { 'angle_y' : camera.rotation.y, 'angle_x': camera.rotation.x, 'position' : camera.position };
@@ -318,6 +321,7 @@ window.onload = function(){
   element.addEventListener(
     'mouseup',
     function(e){ 
+      if (!locked_view) { return }
       mouseDown = false;
       element.classList.remove('mouseDown');
     },
@@ -326,6 +330,7 @@ window.onload = function(){
   element.addEventListener(
     'mousemove',
     function(e){
+      if (!locked_view) { return }
       var newPos;
       if(mouseDown){
         camera.rotation.y = origin['angle_y'] + ( speedCoeff * Math.PI * ( e.clientX - mouseDown.clientX ) / window.innerWidth );
@@ -335,4 +340,8 @@ window.onload = function(){
     false
   );
   
+  document.getElementById("unlock_view").onclick = function() {
+    locked_view = !this.checked;
+    controls.enabled = this.checked;
+  }
 };
