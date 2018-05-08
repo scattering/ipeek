@@ -246,7 +246,6 @@
               if (!counts_attrs.binary) {
                 counts = flatten_data(counts).data;
               }
-              console.log(counts, counts_attrs);
               let title = await entry.get('DAS_logs/trajectoryData/fileName').then(getValue);
               let description = await entry.get('DAS_logs/trajectoryData/description').then(getValue);
               title += ': ' + description;
