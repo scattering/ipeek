@@ -55,7 +55,12 @@ window.onload = function(){
     camera.rotation.y = reset_position.angle_y;
     camera.updateProjectionMatrix();
   }
-  
+
+  window.textures = {};
+  var datasets = [];
+  var textures = [];
+  var zmin = Infinity;
+  var zmax = -Infinity;
   loadImages();
   function loadImages(){
     //if(!imagesLoaded) return(false);
@@ -89,13 +94,32 @@ window.onload = function(){
       "VERTICAL": [-521.0, 8.14, 0.0]
     }
     
+    var keys_to_get = [
+      "tube_orientation", 
+      "setback", 
+      "x_pixel_size", 
+      "y_pixel_size", 
+      "vertical_offset", 
+      "lateral_offset",
+      "pixel_num_x",
+      "pixel_num_y",
+      "panel_gap",
+      "distance",
+      "data"
+    ]
+      
+    
     var myRequest = new Request('https://ncnr.nist.gov/ipeek/data/VSANS/live_data.nxz');
     var filename = "live_data";
     var f;
+    console.time('fetch');
     fetch(myRequest).then(function(response) {
+      console.timeEnd('fetch');
       return response.blob();
+      
     }).then(function(blob) {
       return new Promise(function(resolve, reject) {
+        console.time('entry');
         zip.createReader(
           new zip.BlobReader(blob), function(reader) {
             // get all entries from the zip
@@ -105,6 +129,7 @@ window.onload = function(){
               f.get(f.groupnames()[0])
                 .then(function(en) { 
                   entry = en;
+                  console.timeEnd('entry');
                   resolve(en);
                 });
             });
@@ -114,27 +139,50 @@ window.onload = function(){
       var fov = 0;
       for(var i=0; i < short_detectors.length; i++){ loadDetector(i); }
       async function loadDetector(ind){
-        var sname = short_detectors[i];
+        var sname = short_detectors[ind];
         var dname = "detector_" + sname;
         var cmap_array = colormap_array(colormap.get_colormap('jet'));
         entry.get("instrument/" + dname).then(async function(det) {
           // get all values:
           let values = {};
           let attrs = {};
+          var promises = [];
+          /*
           for (let k of det.keys()) {
+            if (!keys_to_get.includes(k)) { continue }
+            console.time('d_' + ind + '_k_' + k);
             let f = await det.get(k).then(function(field) { 
               if (field == null) {
-                return [[[null]], null]
+                return [null, [[null]]]
               } else {
-                return Promise.all([field.getValue(), field.getAttrs()]);
+                return Promise.all([field.getAttrs(), field.getValue()]);
               }
               //return (field == null) ? {[[null]] : field.getValue() });
             });
+            console.timeEnd('d_' + ind + '_k_' + k);
             //let value = await det.get(k).then(function(field) { return (field == null) ? [[null]] : field.getValue() });
-            values[k] = f[0];
-            attrs[k] = f[1];
+            values[k] = f[1];
+            attrs[k] = f[0];
           }
-          //console.log(values);
+          */
+          for (let k of det.keys()) {
+            if (!keys_to_get.includes(k)) { continue }
+            promises.push(det.get(k).then(function(field) {
+              if (field == null) {
+                values[k] = [[null]];
+                attrs[k] = null;
+                return true;
+              } else {
+                return field.getAttrs().then(function(a) {
+                  attrs[k] = a;
+                  return field.getValue();
+                }).then(function(v) {
+                  values[k] = v;
+                });
+              }
+            }));
+          }
+          let done = await Promise.all(promises);
           let z_offset = (values.setback || [[0]])[0][0];
           var x_pixel_size, y_pixel_size;
           let inline_pixel_size = 0.75;
@@ -165,47 +213,57 @@ window.onload = function(){
           camera.fov = fov;
           let solid_angle_correction = Math.pow(z, 2) / 1e6;
           let flattened = (attrs.data.binary) ? Array.prototype.slice.call(values.data) : (flatten_data(values.data)).data;
-          let corrected = flattened.map(function(d) { return Math.log(d * solid_angle_correction) });  
+          var zmin_local = Infinity;
+          var zmax_local = -Infinity;
+          let corrected = flattened.map(function(d) { 
+            let corr = (d * solid_angle_correction);
+            zmin_local = (corr < zmin_local) ? corr : zmin_local;
+            zmax_local = (corr > zmax_local) ? corr : zmax_local;
+            return corr;
+          });
+          var recalculate_colors = false;
+          if (zmax_local > zmax) { 
+            zmax = zmax_local;
+            recalculate_colors = true;
+          }
+          if (zmin_local < zmin) {
+            zmin = zmin_local;
+            recalculate_colors = true;
+          }
+          
           let datasize = flattened.length;
           //let plotdata = new Uint8ClampedArray(datasize);
+          let dataset = new Float64Array(datasize);
+          let scale_factor = 255 / ((zmax - zmin) || 1);
           let plotdata = new Uint8ClampedArray(1);          
           let texture_data = new Uint8Array(3*datasize);
-          var p=0;
+          var p=0, pp=0;
           var c, i, q;
           for (let yi=0; yi<dim_y; yi++) {
             for (let xi=0; xi<dim_x; xi++) {
               q = yi + dim_y * xi;
-              plotdata[0] = corrected[q] * 40;
+              dataset[pp++] = corrected[q]; // dataset is aligned with image.
+              plotdata[0] = (corrected[q] - zmin) * scale_factor;
               c = cmap_array[plotdata[0]];
               texture_data[p++] = c.r;
               texture_data[p++] = c.g;
               texture_data[p++] = c.b;
             }
           }
-          
-          /*
-            for (var i=0; i<datasize; i++) {
-            plotdata[i] = corrected[i]*40;
-            c = cmap_array[plotdata[i]];
-            texture_data[p++] = c.r;
-            texture_data[p++] = c.g;
-            texture_data[p++] = c.b;
-          }
-          */
           var texture = new THREE.DataTexture( texture_data, values.pixel_num_x[0][0], values.pixel_num_y[0][0], THREE.RGBFormat );
           texture.needsUpdate = true;
+          textures[ind] = texture;
+          datasets[ind] = dataset;
           var image = new THREE.Mesh(
             new THREE.PlaneGeometry(size_x, size_y), // distance in cm
             //new THREE.MeshBasicMaterial( {color: 0xffff00, side: THREE.DoubleSide} )
             new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide })
           );
-          image.minFilter = THREE.LinearFilter;
+          //image.minFilter = THREE.LinearFilter;
           //image.magFilter = THREE.NearestFilter;
-          //image.minFilter = THREE.NearestFilter;
+          image.minFilter = THREE.NearestFilter;
           image.overdraw = true;
           image.rotation.y = 0; //- ind * galleryPhi;
-          //let z = -(((sname[0] == 'F') ? d1[0][0] : d2[0][0]) + z_offset);
-          //console.log(z);
           
           let position_key = sname[1];
           if (position_key == 'T') {
@@ -231,6 +289,34 @@ window.onload = function(){
     
     return true;
   }
+  
+  function rescale_all(scale_f, zmin_new, zmax_new) {
+    var scale_f = (scale_f == null) ? function(x) { return x } : scale_f;
+    var zmin_new = (zmin_new == null) ? zmin : zmin_new;
+    var zmax_new = (zmax_new == null) ? zmax : zmax_new;
+    var scaled_zmin = scale_f(zmin_new);
+    var scaled_zmax = scale_f(zmax_new);
+    var cmap_array = colormap_array(colormap.get_colormap('jet'));
+    let scale_factor = 255 / ((scaled_zmax - scaled_zmin) || 1);
+    for (var i in datasets) {
+      let plotdata = new Uint8ClampedArray(1);
+      let dataset = datasets[i];
+      let texture = textures[i];
+      var p=0, pp=0, c;
+      var size = dataset.length;
+      for (let pp=0; pp<size; pp++) {
+        plotdata[0] = (scale_f(dataset[pp]) - scaled_zmin) * scale_factor;
+        c = cmap_array[plotdata[0]];
+        texture.image.data[p++] = c.r;
+        texture.image.data[p++] = c.g;
+        texture.image.data[p++] = c.b;
+      }
+      texture.needsUpdate = true;
+    }
+  }
+  
+  window.rescale_all = rescale_all;
+  
   function flatten_data(data) {
     // assumes row-major array order
     var ydim = data.length;
@@ -279,7 +365,8 @@ window.onload = function(){
     if( ! imagesLoaded && images.length === numImages){
       camera.updateProjectionMatrix();
       imagesLoaded = true;
-      document.body.classList.add('imagesLoaded');      
+      document.body.classList.add('imagesLoaded');
+      rescale_all(Math.log, 0.5) 
     }
     renderer.render(scene, camera);
     requestAnimationFrame( render );
@@ -289,7 +376,7 @@ window.onload = function(){
     'dblclick',
     function(e){ 
       e.preventDefault();
-      restore_view();
+      //restore_view();
       controls.reset();
     },
     false
@@ -301,7 +388,7 @@ window.onload = function(){
     if (e.shiftKey) {
       camera.position.z += e.deltaY/2;
     } else {
-      camera.zoom *= (1 - e.deltaY/200);
+      camera.zoom *= (1 - e.deltaY/500);
       camera.updateProjectionMatrix();
     }
   });
