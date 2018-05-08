@@ -220,7 +220,7 @@
               }
               else {
                 plots['sum'].source_data(data_sum.data).update();
-                var flattened = flatten_data(data_2d.z[0]);
+                var flattened = flatten_data_f(data_2d.z[0]);
                 plots['area_2d'].source_data(flattened.data)
                 $('#run_title').text(data_2d.title);
                 if (data_2d.metadata) {
@@ -381,8 +381,9 @@
             <div id="metadata"></div>
             
             <footer>
-                <div style="float:left;"><p>Brian B. Maranville(<a href="mailto:brian.maranville@nist.gov">brian.maranville@nist.gov</a>)</p></div>
+<!--
                 <div style="float:right;"><p><? lastmod(); ?></p></div>
+-->
             </footer>
         </div>
 
