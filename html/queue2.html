@@ -1,0 +1,348 @@
+<html lang="en">
+<head>
+  <link rel="icon" type="image/png" href="css/appicon.png" />
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
+  <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Open+Sans" />
+  <link href="https://code.jquery.com/ui/1.8.2/themes/start/jquery-ui.css"
+            type="text/css" rel="Stylesheet" />
+  <script src="https://code.jquery.com/jquery-1.11.1.min.js"></script> 
+  <script src="https://code.jquery.com/ui/1.10.4/jquery-ui.min.js"></script>
+  <script src="js/jquery.layout-latest.js"></script>
+  <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css">
+  <link rel="stylesheet" href="//www.ncnr.nist.gov/instruments/magik/jstree/dist/themes/default/style.min.css"/>
+  <script type="text/javascript" src="//www.ncnr.nist.gov/instruments/magik/jstree/dist/jstree.js"></script>
+  <script src="js/geturlvars.js"></script>  
+  <script type="text/javascript">
+    
+    var instrument_name = "local"; // default NICE host
+    var port = '9999';
+    if (localStorage && localStorage.instrument_name) {
+        instrument_name = localStorage.instrument_name
+    }
+    
+    var command_history = [];
+  
+    
+    //CommandStatusEnum = getEnumValues(nice.api.queue.CommandState);
+    CommandStatusEnum =  [ 'QUEUED', 'RUNNING', 'CHILDREN', 'FINISHING', 'FINISHED', 'SKIPPED'];
+    
+    ////////////////////////////////////////////////////////////////////////////
+    // JSTREE
+    ////////////////////////////////////////////////////////////////////////////
+    
+    function commands_from_queue(queue, output) {
+        var output = output || [];
+        var newitem = command_to_node(queue);
+        output.push(newitem);
+        (queue.children || []).forEach(function(c) {
+            commands_from_queue(c, output)
+        })
+        return output;
+    }
+
+    function showQueue(queue) {
+        myqueue = queue;
+        mycommands = commands_from_queue(queue);
+        newqueue = q2jstree(mycommands);
+        //treequeue = json_to_jstree(queue, true);
+        //newqueue = q2jstree(queue, true);
+        
+        //$('#queue').on('ready.jstree', function(e, data) { window.scrollTo(0,document.body.scrollHeight) });
+        //$("#queue").bind("select_node.jstree", function (e, data) { return data.instance.toggle_node(data.node); });
+        //return $('#queue').jstree(newqueue);
+        return $('#console').jstree(newqueue);
+    }
+
+    function type (object) {
+        if (object === null) {
+            return 'null';
+        }
+        if (object === undefined) {
+            return 'undefined';
+        }
+        if ((object instanceof Number) || (typeof object === 'number')) {
+            return 'number';
+        }
+        if ((object instanceof String) || (typeof object === 'string')) {
+            return 'string';
+        }
+        if ((object instanceof Boolean) || (typeof object === 'boolean')) {
+            return 'boolean';
+        }
+        if ((object instanceof RegExp) || (typeof object === 'regexp')) {
+            return 'regexp';
+        }
+        if (Array.isArray(object)) {
+            return 'array';
+        }
+
+        return 'object';
+    };
+
+    function command_to_node(command) {
+        var out = {};
+        out.parent = command.parentUUID || "#";
+        out.id = command.UUID;
+        out.li_attr = {'class': ''};
+        if ('status' in command) {
+            var status = command.status;
+            
+            if ('commandStr' in status) {
+                out.text = status.commandStr;
+            }
+            if ('state' in status) {
+                var v;
+                if ('value' in status.state) {                            
+                    v = parseInt(status.state.value);
+                } 
+                else if ('_value' in status.state) {
+                    v = parseInt(status.state._value);
+                }
+                var state_string = null;
+                if (v != null) {
+                    state_string = CommandStatusEnum[v];
+                    out.text += ": " + state_string;
+                    out.li_attr.class += " queue-" + state_string;
+                    //out.attributes = {"class": "queue-" + CommandStatusEnum[v]};
+                }
+                if (state_string == "RUNNING" || state_string == "CHILDREN") {
+                    out.icon = "css/running.gif"; // running!
+                }
+                if (state_string == "FINISHED") {
+                    var t = new Date(status.endCommandTimestamp);
+                    var hours_str = t.getHours().toFixed();
+                    if (hours_str.length < 2) {
+                        hours_str = "0" + hours_str; 
+                    }
+                    var minutes_str = t.getMinutes().toFixed();
+                    if (minutes_str.length < 2) {
+                        minutes_str = "0" + minutes_str; 
+                    }
+                    out.text += " " + hours_str + ":" + minutes_str;
+                    out.text += " " + t.toLocaleDateString();
+                    out.icon = "css/checkmark.gif";
+                }
+                if (state_string == "QUEUED") {
+                    out.icon = "css/queue.gif"; // queued
+                }
+                if (state_string == "SKIPPED") {
+                    out.icon = "css/ex.gif";
+                }
+                    
+            }
+            if(status.isBreakPoint) {
+                out.icon = "css/stopsign.gif";
+                out.li_attr.class += " queue-breakpoint";
+            }
+            
+        }
+        return out
+    }
+
+    function q2jstree(commands){
+        var output = {
+            'core': {
+                'data': commands,
+                'animation': 0,
+                'check_callback': true
+            },
+            'plugins': ['search'] // 'state', 'types', 'wholerow']
+        }
+        
+        output.core.data[0].state = {opened: true};
+        return output;
+    }
+
+
+    ////////////////////////////////////////////////////////////////////////////
+    // END JSTREE
+    ////////////////////////////////////////////////////////////////////////////
+    function loadData(instr) {
+            var noCache = new Date().getTime();
+            //$.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+            $.ajax({
+              dataType: "text",
+              url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_queue.json",
+              data: { "noCache": noCache },
+              success: function(result) {
+                  mydata = result;
+                  var data = JSON.parse(result);
+                  showQueue(data);
+              },
+              error: function(e) { resolve(showData([{}])); }
+            });
+    }
+    
+    
+    function padded(number) {
+        var output = number.toFixed(0);
+        if (output.length < 2) { output = "0" + output }
+        return output
+    }
+    
+
+    getCursorPosition = function(input) {
+        if (!input) return; // No (input) element found
+        if ('selectionStart' in input) {
+            // Standard-compliant browsers
+            return input.selectionStart;
+        } else if (document.selection) {
+            // IE
+            input.focus();
+            var sel = document.selection.createRange();
+            var selLen = document.selection.createRange().text.length;
+            sel.moveStart('character', -input.value.length);
+            return sel.text.length - selLen;
+        }
+    }
+
+      
+  window.onload = function() {
+    current_instr = jQuery.getUrlVar('instrument') || "NG7SANS";
+    $('h3.instrument-name').text("Instrument: " + current_instr); 
+    
+    myLayout = $('body').layout({
+		east__size:			400
+	,	west__size:			0
+	,   south__size:        "auto"
+	,   north_size:         "auto"
+		// RESIZE Accordion widget when panes resize
+	,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+	,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+	,	south__onresize:    $.layout.callbacks.resizePaneAccordions
+	,	north__onresize:    $.layout.callbacks.resizePaneAccordions
+	});
+    
+        
+    loadData(current_instr);
+    
+    
+  }
+  </script>
+  <style type="text/css">
+    body {
+        font-family: 'Open Sans' !important;
+    }
+    #login {
+        top: 28%;
+        position: absolute;
+        z-index: 10;
+    }
+    #command {
+        width: 100%;
+        height: 50px;
+        background:#F0F0F0;
+        /*position: fixed;*/
+        /*top: 0;*/
+        /*left: 0;*/
+    }
+    #command input {
+        width: 100%;
+        height: 30px;    
+    }
+    #top_panel {
+        background-color: LightYellow;
+        height: 30px;
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-weight: normal;
+        /* font-family: 'Open Sans'; */
+        /* font-variant: small-caps; */
+    }
+    #top_panel.connected {
+        background-color: LightGreen;
+    }
+    #top_panel h3 {
+        display: inline-block;
+    }
+    #console {
+        overflow: auto;
+    }
+    .instrument-logo {
+        height: 3em;
+        padding-left: 1em;
+        padding-right: 1em;
+    }
+    .command-highlight, .queue-highlight {
+        background-color: yellow !important;
+        color: red;
+    }
+    .console-item {
+        clear: left;
+        display: block;
+    }
+    .console-timestamp {
+        display: inline-block;
+        vertical-align: top;
+        float: left;
+    }
+    .console-message {
+        display: inline-block;
+        vertical-align: top;
+        float: left;
+        width: 80%;
+    }
+    .console-flag {
+        font-weight: bold;
+    }
+    .ui-autocomplete {
+        max-height: 150px;
+        overflow-y: auto;
+        /* prevent horizontal scrollbar */
+        overflow-x: hidden;
+        z-index: 3 !important;
+    }
+    .control-buttons {
+        float: right;
+        font-size: 14pt;
+        font-weight: bold;
+    }
+    .control-buttons .stop-button {
+        background-color: red;
+        color: white;
+    }
+    .jstree-container-ul { 
+        margin-left: -25px;
+    }
+  </style>
+  <title>NICE console</title>
+</head>
+<body>
+<dialog id="login">
+  <h2>Login</h2>
+  <table>
+    <tr>
+      <td><label for="instrument_ip">Instrument address</label></td>
+      <td><select id="instrument_selector"></select><input type="text" id="instrument_ip"></td>
+    </tr>
+  </table>
+  <input type="button" onclick="dialog_login()" value="Connect">
+</dialog>
+
+<div id="top_panel" class="ui-layout-north">
+    <h3 class="instrument-name">Instrument: </h3>
+<!--
+    <img src="css/appicon.png" class="instrument-logo">
+-->
+<!--
+    <div id="control_buttons" class="control-buttons">
+-->
+    <span id="queue_state"></span>
+<!--
+    <input type="button" onclick="api.suspend();" value="Pause" class="pause-button" id="pause_button">
+    <input type="button" onclick="api.resume();" value="Resume" class="resume-button" id="resume_button">
+    <input type="button" onclick="api.stop();" value="Stop" class="stop-button">
+-->
+    </div>
+</div>
+<div id="queue_panel" class="ui-layout-east">
+    <div id="queue"></div>
+</div>
+<div id="console" class="ui-layout-wrapper ui-layout-center"></div>
+<div id="command" class="ui-layout-south">
+<!--
+    Command: <input type="text" id="command_line" name="command_line"/>
+-->
+</div>
+</body>
+</html>
