@@ -48,7 +48,10 @@ sources = [
      "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "NG7SANS",
      "host_name": "ng7sans.ncnr.nist.gov",
-     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
+     "live_datafiles": [
+       "/usr/local/nice/server_data/experiments/live_data/live_data.json",
+       "/usr/local/nice/server_data/experiments/live_data/live_queue.json"
+     ]},
      {"name": "VSANS",
      "host_name": "vsans.ncnr.nist.gov",
      "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.nxz"]},
