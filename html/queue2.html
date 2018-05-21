@@ -15,7 +15,8 @@
   <script type="text/javascript">
     
     var current_instr;
-    
+    var refresh_interval = 60; // seconds
+
     //CommandStatusEnum = getEnumValues(nice.api.queue.CommandState);
     CommandStatusEnum =  [ 'QUEUED', 'RUNNING', 'CHILDREN', 'FINISHING', 'FINISHED', 'SKIPPED'];
     
@@ -205,7 +206,6 @@
               mydata = result;
               var data = JSON.parse(result);
               showQueue(data);
-              window.setTimeout(loadData, 60000);
           },
           error: function(e) { console.log(e); }
         });
@@ -298,6 +298,7 @@
     
         
     loadData(current_instr);
+    window.setInterval(loadData, refresh_interval * 1000);
     
     
   }
