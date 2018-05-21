@@ -14,14 +14,7 @@
   <script src="js/geturlvars.js"></script>  
   <script type="text/javascript">
     
-    var instrument_name = "local"; // default NICE host
-    var port = '9999';
-    if (localStorage && localStorage.instrument_name) {
-        instrument_name = localStorage.instrument_name
-    }
-    
-    var command_history = [];
-  
+    var current_instr;
     
     //CommandStatusEnum = getEnumValues(nice.api.queue.CommandState);
     CommandStatusEnum =  [ 'QUEUED', 'RUNNING', 'CHILDREN', 'FINISHING', 'FINISHED', 'SKIPPED'];
@@ -30,17 +23,23 @@
     // JSTREE
     ////////////////////////////////////////////////////////////////////////////
     
-    function commands_from_queue(queue, commandlist, commandobj) {
-        var commandlist = commandlist || [];
+    var treeview;
+    var myqueue;
+    
+    function commands_from_queue(queue) {
+        var queue_lookup = {};
+        var root = command_to_node(queue, queue_lookup);
+        return {commandlist: root, queue_lookup: queue_lookup};
+    }
+    
+    function queue_to_jstree(queue, commandobj) {
         var commandobj = commandobj || {};
-        var newitem = command_to_node(queue);
-        commandlist.push(newitem);
-        var cmd = jQuery.extend(true, {}, queue);
         commandobj[queue.UUID] = queue;
-        (queue.children || []).forEach(function(c) {
-            commands_from_queue(c, commandlist, commandobj)
-        })
-        return {commandlist: commandlist, commandobj: commandobj};
+        var newitem = command_to_node(queue);
+        newitem.children = queue.children.map(function(c) {
+            return queue_to_jstree(c, commandobj);
+        });
+        return newitem;
     }
     
     function findCurrentCommand(commandobj) {
@@ -53,7 +52,7 @@
             if (!command.status) {
                 continue
             }
-            if ([1,3].indexOf(command.status.state._value) > -1) {
+            if ([1,2,3].indexOf(command.status.state._value) > -1) {
             //if (command.status.state._value == 1) {
                 last_ts = command.status.endCommandTimestamp;
                 last_id = id;
@@ -73,14 +72,15 @@
         myqueue = queue;
         mycommands = commands_from_queue(queue);
         newqueue = q2jstree(mycommands.commandlist);
-        last_id = findCurrentCommand(mycommands.commandobj);
-        //treequeue = json_to_jstree(queue, true);
-        //newqueue = q2jstree(queue, true);
-        
-        //$('#queue').on('ready.jstree', function(e, data) { window.scrollTo(0,document.body.scrollHeight) });
-        //$("#queue").bind("select_node.jstree", function (e, data) { return data.instance.toggle_node(data.node); });
-        //return $('#queue').jstree(newqueue);
-        return $('#queue').jstree(newqueue);
+        last_id = findCurrentCommand(mycommands.queue_lookup);
+        if (treeview != null) {
+            //mystate = treeview.get_state(); // has opened nodes and scroll position.
+            treeview.settings.core.data = mycommands.commandlist;
+            treeview.refresh(true);
+        } else {
+            $('#queue').jstree(newqueue);
+            treeview = $('#queue').jstree(true);
+        }
     }
 
     function type (object) {
@@ -109,9 +109,10 @@
         return 'object';
     };
 
-    function command_to_node(command) {
+    function command_to_node(command, lookup) {
         var out = {};
-        out.parent = command.parentUUID || "#";
+        lookup[command.UUID] = command;
+        //out.parent = command.parentUUID || "#";
         out.id = command.UUID;
         out.li_attr = {'class': ''};
         if ('status' in command) {
@@ -166,6 +167,11 @@
             }
             
         }
+        if (command.children) {
+            out.children = command.children.map(function(child) {
+                return command_to_node(child, lookup);
+            })
+        }
         return out
     }
 
@@ -179,7 +185,7 @@
             'plugins': ['search'] // 'state', 'types', 'wholerow']
         }
         
-        output.core.data[0].state = {opened: true};
+        output.core.data.state = {opened: true};
         return output;
     }
 
@@ -188,19 +194,21 @@
     // END JSTREE
     ////////////////////////////////////////////////////////////////////////////
     function loadData(instr) {
-            var noCache = new Date().getTime();
-            //$.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
-            $.ajax({
-              dataType: "text",
-              url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_queue.json",
-              data: { "noCache": noCache },
-              success: function(result) {
-                  mydata = result;
-                  var data = JSON.parse(result);
-                  showQueue(data);
-              },
-              error: function(e) { resolve(showData([{}])); }
-            });
+        var instr = instr || current_instr;
+        var noCache = new Date().getTime();
+        //$.getJSON("https://ncnr.nist.gov/ipeek/data/" + instr + "/live_data.json", { "noCache": noCache }, function(datalist, status, xhr) {showData(datalist, instr);});
+        $.ajax({
+          dataType: "text",
+          url: "https://ncnr.nist.gov/ipeek/data/" + instr + "/live_queue.json",
+          data: { "noCache": noCache },
+          success: function(result) {
+              mydata = result;
+              var data = JSON.parse(result);
+              showQueue(data);
+              window.setTimeout(loadData, 60000);
+          },
+          error: function(e) { console.log(e); }
+        });
     }
     
     
@@ -242,7 +250,7 @@
         var err_div = $("<div />");
         err_div.append($("<h4 />", {text: "Errors:"}));
         status.errors.forEach(function(e) {
-          console.log(e);
+          //console.log(e);
           err_div.append($("<div />", {html: e.message}));
         });
         output.append(err_div);
@@ -264,7 +272,7 @@
     $('#queue').on('select_node.jstree', function(evt, data){
             //selected node object: data.node;
             console.log(data.node.id);
-            var command = mycommands.commandobj[data.node.id];
+            var command = mycommands.queue_lookup[data.node.id];
             myfc = format_command(command);
             var command_status = jQuery.extend(true, {}, command.status);
             //delete command_status.commandStr
