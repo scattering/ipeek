@@ -30,27 +30,57 @@
     // JSTREE
     ////////////////////////////////////////////////////////////////////////////
     
-    function commands_from_queue(queue, output) {
-        var output = output || [];
+    function commands_from_queue(queue, commandlist, commandobj) {
+        var commandlist = commandlist || [];
+        var commandobj = commandobj || {};
         var newitem = command_to_node(queue);
-        output.push(newitem);
+        commandlist.push(newitem);
+        var cmd = jQuery.extend(true, {}, queue);
+        commandobj[queue.UUID] = queue;
         (queue.children || []).forEach(function(c) {
-            commands_from_queue(c, output)
+            commands_from_queue(c, commandlist, commandobj)
         })
-        return output;
+        return {commandlist: commandlist, commandobj: commandobj};
+    }
+    
+    function findCurrentCommand(commandobj) {
+        var last_ts = 0;
+        var last_id = null;
+        var idlist = Object.keys(commandobj);
+        for (let i=0; i<idlist.length; i++) {
+            let id = idlist[i];
+            let command = commandobj[id];
+            if (!command.status) {
+                continue
+            }
+            if ([1,3].indexOf(command.status.state._value) > -1) {
+            //if (command.status.state._value == 1) {
+                last_ts = command.status.endCommandTimestamp;
+                last_id = id;
+                break;
+            }
+            else {
+                if (command.status.endCommandTimestamp > last_ts) {
+                    last_ts = command.status.endCommandTimestamp;
+                    last_id = id;
+                }
+            }
+        }
+        return last_id;
     }
 
     function showQueue(queue) {
         myqueue = queue;
         mycommands = commands_from_queue(queue);
-        newqueue = q2jstree(mycommands);
+        newqueue = q2jstree(mycommands.commandlist);
+        last_id = findCurrentCommand(mycommands.commandobj);
         //treequeue = json_to_jstree(queue, true);
         //newqueue = q2jstree(queue, true);
         
         //$('#queue').on('ready.jstree', function(e, data) { window.scrollTo(0,document.body.scrollHeight) });
         //$("#queue").bind("select_node.jstree", function (e, data) { return data.instance.toggle_node(data.node); });
         //return $('#queue').jstree(newqueue);
-        return $('#console').jstree(newqueue);
+        return $('#queue').jstree(newqueue);
     }
 
     function type (object) {
@@ -196,15 +226,60 @@
         }
     }
 
-      
+  function format_command(command) {
+      var output = $("<div />");
+      var status = command.status;
+      output.append($("<h4 />", {text: status.state._name}));
+      if (status.startCommandTimestamp) {
+        var timestamps = $("<ul />");
+        timestamps.append($("<li />", {text: "Start: " + String(new Date(status.startCommandTimestamp))}));
+        if (status.endCommandTimestamp) {
+            timestamps.append($("<li />", {text: "End: " + String(new Date(status.endCommandTimestamp))}));
+        }
+        output.append(timestamps);
+      }
+      if (status.errors.length > 0) {
+        var err_div = $("<div />");
+        err_div.append($("<h4 />", {text: "Errors:"}));
+        status.errors.forEach(function(e) {
+          console.log(e);
+          err_div.append($("<div />", {html: e.message}));
+        });
+        output.append(err_div);
+      }          
+      return output;
+  }
+
+          
   window.onload = function() {
     current_instr = jQuery.getUrlVar('instrument') || "NG7SANS";
     $('h3.instrument-name').text("Instrument: " + current_instr); 
+    $('#queue').on('ready.jstree', function(e, data) {
+        if (last_id != null) {
+            e.currentTarget.scrollTop = $("li#" + last_id).offset().top;
+        } else {
+            e.currentTarget.scrollTop = e.currentTarget.scrollHeight;
+        } 
+    });
+    $('#queue').on('select_node.jstree', function(evt, data){
+            //selected node object: data.node;
+            console.log(data.node.id);
+            var command = mycommands.commandobj[data.node.id];
+            myfc = format_command(command);
+            var command_status = jQuery.extend(true, {}, command.status);
+            //delete command_status.commandStr
+            //command_status.state = command_status.state._name;
+            //$('#command pre').text(JSON.stringify(command_status, null, 2));
+            $('#command').empty();
+            $('#command').append(myfc);
+        }
+    );
+
     
     myLayout = $('body').layout({
-		east__size:			400
+		east__size:			0
 	,	west__size:			0
-	,   south__size:        "auto"
+	,   south__size:        "200"
 	,   north_size:         "auto"
 		// RESIZE Accordion widget when panes resize
 	,	west__onresize:		$.layout.callbacks.resizePaneAccordions
@@ -255,7 +330,7 @@
     #top_panel h3 {
         display: inline-block;
     }
-    #console {
+    #queue {
         overflow: auto;
     }
     .instrument-logo {
@@ -305,7 +380,7 @@
         margin-left: -25px;
     }
   </style>
-  <title>NICE console</title>
+  <title>NICE queue</title>
 </head>
 <body>
 <dialog id="login">
@@ -321,28 +396,12 @@
 
 <div id="top_panel" class="ui-layout-north">
     <h3 class="instrument-name">Instrument: </h3>
-<!--
-    <img src="css/appicon.png" class="instrument-logo">
--->
-<!--
-    <div id="control_buttons" class="control-buttons">
--->
     <span id="queue_state"></span>
-<!--
-    <input type="button" onclick="api.suspend();" value="Pause" class="pause-button" id="pause_button">
-    <input type="button" onclick="api.resume();" value="Resume" class="resume-button" id="resume_button">
-    <input type="button" onclick="api.stop();" value="Stop" class="stop-button">
--->
     </div>
 </div>
-<div id="queue_panel" class="ui-layout-east">
-    <div id="queue"></div>
-</div>
-<div id="console" class="ui-layout-wrapper ui-layout-center"></div>
+<div id="queue" class="ui-layout-wrapper ui-layout-center"></div>
 <div id="command" class="ui-layout-south">
-<!--
-    Command: <input type="text" id="command_line" name="command_line"/>
--->
+    <pre id="details"></pre>
 </div>
 </body>
 </html>
