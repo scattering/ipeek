@@ -36,7 +36,10 @@ sources = [
      "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
      {"name": "PBR",
      "host_name": "pbr.ncnr.nist.gov",
-     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
+     "live_datafiles": [
+        "/usr/local/nice/server_data/experiments/live_data/live_data.json",
+        "/usr/local/nice/server_data/experiments/live_data/live_queue.json"
+     ]},
      {"name": "NGBSANS",
      "host_name": "ngbsans.ncnr.nist.gov",
      "live_datafiles": [
