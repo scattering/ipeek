@@ -30,7 +30,10 @@ sources = [
      "live_datafiles": ["/home/ncnr/live_data/live_data.json"]},
      {"name": "MAGIK",
      "host_name": "magik.ncnr.nist.gov",
-     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
+     "live_datafiles": [
+        "/usr/local/nice/server_data/experiments/live_data/live_data.json",
+        "/usr/local/nice/server_data/experiments/live_data/live_queue.json"
+     ]},
      {"name": "NG7",
      "host_name": "ng7refl.ncnr.nist.gov",
      "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.json"]},
