@@ -141,14 +141,22 @@ def update_status(instruments):
 
 def active(instrument):
     """check web server if we are allowed to update"""
+    import database
     # If running locally then generate all graphs
     if WEBSPACE is None: return True
-    fid = urllib.urlopen(ACTIVEURL+"?id=%s"%instrument)
-    s = fid.read()
-    fid.close()
-    #print "status=",s
-    idx = s.find(instrument.upper()+'=')
-    return idx >= 0 and s[idx + len(instrument) + 1] == '1'
+    try:
+        dbh = database.connect()
+    except:
+        dbh = None
+
+    if dbh is not None:
+        instr_info = database.getInstrumentInfoFromAlias(dbh, instrument)
+        if instr_info is not None:
+            can_mirror = database.canMirrorTime(dbh, instr_info['instrument_ID'], datetime.datetime.now())
+            if can_mirror != 'Y':
+                return False
+
+    return True
 
 class XPeekWeb(xpeek.XPeek):
     """
@@ -201,9 +209,6 @@ class XPeekWeb(xpeek.XPeek):
 
     def _plot(self, lineid):
         """Figure out which plots to make"""
-        #if not active(self.instrument):
-        #    webclear(self.instrument)
-        #    return
         if not self.isplottable:
             return
 
@@ -218,6 +223,10 @@ class XPeekWeb(xpeek.XPeek):
         #    os.mkdir(os.path.join(TEMPDIR, self.instrument))
         file = os.path.join(TEMPDIR, self.instrument, 'live_data.json')
         #logging.debug("create %s"%(file,))
+
+        if not active(self.instrument):
+            webupdate(file, self.instrument)
+            return
 
         try:
             #if os.path.exists(file): os.remove(file)
