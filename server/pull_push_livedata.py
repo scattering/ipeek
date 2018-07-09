@@ -7,6 +7,9 @@ import paramiko
 import urllib2, ftplib
 import time
 import StringIO
+import datetime
+
+import database
 
 DEBUG = False
 RETRIEVE_METHOD = "ssh" # or "ftp" or "urllib"
@@ -137,8 +140,20 @@ retrievers = {
     "urllib": retrieve_urllib,
     "ftp": retrieve_ftp
 }
-    
+
+try:
+    dbh = database.connect()
+except Exception:
+    dbh = None
+
 for source in sources:
+    # try to determine if mirroring is disabled:
+    can_mirror = 'Y'
+    if dbh is not None:
+        instr_info = database.getInstrumentInfoFromHostname(dbh, source['host_name'])
+        if instr_info is not None:
+            can_mirror = database.canMirrorTime(dbh, instr_info['instrument_ID'], datetime.datetime.now())
+        
     retrieve_method = source.get('retrieve_method', RETRIEVE_METHOD)
     name = source['name']
     username = source.get('username', 'ncnr')
@@ -146,13 +161,16 @@ for source in sources:
     source_port = source.get('host_port', HOST_PORT)
     try:
         for live_datapath in source['live_datafiles']:
-            live_data = StringIO.StringIO()
-            retriever = retrievers.get(retrieve_method, lambda *args: None)
-            retriever(source_host, source_port, live_datapath, live_data, username)
-            live_data.seek(0) # move back to the beginning of file
             output.setdefault(name, {})
-            filename = os.path.basename(live_datapath)
-            output[name][filename] = live_data.read()
+            if not can_mirror == 'Y':
+                output[name][filename] = ''
+            else:
+                live_data = StringIO.StringIO()
+                retriever = retrievers.get(retrieve_method, lambda *args: None)
+                retriever(source_host, source_port, live_datapath, live_data, username)
+                live_data.seek(0) # move back to the beginning of file
+                filename = os.path.basename(live_datapath)
+                output[name][filename] = live_data.read()
             
     except:
         if DEBUG:
@@ -167,7 +185,6 @@ dest_sftp = paramiko.SFTPClient.from_transport(dest_transport)
 
 for name in output:   
     #name = source['name']
-    
     for json_filename in output[name].keys():    
         # now I push that file outside the firewall to webster:
         remote_tmp = os.path.join('ipeek_html', 'data', name, json_filename + ".tmp")
