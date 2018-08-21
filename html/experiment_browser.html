@@ -65,6 +65,7 @@
     var enhanced_info = {};
     var urlVars = $.getUrlVars();
     var instrument = urlVars.instrument || "PBR"; // default NICE host
+    var initial_search = urlVars.search || "";
     
     function change_instrument(instrument) {
       var instr = instruments.find(function(s) { return s.id == instrument });
@@ -116,7 +117,11 @@
 	      mainTable.api().clear();
 	      mainTable.api().rows.add(data);
 	  }
+	  if (initial_search != "") {
+	    mainTable.api().search(initial_search);
+	  }
 	  mainTable.api().order([[2, "desc"]]).draw(); // sort by date, descending;
+	  
       });
     }
     
