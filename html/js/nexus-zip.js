@@ -112,9 +112,7 @@ nz.Node.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs != null) {
-      return Promise.resolve(this._attrs);
-    }
+    if (this._attrs != null) { return Promise.resolve(this._attrs) }
     else { 
       var that = this;
       var attrs_promise = this.file_readText(lstrip(this.path + this._attrs_filename, "/"))
@@ -217,14 +215,12 @@ nz.Node.prototype = {
   file_readText: function(path) {
     // returns a Promise, to be resolved with the data.
     var entry =  this.root.zipfiles[path];
-
-    promise_value = new Promise(function(resolve, reject) {
+    return new Promise(function(resolve, reject) {
       if (entry == null) { resolve(null); return }
       else {
         entry.getData(new zip.TextWriter(), function(text) { resolve(text) });
       }
-    });
-    return promise_value;
+    });    
   },
   
   file_readBlob: function(path) {
@@ -292,9 +288,7 @@ nz.Field.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs != null) {
-      return Promise.resolve(this._attrs);
-    }
+    if (this._attrs != null) { return Promise.resolve(this._attrs) }
     else { 
       var that = this;
       var attrs_promise = this.root.file_readText(lstrip(this.path + this._attrs_suffix, "/"))
@@ -320,16 +314,6 @@ nz.Field.prototype = {
         return that.getValue().then(function(v) { return d3_tsvFormat(v) })
       }
       else {
-        promise_value = root.file_readText(path);
-        promise_value_string = promise_value.then(function(s) {
-          if (/[s]/.test(attrs.format[1].toLowerCase())) { 
-            return s.replace(/\\n/g, '\n')
-                    .replace(/\\t/g, '\t')
-                    .replace(/\\r/g, '\r');
-          } else {
-            return s;
-          }
-        });
         return root.file_readText(path).then(function(s) {
           if (/[s]/.test(attrs.format[1].toLowerCase())) { 
             return s.replace(/\\n/g, '\n')

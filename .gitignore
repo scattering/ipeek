@@ -12,13 +12,6 @@ eggs
 parts
 bin
 
-data/
-*.orig
-*.nxz
-rapid*.dat
-*.phd
-ncnrdata/
-
 var
 sdist
 develop-eggs

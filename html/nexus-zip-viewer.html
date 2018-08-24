@@ -25,8 +25,7 @@
   <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
-  <script src="http://localhost:8000/html/js/xy-chart.js"></script>
-
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
   <script>
@@ -111,183 +110,7 @@
     
     var fileinput = document.getElementById('datafile');
     fileinput.onchange = loadData;
-    class chartMinMax {
-      constructor () {
-        this.xMin = this.yMin = -Infinity;
-        this.xMax = this.yMax =  Infinity;
-      }
-    }
-//-----------------------------------------------------------------------------
-function convertStringVec(s, min_max) {
-  var n, m, y, val_arr = s.split("\n"), xy = [];
-
-  min_max.yMin = Infinity;
-  min_max.yMax = -Infinity;
-  min_max.xMin = 0;
-  min_max.xMax = s.length + 1;
-  for (n=m=0 ; n < val_arr.length ; n++) {
-    if (val_arr[n].length) {
-      y = parseFloat(val_arr[n]);
-      min_max.yMin = Math.min (min_max.yMin, y);
-      min_max.yMax = Math.max (min_max.yMax, y);
-      xy[m++] = [n+1, y];
-    }
-  }
-  return xy;
-}
-//-----------------------------------------------------------------------------
-    function getChartData(s, options, xys) {
-      var xy = [], dataLength = 0;
-      var min_max = new chartMinMax();
-
-      if (s) {
-        xy = convertStringVec(s, min_max);
-        options.max_y = min_max.yMax;
-        options.min_y = min_max.yMin;
-        options.max_x = min_max.xMax;
-        options.min_x = min_max.xMin;
-        dataLength = xy.length;
-        if (xy.length > 1) {
-          xys[0] = xy;
-        }
-      }
-      return dataLength;
-    }
-//-----------------------------------------------------------------------------
-    function get2dChartDims (a, xdim, ydim) {
-      xdim = a.shape.slice(-2)[0];
-      ydim = a.shape.slice(-1)[0];
-      var dims = {
-                xmin: 0,
-                xmax: xdim,
-                xdim: xdim,
-                ymin: 0,
-                ymax: ydim,
-                ydim: ydim
-            };
-      return dims;
-    }
-//-----------------------------------------------------------------------------
-      function get2dOptions () {
-
-        var plot_2d_options = {
-          "ztransform": 'log',
-          "aspect_ratio": 1.0,
-          "autoscale": true,
-          axes: {
-            xaxis: {label: 'x'},
-            yaxis: {label: 'y'}
-          }
-        }
-        return plot_2d_options;
-      }
-//-----------------------------------------------------------------------------
-    function displayItemChart2D (s) {
-      $("#device_values").empty().height(300);
-      var xdim, ydim, dim = {};
-      dims = get2dChartDims (a, xdim, ydim);
-      if (a.binary) {
-        var size = xdim * ydim;
-        var flattened = v.slice(0, size);
-      }
-      else {
-        var z = (a.shape.length > 2) ? v[0] : v;
-        var flattened = flatten_data(z).data;
-
-        var zmin = Infinity;
-        var zmax = -Infinity;
-        var zz;
-        for (var i=0; i<data.length; i++) {
-          zz = flattened[i];
-          zmin = Math.min(zmin, zz);
-          zmax = Math.max(zmax, zz);
-        }
-      }
-          if (chart && chart.destroy) {
-            chart.destroy()
-          }
-          var plot_2d_options = get2dOptions ();
-            chart = new heatChart.default(plot_2d_options);
-            chart
-                  .colormap(colormap.get_colormap("jet"))
-                  .autoscale(true)
-                  .dims(dims);
-            d3.select('#device_values')
-                  .data([flattened])
-                  .call(chart);
-            chart.zoomScroll(true);
-    }
-//-----------------------------------------------------------------------------
-    function displayItemChart1D (s) {
-        var series = new Array(), xys = [], xy = [], xMin, xMax, yMin, yMax;
-        var options = {series: series};
-        options.xtransform = 'linear';
-        options.ytransform = 'linear';
-        options.series[0] = {label: 'series' };
-
-        var dataLength = getChartData(s, options, xys);
-        $("#device_values").empty().height(300);
-        if (dataLength > 1) {
-          var chart = xyChart.default(options);
-          d3.select("#device_values").data([xys]);
-          d3.select("#device_values").call(chart);
-          chart.zoomRect(true);
-        }
-    }
-//-----------------------------------------------------------------------------
-    function getFlattenedData (a, v, data, dims, xdim, ydim) {
-      var flattened;
-      if (a.binary) {
-        var size = xdim * ydim;
-        var flattened = v.slice(0, size);
-      }
-      else {
-        var z = (a.shape.length > 2) ? v[0] : v;
-        var flattened = flatten_data(z).data;
-
-        var zmin = Infinity;
-        var zmax = -Infinity;
-        var zz;
-        for (var i=0; i<data.length; i++) {
-          zz = flattened[i];
-          zmin = Math.min(zmin, zz);
-          zmax = Math.max(zmax, zz);
-        }
-      }
-      return flattened;
-    }
-//-----------------------------------------------------------------------------
-    function displayItemChart2D (item, a, data, s) {
-        item.getValue().then(function(v) {
-          var xdim, ydim;
-          $("#device_values").empty().height(300);
-          var dims = get2dChartDims (a, xdim, ydim);
-          var flattened = getFlattenedData (a, v, data, dims, xdim, ydim);
-          if (chart && chart.destroy) {
-            chart.destroy()
-          }
-          var plot_2d_options = get2dOptions ();
-          chart = new heatChart.default(plot_2d_options);
-          chart.colormap(colormap.get_colormap("jet"))
-                .autoscale(true)
-                .dims(dims);
-          d3.select('#device_values')
-            .data([flattened])
-            .call(chart);
-          chart.zoomScroll(true);
-        });
-    }
-//-----------------------------------------------------------------------------
-    function displayItemChart (item, a, data, s) {
-      if (a.shape && (a.shape.length > 1)) {
-// that is, if it's a vector, draw if (a.shape && a.shape.length && a.shape.length > 1) {
-  displayItemChart2D (item, a, data, s);
-      }
-      else {
-        displayItemChart1D (s);
-      }
-    }
-//-----------------------------------------------------------------------------
+    
     function zipHandler(filename, file) {
       var autoscroll = false; // trigger a scroll for autoselected items.
         zip.createReader(new zip.BlobReader(file), function(reader) {
@@ -321,19 +144,92 @@ function convertStringVec(s, min_max) {
               });
               f.get(id).then(function(item) {
                 item.getAttrs().then(function(a) {
+//                  $("#device_attrs")
                   panelAttrs.html("<pre>" + JSON.stringify(a, null, 2).replace(">", "&gt;").replace("<", "&lt;") + "</pre>");
-                  var deviceValues = $("#device_values");
+                  var dev_auto = $("#device_values");
                   $("#device_values").height('auto');
                   panelAlphaNum.height('auto');
                   if (!isdir) {
+//                    panelAlphaNum.html('<pre class="value">' + s + '</pre>');
+                    if (a.shape && a.shape.length > 1) { // min(a.shape, a.shape.length) > 1
                       // that is, if it's a vector, draw
-                    item.getValueString().then(function(s) {
-                        displayItemChart (item, a, data, s);
+//                  if (a.shape && a.shape.length && a.shape.length > 1) {
+                      item.getValue().then(function(v) {
+                        $("#device_values").empty().height(300);
+                        var xdim = a.shape.slice(-2)[0];
+                        var ydim = a.shape.slice(-1)[0];
+                        var dims = {
+                          xmin: 0,
+                          xmax: xdim,
+                          xdim: xdim,
+                          ymin: 0,
+                          ymax: ydim,
+                          ydim: ydim
+                        };
+                        if (a.binary) {
+                          var size = xdim * ydim;
+                          var flattened = v.slice(0, size);
+                          
+                        } 
+                        else {
+                          
+                          var z = (a.shape.length > 2) ? v[0] : v;
+                          var flattened = flatten_data(z).data;
+                          console.log(dims);
+                          
+                          var zmin = Infinity;
+                          var zmax = -Infinity;
+                          var zz;
+                          for (var i=0; i<data.length; i++) {
+                            zz = flattened[i];
+                            zmin = Math.min(zmin, zz);
+                            zmax = Math.max(zmax, zz);
+                          }
+                          /*
+                          //var row;
+                          for (var i=0; i<z.length; i++) {
+                            let row = z[i];
+                            for (var j=0; j<row.length; j++) {
+                              let zz = row[j];
+                              zmin = Math.min(zmin, zz);
+                              zmax = Math.max(zmax, zz);
+                            }
+                          }
+                          */
+                          //dims.zmin = zmin;
+                          //dims.zmax = zmax;
+                        }
+                        
+                        if (chart && chart.destroy) { chart.destroy() }
+                        var plot_2d_options = {
+                          "ztransform": 'log',
+                          "aspect_ratio": 1.0,
+                          "autoscale": true,
+                          //"source_order": "F",
+                          axes: {
+                            xaxis: {label: 'x'},
+                            yaxis: {label: 'y'}
+                          }
+                        }
+                        chart = new heatChart.default(plot_2d_options);
+                        chart
+                          .colormap(colormap.get_colormap("jet"))
+                          .autoscale(true)
+                          .dims(dims);
+                        d3.select('#device_values')
+                          .data([flattened])
+                          .call(chart);
+                        chart.zoomScroll(true);
+                      });
+                      //$("#device_values").html('<pre class="value"> binary array </pre>');
+                    }
+                    else {
+                      item.getValueString().then(function(s) {
+                        $("#device_values").html('<pre class="value">' + s + '</pre>');
                         panelAlphaNum.html('<pre class="value">' + s + '</pre>');
                       });
-                  }
-                  else {
-                    panelAlphaNum.html('<pre> </pre>');
+                    }
+                  } else {
                     $("#device_values").html("<pre>Group</pre>");
                     data.instance.toggle_node(data.node);
                   }
