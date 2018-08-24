@@ -11,6 +11,14 @@ build
 eggs
 parts
 bin
+
+data/
+*.orig
+*.nxz
+rapid*.dat
+*.phd
+ncnrdata/
+
 var
 sdist
 develop-eggs
@@ -33,3 +41,5 @@ nosetests.xml
 .mr.developer.cfg
 .project
 .pydevproject
+#
+pub/

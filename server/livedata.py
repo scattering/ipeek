@@ -15,12 +15,17 @@ Plots are generated on /tmp.
 import os
 import sys
 import stat
-import thread
+# CRUFT: python 2 support
+try:
+    import thread
+    import Queue # Multithreaded queue
+except ImportError:
+    import _thread as thread
+    import queue as Queue # Multithreaded queue
 import logging
 import time
 import traceback
 import urllib
-import Queue # Multithreaded queue
 import os
 # hack for multithreading svd problem
 os.environ['OMP_NUM_THREADS'] = "1"
@@ -107,7 +112,7 @@ def fetch_status(instrument):
             msg = msg.replace('\x1b[0;32m','<font style="color: green;">')
             msg = msg.replace('\x1b[0m','</font>')
             msg = '<pre>\n'+msg+'</pre>'
-        except Exception,e:
+        except Exception as e:
             raise IOError("received '"+str(e)+"' while retrieving "+url);       
     else:
         msg = instrument + 'remote status monitoring is off'

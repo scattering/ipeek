@@ -17,10 +17,11 @@
   <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
+
   <script>
   $(function() {
     BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log'];
-    dirHelper = "listftpfiles.php";
+    dirHelper = "https://www.ncnr.nist.gov/ipeek/listftpfiles.php";
     data_path = ["ncnrdata"];
     datasets = [];
     
@@ -68,23 +69,23 @@
       data = d3.tsvParse(output);
       return {column_names: column_names, data: data};
     }
-    
-    var makeXY = function(dataset, xcol, ycol, ynormcol) {
+//-----------------------------------------------------------------------------
+    var makeXY = function(data, xcol, ycol, ynormcol) {
       var data_array = [], x, y, ynorm;
-      for (var i=0; i<dataset.data.length; i++){
-        x = parseFloat(dataset.data[i][xcol]);
-        y = parseFloat(dataset.data[i][ycol]);
+      for (var i=0; i < data.length; i++){
+        x = parseFloat(data[i][xcol]);
+        y = parseFloat(data[i][ycol]);
         if (ynormcol == "1" || ynormcol == null) {
           ynorm = y;
         } 
         else {
-          ynorm = y / parseFloat(dataset.data[i][ynormcol]);
+          ynorm = y / parseFloat(data[i][ynormcol]);
         }
         data_array[i] = [x, ynorm];
       }
       return data_array;
     }
-    
+//-----------------------------------------------------------------------------
     var getManyData = function(path, filenames) {
       var promises = [],
           ajax_results = {};
@@ -95,7 +96,7 @@
       }
       $.when.apply($, promises).then(function() {
         var series = new Array();
-        var options = {series: series, legend: {show: true, left: 150}}, datas = [];
+        var options = {series: series}/*{series: series, legend: {show: true, left: 150}}*/, datas = [];
         var files_retrieved = Object.keys(ajax_results);
         for (var i=0; i<files_retrieved.length; i++) {
           datas[i] = parseBT7(ajax_results[files_retrieved[i]]);
@@ -152,7 +153,7 @@
         options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
-          xys[i] = makeXY(datas[i], xcol, ycol, ynormcol);
+          xys[i] = makeXY(datas[i].data, xcol, ycol, ynormcol);
         }
         var chart = xyChart.default(options);
         mychart = chart;
@@ -322,10 +323,14 @@
     var handleChecked = function() {
       var selected = $("#navigation input:checked"),
           path = '/pub/' + getCurrentPath();
+//          path = 'https://www.ncnr.nist.gov/ipeek/pub/' + getCurrentPath();
       if (selected.length > 0) {
         
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
         getManyData(path, filenames);
+      }
+      else {
+        $("#plotdiv").empty();
       }
     }
     $("#navigation").on("change", "input", handleChecked);

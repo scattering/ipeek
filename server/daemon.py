@@ -128,8 +128,8 @@ def daemonize(stdout=REDIRECT_TO, stderr=None, stdin=REDIRECT_TO,
     try:
         pid = os.fork()
         if pid > 0: exit(0) # Exit first parent.
-    except OSError, e:
-        raise Exception, "[%d] %s" % (e.errno, e.strerror)
+    except OSError as e:
+        raise Exception("[%d] %s" % (e.errno, e.strerror))
 
     # Decouple from parent environment.
     os.chdir(WORKDIR)  # Make sure we are not holding a directory open
@@ -147,8 +147,8 @@ def daemonize(stdout=REDIRECT_TO, stderr=None, stdin=REDIRECT_TO,
     try:
         pid = os.fork()
         if pid > 0: exit(0) # Exit second parent.
-    except OSError, e:
-        raise Exception, "[%d] %s" % (e.errno, e.strerror)
+    except OSError as e:
+        raise Exception("[%d] %s" % (e.errno, e.strerror))
 
     # Save pid
     pid = str(os.getpid())
@@ -197,7 +197,7 @@ def process_is_running(pid):
     try:
         os.kill(pid, 0)
         return 1
-    except OSError, err:
+    except OSError as err:
         return err.errno == errno.EPERM
 
 def startstop(stdout=REDIRECT_TO, stderr=None, stdin=REDIRECT_TO,
@@ -221,7 +221,7 @@ def startstop(stdout=REDIRECT_TO, stderr=None, stdin=REDIRECT_TO,
                 while 1:
                     os.kill(pid,SIGTERM)
                     time.sleep(1)
-            except OSError, err:
+            except OSError as err:
                 err = str(err)
                 if err.find("No such process") > 0:
                     os.remove(pidfile)
@@ -254,7 +254,7 @@ def startstop(stdout=REDIRECT_TO, stderr=None, stdin=REDIRECT_TO,
             sys.stderr.write('Status: %s\n'%status)
             sys.exit(0)
 
-    print "usage: %s start|stop|restart|status|run" % sys.argv[0]
+    print("usage: %s start|stop|restart|status|run" % sys.argv[0])
     sys.exit(2)
 
 def test():
