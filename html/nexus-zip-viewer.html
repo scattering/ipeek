@@ -25,6 +25,7 @@
   <script src="js/geturlvars.js"></script>
 <!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
+
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
@@ -110,7 +111,148 @@
     
     var fileinput = document.getElementById('datafile');
     fileinput.onchange = loadData;
-    
+    class chartMinMax {
+      constructor () {
+        this.xMin = this.yMin = -Infinity;
+        this.xMax = this.yMax =  Infinity;
+      }
+    }
+//-----------------------------------------------------------------------------
+    function convertStringVec(s, min_max) {
+      var n, m, y, val_arr = s.split("\n"), xy = [];
+
+      min_max.yMin = Infinity;
+      min_max.yMax = -Infinity;
+      min_max.xMin = 0;
+      min_max.xMax = s.length + 1;
+      for (n=m=0 ; n < val_arr.length ; n++) {
+        if (val_arr[n].length) {
+          y = parseFloat(val_arr[n]);
+          min_max.yMin = Math.min (min_max.yMin, y);
+          min_max.yMax = Math.max (min_max.yMax, y);
+          xy[m++] = [n+1, y];
+        }
+      }
+      return xy;
+    }
+//-----------------------------------------------------------------------------
+    function getChartData(s, options, xys) {
+      var xy = [], dataLength = 0;
+      var min_max = new chartMinMax();
+
+      if (s) {
+        xy = convertStringVec(s, min_max);
+        options.max_y = min_max.yMax;
+        options.min_y = min_max.yMin;
+        options.max_x = min_max.xMax;
+        options.min_x = min_max.xMin;
+        dataLength = xy.length;
+        if (xy.length > 1) {
+          xys[0] = xy;
+        }
+      }
+      return dataLength;
+    }
+//-----------------------------------------------------------------------------
+    function get2dChartDims (a, xdim, ydim) {
+      xdim = a.shape.slice(-2)[0];
+      ydim = a.shape.slice(-1)[0];
+      var dims = {
+                xmin: 0,
+                xmax: xdim,
+                xdim: xdim,
+                ymin: 0,
+                ymax: ydim,
+                ydim: ydim
+            };
+      return dims;
+    }
+//-----------------------------------------------------------------------------
+    function get2dOptions () {
+
+      var plot_2d_options = {
+        "ztransform": 'log',
+        "aspect_ratio": 1.0,
+        "autoscale": true,
+        axes: {
+          xaxis: {label: 'x'},
+          yaxis: {label: 'y'}
+        }
+      }
+      return plot_2d_options;
+    }
+//-----------------------------------------------------------------------------
+    function displayItemChart1D (s) {
+        var series = new Array(), xys = [], xy = [], xMin, xMax, yMin, yMax;
+        var options = {series: series};
+        options.xtransform = 'linear';
+        options.ytransform = 'linear';
+        options.series[0] = {label: 'series' };
+
+        var dataLength = getChartData(s, options, xys);
+        $("#device_values").empty().height(300);
+        if (dataLength > 1) {
+          var chart = xyChart.default(options);
+          d3.select("#device_values").data([xys]);
+          d3.select("#device_values").call(chart);
+          chart.zoomRect(true);
+        }
+    }
+//-----------------------------------------------------------------------------
+    function getFlattenedData (a, v, data, xdim, ydim) {
+      var flattened;
+
+      if (a.binary) {
+        var size = xdim * ydim;
+        var flattened = v.slice(0, size);
+      }
+      else {
+        var z = (a.shape.length > 2) ? v[0] : v;
+        var flattened = flatten_data(z).data;
+
+        var zmin = Infinity;
+        var zmax = -Infinity;
+        var zz;
+        for (var i=0; i<data.length; i++) {
+          zz = flattened[i];
+          zmin = Math.min(zmin, zz);
+          zmax = Math.max(zmax, zz);
+        }
+      }
+      return flattened;
+    }
+//-----------------------------------------------------------------------------
+    function displayItemChart2D (item, a, data, s) {
+        item.getValue().then(function(v) {
+          var xdim, ydim;
+          $("#device_values").empty().height(300);
+          var dims = get2dChartDims (a, xdim, ydim);
+          var flattened = getFlattenedData (a, v, data, xdim, ydim);
+          if (chart && chart.destroy) {
+            chart.destroy()
+          }
+          var plot_2d_options = get2dOptions ();
+          chart = new heatChart.default(plot_2d_options);
+          chart.colormap(colormap.get_colormap("jet"))
+                .autoscale(true)
+                .dims(dims);
+          d3.select('#device_values')
+            .data([flattened])
+            .call(chart);
+          chart.zoomScroll(true);
+        });
+    }
+//-----------------------------------------------------------------------------
+    function displayItemChart (item, a, data, s) {
+      if (a.shape && (a.shape.length > 1)) {
+// that is, if it's a vector, draw if (a.shape && a.shape.length && a.shape.length > 1) {
+        displayItemChart2D (item, a, data, s);
+      }
+      else {
+        displayItemChart1D (s);
+      }
+    }
+//-----------------------------------------------------------------------------
     function zipHandler(filename, file) {
       var autoscroll = false; // trigger a scroll for autoselected items.
         zip.createReader(new zip.BlobReader(file), function(reader) {
@@ -135,7 +277,7 @@
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
               var panelAttrs = $("#device_attrs");
-              var panelAlphaNum = $("#device_values-alpha_num");
+              var panelAlphaNum = $("#device_values_alpha_num");
               var panelValues = $("#device_values");
               selected_node = id;
               var isdir = (id.slice(-1) == "/");
@@ -144,92 +286,19 @@
               });
               f.get(id).then(function(item) {
                 item.getAttrs().then(function(a) {
-//                  $("#device_attrs")
                   panelAttrs.html("<pre>" + JSON.stringify(a, null, 2).replace(">", "&gt;").replace("<", "&lt;") + "</pre>");
-                  var dev_auto = $("#device_values");
+                  var deviceValues = $("#device_values");
                   $("#device_values").height('auto');
                   panelAlphaNum.height('auto');
                   if (!isdir) {
-//                    panelAlphaNum.html('<pre class="value">' + s + '</pre>');
-                    if (a.shape && a.shape.length > 1) { // min(a.shape, a.shape.length) > 1
                       // that is, if it's a vector, draw
-//                  if (a.shape && a.shape.length && a.shape.length > 1) {
-                      item.getValue().then(function(v) {
-                        $("#device_values").empty().height(300);
-                        var xdim = a.shape.slice(-2)[0];
-                        var ydim = a.shape.slice(-1)[0];
-                        var dims = {
-                          xmin: 0,
-                          xmax: xdim,
-                          xdim: xdim,
-                          ymin: 0,
-                          ymax: ydim,
-                          ydim: ydim
-                        };
-                        if (a.binary) {
-                          var size = xdim * ydim;
-                          var flattened = v.slice(0, size);
-                          
-                        } 
-                        else {
-                          
-                          var z = (a.shape.length > 2) ? v[0] : v;
-                          var flattened = flatten_data(z).data;
-                          console.log(dims);
-                          
-                          var zmin = Infinity;
-                          var zmax = -Infinity;
-                          var zz;
-                          for (var i=0; i<data.length; i++) {
-                            zz = flattened[i];
-                            zmin = Math.min(zmin, zz);
-                            zmax = Math.max(zmax, zz);
-                          }
-                          /*
-                          //var row;
-                          for (var i=0; i<z.length; i++) {
-                            let row = z[i];
-                            for (var j=0; j<row.length; j++) {
-                              let zz = row[j];
-                              zmin = Math.min(zmin, zz);
-                              zmax = Math.max(zmax, zz);
-                            }
-                          }
-                          */
-                          //dims.zmin = zmin;
-                          //dims.zmax = zmax;
-                        }
-                        
-                        if (chart && chart.destroy) { chart.destroy() }
-                        var plot_2d_options = {
-                          "ztransform": 'log',
-                          "aspect_ratio": 1.0,
-                          "autoscale": true,
-                          //"source_order": "F",
-                          axes: {
-                            xaxis: {label: 'x'},
-                            yaxis: {label: 'y'}
-                          }
-                        }
-                        chart = new heatChart.default(plot_2d_options);
-                        chart
-                          .colormap(colormap.get_colormap("jet"))
-                          .autoscale(true)
-                          .dims(dims);
-                        d3.select('#device_values')
-                          .data([flattened])
-                          .call(chart);
-                        chart.zoomScroll(true);
-                      });
-                      //$("#device_values").html('<pre class="value"> binary array </pre>');
-                    }
-                    else {
-                      item.getValueString().then(function(s) {
-                        $("#device_values").html('<pre class="value">' + s + '</pre>');
+                    item.getValueString().then(function(s) {
+                        displayItemChart (item, a, data, s);
                         panelAlphaNum.html('<pre class="value">' + s + '</pre>');
                       });
-                    }
-                  } else {
+                  }
+                  else {
+                    panelAlphaNum.html('<pre> </pre>');
                     $("#device_values").html("<pre>Group</pre>");
                     data.instance.toggle_node(data.node);
                   }
@@ -314,140 +383,135 @@
     }
     
     function updateFileBrowserPane(target_id, pathlist, filename_in) {
-        function handler(dirdata) {
-            var buttons = $("<div />", {class: "buttons"});
-            //var clear_all = $("<button />", {
-            //    text: "clear all"
-            //});
-            //clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
-            var download_all = $("<button />", {
-                text: "download selected"
-            });
-            download_all.click(function() {
-                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
-            });
-            buttons
-              //.append(clear_all)
-              .append(download_all);
-        
-            var files = dirdata.files;
-            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
-            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
-            
-            var patheditor = document.createElement('div');
-            patheditor.className = 'patheditor';
-            var subdiritem, dirlink, new_pathlist;
-            if (pathlist.length > 0) {               
-                var new_pathlist = $.extend(true, [], pathlist);
-                $.each(new_pathlist, function(index, pathitem) {
-                    dirlink = document.createElement('span');
-                    dirlink.textContent = pathitem + "/";
-                    dirlink.onclick = function() {
-                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
-                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
-                    }
-                    patheditor.appendChild(dirlink);
-                });
+      function handler(dirdata) {
+        var buttons = $("<div />", {class: "buttons"});
+        //var clear_all = $("<button />", {
+        //    text: "clear all"
+        //});
+        //clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
+        var download_all = $("<button />", {
+          text: "download selected"
+        });
+        download_all.click(function() {
+          $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+        });
+        buttons.append(download_all); //.append(clear_all)
+
+        var files = dirdata.files;
+        files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime });
+          // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+        var patheditor = document.createElement('div');
+        patheditor.className = 'patheditor';
+        var subdiritem, dirlink, new_pathlist;
+        if (pathlist.length > 0) {               
+          var new_pathlist = $.extend(true, [], pathlist);
+          $.each(new_pathlist, function(index, pathitem) {
+            dirlink = document.createElement('span');
+            dirlink.textContent = pathitem + "/";
+            dirlink.onclick = function() {
+              history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
+              $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
             }
-            
-            var dirbrowser = document.createElement('ul');
-            dirbrowser.id = "dirbrowser";
-            dirdata.subdirs.reverse();
-            $.each(dirdata.subdirs, function(index, subdir) {
-                subdiritem = document.createElement('li');
-                subdiritem.classList.add('subdiritem');
-                subdiritem.textContent = "(dir) " + subdir;
-                var new_pathlist = $.extend(true, [], pathlist);
-                new_pathlist.push(subdir);
-                subdiritem.onclick = function() {
-                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
-                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
-                }
-                dirbrowser.appendChild(subdiritem);
-            });
-            var filebrowser = document.createElement('table');
-            filebrowser.class = "tablesorter";
-            filebrowser.id = "filebrowser";
-            //var browser_body = filebrowser.createTBody();
-            
-            $.each(files, function(index, filename) {
-                if (NEXUS_ZIP_REGEXP.test(filename) || ZIP_REGEXP.test(filename)) {
-                    var tr = filebrowser.insertRow();
-                    var chb = document.createElement('input');
-                    chb.setAttribute("type", "checkbox");
-                    chb.setAttribute("filename", filename);
-                    chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
-                    if (filename == filename_in) {
-                        chb.checked = true;
-                    }
-                    //chb.onchange = handleChecked;
-                    var check_td = tr.insertCell();
-                    check_td.appendChild(chb)
-                    
-                    var filelabel = document.createElement('label');
-                    var timestamp = dirdata.files_metadata[filename].mtime * 1000;
-                    var filedate = new Date(timestamp);
-                    //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
-                    filelabel.textContent = filename;
-                    //filelabel.textContent = (filename + ' ' + filedate.toLocaleString());
-                    filelabel.setAttribute("for", "checkbox_" + filename);
-                    var label_td = tr.insertCell();
-                    label_td.appendChild(filelabel);
-                    var mtime_td = tr.insertCell();
-                    mtime_td.innerHTML = filedate.toLocaleString();
-                    mtime_td.setAttribute("mtime", timestamp);
-                    var download_td = tr.insertCell();
-                    var download_a = document.createElement("a")
-                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
-                    download_a.setAttribute("download", filename);
-                    var download_link = document.createElement("span");
-                    download_link.innerHTML = "";
-                    download_a.appendChild(download_link);
-                    download_td.appendChild(download_a);
-                    
-                    
-                    
-                    //fileitem.appendChild(filelabel);
-                    //filebrowser.appendChild(fileitem);
-                }
-            });
-            var thead = filebrowser.createTHead();
-            var tr = thead.insertRow();
-            var th = document.createElement("th");
-            th.innerHTML = "x";
-            tr.appendChild(th);
-            th = document.createElement("th");
-            th.innerHTML = "filename";
-            tr.appendChild(th);
-            th = document.createElement("th");
-            th.innerHTML = "date";
-            tr.appendChild(th);
-            th = document.createElement("th");
-            th.innerHTML = "";
-            tr.appendChild(th);
-            $('#' + target_id).empty()
+            patheditor.appendChild(dirlink);
+          });
+        }
+
+        var dirbrowser = document.createElement('ul');
+        dirbrowser.id = "dirbrowser";
+        dirdata.subdirs.reverse();
+        $.each(dirdata.subdirs, function(index, subdir) {
+          subdiritem = document.createElement('li');
+          subdiritem.classList.add('subdiritem');
+          subdiritem.textContent = "(dir) " + subdir;
+          var new_pathlist = $.extend(true, [], pathlist);
+          new_pathlist.push(subdir);
+          subdiritem.onclick = function() {
+            history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
+            $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+          }
+          dirbrowser.appendChild(subdiritem);
+        });
+        var filebrowser = document.createElement('table');
+        filebrowser.class = "tablesorter";
+        filebrowser.id = "filebrowser";
+        //var browser_body = filebrowser.createTBody();
+
+        $.each(files, function(index, filename) {
+          if (NEXUS_ZIP_REGEXP.test(filename) || ZIP_REGEXP.test(filename)) {
+            var tr = filebrowser.insertRow();
+            var chb = document.createElement('input');
+            chb.setAttribute("type", "checkbox");
+            chb.setAttribute("filename", filename);
+            chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
+            if (filename == filename_in) {
+              chb.checked = true;
+            }
+            //chb.onchange = handleChecked;
+            var check_td = tr.insertCell();
+            check_td.appendChild(chb)
+
+            var filelabel = document.createElement('label');
+            var timestamp = dirdata.files_metadata[filename].mtime * 1000;
+            var filedate = new Date(timestamp);
+            //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
+            filelabel.textContent = filename;
+            //filelabel.textContent = (filename + ' ' + filedate.toLocaleString());
+            filelabel.setAttribute("for", "checkbox_" + filename);
+            var label_td = tr.insertCell();
+            label_td.appendChild(filelabel);
+            var mtime_td = tr.insertCell();
+            mtime_td.innerHTML = filedate.toLocaleString();
+            mtime_td.setAttribute("mtime", timestamp);
+            var download_td = tr.insertCell();
+            var download_a = document.createElement("a")
+            download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+            download_a.setAttribute("download", filename);
+            var download_link = document.createElement("span");
+            download_link.innerHTML = "";
+            download_a.appendChild(download_link);
+            download_td.appendChild(download_a);
+
+            //fileitem.appendChild(filelabel);
+            //filebrowser.appendChild(fileitem);
+          }
+        });
+        var thead = filebrowser.createTHead();
+        var tr = thead.insertRow();
+        var th = document.createElement("th");
+        th.innerHTML = "x";
+        tr.appendChild(th);
+        th = document.createElement("th");
+        th.innerHTML = "filename";
+        tr.appendChild(th);
+        th = document.createElement("th");
+        th.innerHTML = "date";
+        tr.appendChild(th);
+        th = document.createElement("th");
+        th.innerHTML = "";
+        tr.appendChild(th);
+        $('#' + target_id).empty()
               .append(buttons)
               .append(patheditor)
               .append(dirbrowser)
               .append(filebrowser);
-            $(filebrowser).children('tbody').selectable({
-                filter:'td', 
-                stop: handleSelection
-            });
-            try {
-              $(filebrowser).tablesorter();
-            }
-            catch (err) {
-            }
+        $(filebrowser).children('tbody').selectable({
+          filter:'td', 
+          stop: handleSelection
+        });
+        try {
+          $(filebrowser).tablesorter();
         }
-        
-        if (filename_in != null) {
-            var path = '/pub/' + pathlist.join("/") + "/";
-            getNexusZip(path, filename_in);
-        }
-            
-        return handler
+        catch (err) {
+      }
     }
+
+    if (filename_in != null) {
+      var path = '/pub/' + pathlist.join("/") + "/";
+      getNexusZip(path, filename_in);
+    }
+
+    return handler
+  }
     
     var handleSelection = function() {
       var selected = $("#navigation .ui-selected");
@@ -660,7 +724,7 @@ canvas {
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
   <div id="device_attrs"></div>
-  <div id="device_values-alpha_num"></div>
+  <div id="device_values_alpha_num"></div>
   <div id="link_target"></div>
 </div>
 
