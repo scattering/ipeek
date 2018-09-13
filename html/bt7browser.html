@@ -17,10 +17,13 @@
   <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js"></script>
   <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
+
   <script>
   $(function() {
     BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log'];
-    dirHelper = "listftpfiles.php";
+    dirRoot   = "https://www.ncnr.nist.gov";
+    dirHelper = dirRoot + "/ipeek/listftpfiles.php";
+    dirPubData   = "/pub/";
     data_path = ["ncnrdata"];
     datasets = [];
     
@@ -68,23 +71,23 @@
       data = d3.tsvParse(output);
       return {column_names: column_names, data: data};
     }
-    
-    var makeXY = function(dataset, xcol, ycol, ynormcol) {
+//-----------------------------------------------------------------------------
+    var makeXY = function(data, xcol, ycol, ynormcol) {
       var data_array = [], x, y, ynorm;
-      for (var i=0; i<dataset.data.length; i++){
-        x = parseFloat(dataset.data[i][xcol]);
-        y = parseFloat(dataset.data[i][ycol]);
+      for (var i=0; i < data.length; i++){
+        x = parseFloat(data[i][xcol]);
+        y = parseFloat(data[i][ycol]);
         if (ynormcol == "1" || ynormcol == null) {
           ynorm = y;
         } 
         else {
-          ynorm = y / parseFloat(dataset.data[i][ynormcol]);
+          ynorm = y / parseFloat(data[i][ynormcol]);
         }
         data_array[i] = [x, ynorm];
       }
       return data_array;
     }
-    
+//-----------------------------------------------------------------------------
     var getManyData = function(path, filenames) {
       var promises = [],
           ajax_results = {};
@@ -152,7 +155,7 @@
         options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
-          xys[i] = makeXY(datas[i], xcol, ycol, ynormcol);
+          xys[i] = makeXY(datas[i].data, xcol, ycol, ynormcol);
         }
         var chart = xyChart.default(options);
         mychart = chart;
@@ -272,7 +275,7 @@
                     mtime_td.setAttribute("mtime", timestamp);
                     var download_td = tr.insertCell();
                     var download_a = document.createElement("a")
-                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+                    download_a.setAttribute("href", dirPubData + pathlist.join("/") + "/" + filename);
                     download_a.setAttribute("download", filename);
                     var download_link = document.createElement("span");
                     download_link.innerHTML = "";
@@ -321,11 +324,14 @@
     }
     var handleChecked = function() {
       var selected = $("#navigation input:checked"),
-          path = '/pub/' + getCurrentPath();
+          path = dirPubData + getCurrentPath();
       if (selected.length > 0) {
         
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
         getManyData(path, filenames);
+      }
+      else {
+        $("#plotdiv").empty();
       }
     }
     $("#navigation").on("change", "input", handleChecked);
