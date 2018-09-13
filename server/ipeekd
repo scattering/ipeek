@@ -1,6 +1,5 @@
 #!/usr/bin/env python
 
-import resource
 import os.path
 import sys
 import logging
@@ -8,15 +7,17 @@ import logging
 #import matplotlib
 #matplotlib.use('Agg')
 
-import daemon
 import livedata
 
-LOGDIR='/home/bbm/.livedata'
+LOGDIR=os.path.expanduser('~/.livedata')
 LOGFILE = os.path.join(LOGDIR,'livedata.log')
 PIDFILE = os.path.join(LOGDIR,'livedata.pid')
 MAXMEM = 200000000
 
 def startup():
+    import resource
+    import daemon
+
     # Make sure the log/pid directory exists
     if not os.path.exists(LOGDIR): os.makedirs(LOGDIR)
     # daemonize the process

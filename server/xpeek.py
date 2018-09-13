@@ -269,9 +269,9 @@ class Data1D(object):
         else:
             # Adding point to existing data set
             if set(columns.keys()) != set(self.columns.keys()):
-                raise ValueError,'columns do not match %s'%str(self.columns.keys())
+                raise ValueError('columns do not match %s'%str(self.columns.keys()))
             if pixels != self.pixels:
-                raise ValueError,'inconsistent field length DATA'
+                raise ValueError('inconsistent field length DATA')
             for k in columns.keys(): self.columns[k].append(columns[k])
 
         # Extract environment variables
@@ -282,7 +282,7 @@ class Data1D(object):
             elif k.lower() == 'magfield':
                 self.environment['Field'] = v[-1]
             elif k.lower() in ('h','hf') and self.instrument not in ['BT7']:
-		self.environment['Field'] = v[-1]
+                self.environment['Field'] = v[-1]
 
         # Make sure we have a plottable axis
         if self.primary not in columns:
@@ -364,7 +364,7 @@ class Data1D(object):
             bics.append(BIC_p)
 
         # Power model
-	if False and self.instrument in ['NG7']:
+        if False and self.instrument in ['NG7']:
             pars,BIC_p = robust_fit(power, [0,1,2], pt, dt, 
                                     dy=weight, drop=drop)
             models.append(lambda x,p=pars: power(p,x))
@@ -622,7 +622,7 @@ class NoPeak(object):
             if k == 'TIMESTAMP':
                 self.timestamp = time.ctime(float(v))
             else:
-                raise KeyError,"Unknown END field %s"%k
+                raise KeyError("Unknown END field %s"%k)
     def __call__(self,x):
         return x
     def __str__(self):
@@ -647,7 +647,7 @@ def parse_peak(fields):
         k,v=fields[0].split('=')
         v = v.strip() # BT7 uses TYPE= FP rather than TYPE=FP
         if k!='TYPE':
-            raise KeyError,"Unknown END field %s"%k
+            raise KeyError("Unknown END field %s"%k)
         if v=='FP':
             return GaussPeak(fields[1:])
         elif v=='ISCAN':
@@ -655,7 +655,7 @@ def parse_peak(fields):
         elif v=='NOCONV':
             return NoPeak(fields[1:])
         else:
-            raise ValueError,"Unknown peak type %s"%v
+            raise ValueError("Unknown peak type %s"%v)
     else:
         return NoPeak(fields)
 
@@ -704,7 +704,7 @@ class XPeek(object):
             # Interruptible
             try:
                 self.socket_buffer += self.socket.recv(BUFFER_SIZE)
-            except socket.error,msg:
+            except socket.error as msg:
                 if msg[0] == errno.EINTR:
                     raise KeyboardInterrupt
                 else:
@@ -718,7 +718,7 @@ class XPeek(object):
     def parseline(self,line):
         """Get the next line from readline and parse it"""
         self.lastline = line # Remember this for errors
-        if self.echo: print line
+        if self.echo: print(line)
         fields = line.split('\t')
         lineid = line[:line.find(':')] # LineID is everything to the first ':'
         if fields[0].endswith('END'):
@@ -800,16 +800,16 @@ def asfloat(str):
 def demo(instrument):
     class XPeekPrint(XPeek):
         def enddata(self, lineid):
-            print ">>",lineid,"ending peak",str(self.data[lineid].peak).replace("\n",", ")
+            print(">>",lineid,"ending peak",str(self.data[lineid].peak).replace("\n",", "))
         def newdata(self, lineid):
             data = self.data[lineid]
-            print ">>",lineid,"starting",data.filename,"primary",data.primary
+            print(">>",lineid,"starting",data.filename,"primary",data.primary)
         def newpoint(self, lineid):
             data = self.data[lineid]
-            print ">>",lineid,data.timestamp("%y/%m/%d %H:%M:%S"),\
+            print(">>",lineid,data.timestamp("%y/%m/%d %H:%M:%S"),\
                 "point",len(data.columns['DATA']),\
                 data.columns[data.primary][-1],\
-                data.columns['DATA'][-1]
+                data.columns['DATA'][-1])
 
     xpeek = XPeekPrint(instrument, echo=True)
     xpeek.process_stream()

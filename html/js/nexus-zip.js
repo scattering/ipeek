@@ -112,7 +112,9 @@ nz.Node.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs != null) { return Promise.resolve(this._attrs) }
+    if (this._attrs != null) {
+      return Promise.resolve(this._attrs);
+    }
     else { 
       var that = this;
       var attrs_promise = this.file_readText(lstrip(this.path + this._attrs_filename, "/"))
@@ -220,9 +222,9 @@ nz.Node.prototype = {
       else {
         entry.getData(new zip.TextWriter(), function(text) { resolve(text) });
       }
-    });    
+    });
   },
-  
+
   file_readBlob: function(path) {
     // returns a Promise, to be resolved with the data.
     var entry =  this.root.zipfiles[path];
@@ -288,7 +290,9 @@ nz.Field.prototype = {
   
   getAttrs: function() {
     // use cached value if not null:
-    if (this._attrs != null) { return Promise.resolve(this._attrs) }
+    if (this._attrs != null) {
+      return Promise.resolve(this._attrs);
+    }
     else { 
       var that = this;
       var attrs_promise = this.root.file_readText(lstrip(this.path + this._attrs_suffix, "/"))
