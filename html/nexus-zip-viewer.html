@@ -184,7 +184,6 @@
             $("#active_file").text(filename);
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
-              var panelValues = $("#device_values");
               var fChart1D;
               selected_node = id;
               var isdir = (id.slice(-1) == "/");
