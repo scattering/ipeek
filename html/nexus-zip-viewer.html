@@ -134,6 +134,8 @@
             $("#active_file").text(filename);
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
+              var panelAlphaNum = $("#device_values_alpha_num");
+              var panelValues = $("#device_values");
               selected_node = id;
               var isdir = (id.slice(-1) == "/");
               f.get(id).then(function(item) { 
@@ -144,6 +146,7 @@
                   $("#device_attrs")
                     .html("<pre>" + JSON.stringify(a, null, 2).replace(">", "&gt;").replace("<", "&lt;") + "</pre>");
                   $("#device_values").height('auto');
+                  $("#device_values_alpha_num").height('auto');
                   if (!isdir) {
                     if (a.shape && a.shape.length && a.shape.length > 1) {
                       item.getValue().then(function(v) {
@@ -215,11 +218,10 @@
                       });
                       //$("#device_values").html('<pre class="value"> binary array </pre>');
                     }
-                    else {
-                      item.getValueString().then(function(s) {
-                        $("#device_values").html('<pre class="value">' + s + '</pre>');
-                      });
-                    }
+                    item.getValueString().then(function(s) {
+                      $("#device_values_alpha_num").html('<pre class="value">' + s + '</pre>');
+                    });
+//                    }
                   } else {
                     $("#device_values").html("<pre>Group</pre>");
                     data.instance.toggle_node(data.node);
