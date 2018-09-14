@@ -21,10 +21,10 @@
   $(function() {
     BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log'];
     dirHelper = "listftpfiles.php";
-    dirRoot   = "https://www.ncnr.nist.gov";
-    dirHelper = dirRoot + "/ipeek/listftpfiles.php";
-    dirPubData   = "/pub/";
-    data_path = ["ncnrdata"];
+/* data link used in testing
+    dirHelper = dirRoot + "https://www.ncnr.nist.gov/ipeek/listftpfiles.php";
+*/
+data_path = ["ncnrdata"];
     datasets = [];
     
     getUrlVars = function(){
