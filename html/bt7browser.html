@@ -21,6 +21,9 @@
   $(function() {
     BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log'];
     dirHelper = "listftpfiles.php";
+    dirRoot   = "https://www.ncnr.nist.gov";
+    dirHelper = dirRoot + "/ipeek/listftpfiles.php";
+    dirPubData   = "/pub/";
     data_path = ["ncnrdata"];
     datasets = [];
     
@@ -326,6 +329,9 @@
         
         var filenames = selected.map(function() {return $(this).attr("filename")}).get();
         getManyData(path, filenames);
+      }
+      else {
+        $("#plotdiv").empty();
       }
     }
     $("#navigation").on("change", "input", handleChecked);
