@@ -68,7 +68,7 @@
         return {"yupper": y+hi, "ylower": y-lo}
     }
 
-    var makeXY = function(dataset, xcol, ycol, ynormcol) {
+    var makeXY = function(dataset, xcol, ycol, ynormcol, start_det, end_det) {
       var data_array = [], x, y, yerr, n, ynorm;
       var points = dataset.blocks.length;
       var a4_start = dataset.motor.a4.start;
@@ -77,34 +77,49 @@
       var block;
       
       var detectors = [];
-      for (var d=0; d<dataset.numDet; d++) { detectors.push([]); }
+      for (var d=start_det; d<=end_det; d++) { detectors[d] = []; }
       for (var i=0; i<points; i++){
         a4 = a4_start + i*a4_step;
         block = dataset.blocks[i];
-        for (var d=0; d<dataset.numDet; d++) { 
-          x = 5.0*d - dataset.zero_angles[d]*0.01 + a4;
+        for (var d=start_det; d<=end_det; d++) {
+          if (xcol == 'scattangle') {
+            x = 5.0*d - dataset.zero_angles[d]*0.01 + a4;
+          }
+          else if (xcol == 'A04') {
+            x = a4;
+          }
+          else if (xcol == 'point') {
+            x = i;
+          }
+          else if (xcol == 'temp') {
+            x = dataset.Tstart + i * dataset.Tstep;
+          }
           y = dataset.scale_factors[d] * block[d];
           yerr = getPoissonUncertainty(y);
           detectors[d].push([x, y, yerr]);
         }
       }
-      var colors = [];
-      for (var d=0; d<dataset.numDet; d++) {
-        var det = detectors[d];
-        var color_index = d % num_colors;
-        var color_block = colors[color_index];
-        if (color_block == null) {
-          colors[color_index] = det;
+      if (xcol == 'scattangle') {
+        var colors = [];
+        for (var d=start_det; d<=end_det; d++) {
+          var det = detectors[d];
+          var color_index = d % num_colors;
+          var color_block = colors[color_index];
+          if (color_block == null) {
+            colors[color_index] = det;
+          }
+          else {
+            // get last element and duplicate with null y 
+            // as a spacer...
+            var last_item = color_block.slice(-1)[0];
+            det.unshift([last_item[0], null, {yupper: null, ylower: null}]);
+            colors[color_index] = colors[color_index].concat(det);
+          }
         }
-        else {
-          // get last element and duplicate with null y 
-          // as a spacer...
-          var last_item = color_block.slice(-1)[0];
-          det.unshift([last_item[0], null, {yupper: null, ylower: null}]);
-          colors[color_index] = colors[color_index].concat(det);
-        }
+        return colors;
+      } else {
+        return detectors.filter(function(dd) { return dd != null });
       }
-      return colors;
     }
     
     var getManyData = function(path, filenames) {
@@ -120,16 +135,33 @@
         var options = {title: 'title', series: series, legend: {show: true, left: 150}}, datas = [];
         var files_retrieved = Object.keys(ajax_results);
         var column_names = [];
+        var xcolselect = $("#xcol");
+        var xcol = xcolselect.val();
+        var ycol = "Counts";
+        var ynormcol = "";
+        
+        var start_det = parseInt($("select#start_det").val(), 10);
+        var end_det = parseInt($("select#end_det").val(), 10);
+        var num_det = (end_det - start_det) + 1;
+        
         var title_div = $("div#plottitle");
         title_div.empty();
         for (var i=0; i<files_retrieved.length; i++) {
           datas[i] = parseBT1(ajax_results[files_retrieved[i]]);
-          for (var c=0; c<num_colors; c++) {
-            options.series[i*num_colors + c] = {label: files_retrieved[i] };
+          if (xcol == 'scattangle') {
+            for (var c=0; c<num_colors; c++) {
+              options.series[i*num_colors + c] = {label: files_retrieved[i] };
+            }
+          } 
+          else {
+            for (var dd=0; dd<num_det; dd++) {
+              options.series[i*num_det + dd] = {label: files_retrieved[i] + ":" + (start_det + dd).toFixed() };
+            }
           }
           title_div.append($("<div />", {text: (files_retrieved[i] + ": " + datas[i].comment)}));
           //column_names[i] = Object.keys(datas[i].column);
         }
+        
         mydata = datas;
         var errorbars = $("#show_errorbars").prop("checked");
         if (errorbars) { 
@@ -137,19 +169,16 @@
             options.seriesDefaults = {rendererOptions: {errorBar: true}} 
         }; 
         
-        var xcol = "A04";
-        var ycol = "Counts";
-        var ynormcol = "";
+        
         
         options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
         options.xtransform = $("#xscale").val();
         options.ytransform = $("#yscale").val();
         var xys = [];
         for (var i=0; i<datas.length; i++) {
-          xys = xys.concat(makeXY(datas[i], xcol, ycol, ynormcol));
+          xys = xys.concat(makeXY(datas[i], xcol, ycol, ynormcol, start_det, end_det));
         }
-        var chart = new xyChart.default({});
-        chart.options(options);
+        var chart = new xyChart.default(options);
         mychart = chart;
         $("#plotdiv").empty();
         d3.select("#plotdiv")
@@ -337,7 +366,15 @@
     
     window.onpopstate(); // call it on first load, too!
     
-    $('#xcol, #ycol, #xscale, #yscale, #ynormalize, #show_errorbars').change(handleChecked);    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize, #show_errorbars, #start_det, #end_det').change(handleChecked);
+    var start_det_select = $("select#start_det");
+    var end_det_select = $("select#end_det");
+    for (var d=0; d<32; d++) {
+        start_det_select.append($("<option />", {value: d, text: d}));
+        end_det_select.append($("<option />", {value: d, text: d}));
+     }
+     start_det_select.val("0");
+     end_det_select.val("31");      
    
   });
   window.onload = function() {
@@ -499,6 +536,12 @@ canvas {
 <div id="bottom_panel" class="ui-layout-south">
   <div id="controls">
     <span class="axis-select-label">x-axis:</span>
+    <select id="xcol" >
+      <option value="scattangle">Scatt. Angle</option>
+      <option value="A04">A04</option>
+      <option value="temp">Temperature</option>
+      <option value="point">point</option>
+    </select>
     <select id="xscale">
       <option value="linear">linear</option>
       <option value="log">log</option>
@@ -511,6 +554,10 @@ canvas {
     <span class="axis-select-label">
         <label>Poisson errorbars:<input type="checkbox" id="show_errorbars" /> </label>
     </span>
+    <span class="axis-select-label">Start det.</span>
+    <select id="start_det"></select>
+    <span class="axis-select-label">End det.</span>
+    <select id="end_det"></select>
     <button id="reset_zoom">Reset zoom</button>
   </div>
 </div>
