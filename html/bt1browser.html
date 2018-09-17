@@ -1,0 +1,533 @@
+<!doctype html>
+ 
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>BT1 data reader</title>
+  <!-- <link rel="stylesheet" href="http://code.jquery.com/ui/1.10.3/themes/smoothness/jquery-ui.css" />-->
+  <link rel="stylesheet" href="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/smoothness/jquery-ui.css" />
+  <link rel="stylesheet" href="css/layout-default-latest.css" />
+  <script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"></script> 
+  <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+  <script src="js/jquery.layout-latest.js"></script>
+  <script src="js/jquery.tablesorter.min.js"></script> 
+  
+    <script src="js/geturlvars.js"></script>
+<!--    <script src="http://ncnr.nist.gov/instruments/magik/sans_data.js"></script>-->
+  <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
+  <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
+  <script src="js/bt1data.js"></script>
+  <script>
+  $(function() {
+    BLACKLIST_EXTENSIONS = ['.nxs.bt4', '.nxs', '.nxz', '.log', '.LOG'];
+    dirHelper = "/ipeek/listftpfiles.php";
+    data_path = ["ncnrdata"];
+    datasets = [];
+    num_colors = 3;
+    
+    getUrlVars = function(){
+      var vars = [], hash;
+      var hashes = window.location.href.slice(window.location.href.indexOf('?') + 1).split('&');
+      for(var i = 0; i < hashes.length; i++) {
+        hash = hashes[i].split('=');
+        vars.push(hash[0]);
+        vars[hash[0]] = hash[1];
+      }
+      return vars;
+    }
+    
+    var parseBT1 = function(text) {
+      var BT1 = new BT1Parser();
+      BT1.read(text);
+      return BT1
+    }
+    
+    var getPoissonUncertainty = function(y) {
+        // for a poisson-distributed observable, get the range of 
+        // expected actual values for a particular measured value.
+        // As described in the documentation for the error analysis
+        // on the BaBar experiment: 
+        //
+        //4)      An alternative with some nice properties is +-0.5 + sqrt(n+0.25)
+        //i.e upper error = 0.5 + sqrt(n+0.25), lower error = -0.5 + sqrt(n+0.25).
+        //These produce the following intervals:  
+        //n    low      high     cred.        
+        //0 0.000000  1.000000 0.632121
+        //1 0.381966  2.618034 0.679295
+        //2 1.000000  4.000000 0.681595
+        //3 1.697224  5.302776 0.682159
+        //4 2.438447  6.561553 0.682378
+        //5 3.208712  7.791288 0.682485
+        //6 4.000000  9.000000 0.682545
+        //7 4.807418 10.192582 0.682582
+        //8 5.627719 11.372281 0.682607
+        //9 6.458619 12.541381 0.682624
+        var hi =  0.5+Math.sqrt(y+0.25);
+        var lo = -0.5+Math.sqrt(y+0.25);
+        return {"yupper": y+hi, "ylower": y-lo}
+    }
+
+    var makeXY = function(dataset, xcol, ycol, ynormcol) {
+      var data_array = [], x, y, yerr, n, ynorm;
+      var points = dataset.blocks.length;
+      var a4_start = dataset.motor.a4.start;
+      var a4_step = dataset.motor.a4.step;
+      var a4;
+      var block;
+      
+      var detectors = [];
+      for (var d=0; d<dataset.numDet; d++) { detectors.push([]); }
+      for (var i=0; i<points; i++){
+        a4 = a4_start + i*a4_step;
+        block = dataset.blocks[i];
+        for (var d=0; d<dataset.numDet; d++) { 
+          x = 5.0*d - dataset.zero_angles[d]*0.01 + a4;
+          y = dataset.scale_factors[d] * block[d];
+          yerr = getPoissonUncertainty(y);
+          detectors[d].push([x, y, yerr]);
+        }
+      }
+      var colors = [];
+      for (var d=0; d<dataset.numDet; d++) {
+        var det = detectors[d];
+        var color_index = d % num_colors;
+        var color_block = colors[color_index];
+        if (color_block == null) {
+          colors[color_index] = det;
+        }
+        else {
+          // get last element and duplicate with null y 
+          // as a spacer...
+          var last_item = color_block.slice(-1)[0];
+          det.unshift([last_item[0], null, {yupper: null, ylower: null}]);
+          colors[color_index] = colors[color_index].concat(det);
+        }
+      }
+      return colors;
+    }
+    
+    var getManyData = function(path, filenames) {
+      var promises = [],
+          ajax_results = {};
+      for (var i in filenames) {
+        var fn = filenames[i];
+        var success = (function(fn) { return function(r) {ajax_results[fn] = r; }})(fn);
+        promises.push($.ajax(path + fn, {success: success})); 
+      }
+      $.when.apply($, promises).then(function() {
+        var series = new Array();
+        var options = {title: 'title', series: series, legend: {show: true, left: 150}}, datas = [];
+        var files_retrieved = Object.keys(ajax_results);
+        var column_names = [];
+        var title_div = $("div#plottitle");
+        title_div.empty();
+        for (var i=0; i<files_retrieved.length; i++) {
+          datas[i] = parseBT1(ajax_results[files_retrieved[i]]);
+          for (var c=0; c<num_colors; c++) {
+            options.series[i*num_colors + c] = {label: files_retrieved[i] };
+          }
+          title_div.append($("<div />", {text: (files_retrieved[i] + ": " + datas[i].comment)}));
+          //column_names[i] = Object.keys(datas[i].column);
+        }
+        mydata = datas;
+        var errorbars = $("#show_errorbars").prop("checked");
+        if (errorbars) { 
+            options.show_errorbars = true;
+            options.seriesDefaults = {rendererOptions: {errorBar: true}} 
+        }; 
+        
+        var xcol = "A04";
+        var ycol = "Counts";
+        var ynormcol = "";
+        
+        options.axes = {xaxis: {label: xcol}, yaxis: {label: ycol}};
+        options.xtransform = $("#xscale").val();
+        options.ytransform = $("#yscale").val();
+        var xys = [];
+        for (var i=0; i<datas.length; i++) {
+          xys = xys.concat(makeXY(datas[i], xcol, ycol, ynormcol));
+        }
+        var chart = new xyChart.default({});
+        chart.options(options);
+        mychart = chart;
+        $("#plotdiv").empty();
+        d3.select("#plotdiv")
+            .data([xys])
+            .call(chart);
+        chart.zoomRect(true);
+        d3.select("#reset_zoom").on("click", function() {chart.resetzoom()});
+      });
+    };
+    //var fileinput = document.getElementById('sansfile');
+    
+    function compactDateTime(date) {
+        var outstring = '';
+        outstring += date.getHours().toFixed(0) + ":";
+        outstring += ("00" + date.getMinutes().toFixed(0)).slice(-2) + ":";
+        outstring += ("00" + date.getSeconds().toFixed(0)).slice(-2) + "&nbsp;";
+        outstring += date.getMonth().toFixed(0) + "/";
+        outstring += date.getDay().toFixed(0) + "/";
+        outstring += date.getFullYear().toFixed(0);
+        return outstring
+    }
+    
+    function isBlacklisted(filename, blacklist) {
+        for (var i=0; i<blacklist.length; i++) {
+            if (filename.indexOf(blacklist[i]) > -1) { return true; }
+        }
+        return false;
+    }
+    
+    function getCurrentPath() {
+      var path = "";
+      $(".patheditor span").each(function(i,v) {
+        path += $(v).text();
+      });
+      return path;      
+    }
+    
+    function updateFileBrowserPane(target_id, pathlist) {
+        function handler(dirdata) {
+            var buttons = $("<div />", {class: "buttons"});
+            var clear_all = $("<button />", {
+                text: "clear all"
+            });
+            clear_all.click(function() {$("#"+target_id + " input").prop("checked", false)});
+            var download_all = $("<button />", {
+                text: "download selected"
+            });
+            download_all.click(function() {
+                $("#"+target_id + " input:checked").each(function() {$(this).parent().parent().find("a span").trigger("click")});
+            });
+            buttons
+              .append(clear_all)
+              .append(download_all);
+        
+            var files = dirdata.files;
+            files.sort(function(a,b) { return dirdata.files_metadata[b].mtime - dirdata.files_metadata[a].mtime }); 
+            // dirdata is {'subdirs': list_of_subdirs, 'files': list_of_files, 'pathlist': list_of_path
+            
+            var patheditor = document.createElement('div');
+            patheditor.className = 'patheditor';
+            var subdiritem, dirlink, new_pathlist;
+            if (pathlist.length > 0) {               
+                var new_pathlist = $.extend(true, [], pathlist);
+                $.each(new_pathlist, function(index, pathitem) {
+                    dirlink = document.createElement('span');
+                    dirlink.textContent = pathitem + "/";
+                    dirlink.onclick = function() {
+                        history.pushState({}, "", "?pathlist=" + new_pathlist.slice(0, index+1).join("+"));
+                        $.post(dirHelper, {'pathlist': new_pathlist.slice(0, index+1)}, updateFileBrowserPane("navigation", new_pathlist.slice(0, index+1)));
+                    }
+                    patheditor.appendChild(dirlink);
+                });
+            }
+            
+            var dirbrowser = document.createElement('ul');
+            dirbrowser.id = "dirbrowser";
+            dirdata.subdirs.reverse();
+            $.each(dirdata.subdirs, function(index, subdir) {
+                subdiritem = document.createElement('li');
+                subdiritem.classList.add('subdiritem');
+                subdiritem.textContent = "(dir) " + subdir;
+                var new_pathlist = $.extend(true, [], pathlist);
+                new_pathlist.push(subdir);
+                subdiritem.onclick = function() {
+                    history.pushState({}, "", "?pathlist=" + new_pathlist.join("+"));
+                    $.post(dirHelper, {'pathlist': new_pathlist}, updateFileBrowserPane("navigation", new_pathlist));
+                }
+                dirbrowser.appendChild(subdiritem);
+            });
+            var filebrowser = document.createElement('table');
+            filebrowser.classList.add("tablesorter");
+            filebrowser.id = "filebrowser";
+            var browser_body = filebrowser.createTBody();
+            
+            $.each(files, function(index, filename) {
+                if (!(isBlacklisted(filename, BLACKLIST_EXTENSIONS))) {
+                    var tr = filebrowser.insertRow();
+                    var chb = document.createElement('input');
+                    chb.setAttribute("type", "checkbox");
+                    chb.setAttribute("filename", filename);
+                    chb.setAttribute("id", "checkbox_" + filename.replace(".", "_"));
+                    //chb.onchange = handleChecked;
+                    var check_td = tr.insertCell();
+                    check_td.appendChild(chb)
+                    
+                    var filelabel = document.createElement('label');
+                    var timestamp = dirdata.files_metadata[filename].mtime * 1000;
+                    var filedate = new Date(timestamp);
+                    //fileitem.textContent = filename + ' ' + compactDateTime(filedate);
+                    filelabel.textContent = filename;
+                    //filelabel.textContent = (filename + ' ' + filedate.toLocaleString());
+                    filelabel.setAttribute("for", "checkbox_" + filename);
+                    var label_td = tr.insertCell();
+                    label_td.appendChild(filelabel);
+                    var mtime_td = tr.insertCell();
+                    mtime_td.innerHTML = filedate.toLocaleString();
+                    mtime_td.setAttribute("mtime", timestamp);
+                    var download_td = tr.insertCell();
+                    var download_a = document.createElement("a")
+                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+                    download_a.setAttribute("download", filename);
+                    var download_link = document.createElement("span");
+                    download_link.innerHTML = "";
+                    download_a.appendChild(download_link);
+                    download_td.appendChild(download_a);
+                    
+                    
+                    
+                    //fileitem.appendChild(filelabel);
+                    //filebrowser.appendChild(fileitem);
+                }
+            });
+            var thead = filebrowser.createTHead();
+            var tr = thead.insertRow();
+            var th = document.createElement("th");
+            th.innerHTML = "x";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "filename";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "date";
+            tr.appendChild(th);
+            th = document.createElement("th");
+            th.innerHTML = "";
+            tr.appendChild(th);
+            $('#' + target_id).empty()
+              .append(buttons)
+              .append(patheditor)
+              .append(dirbrowser)
+              .append(filebrowser);
+            $(browser_body).selectable({
+                filter:'td', 
+                stop: handleSelection
+            });
+            $(filebrowser).tablesorter();
+        }   
+        return handler
+    }
+    
+    var handleSelection = function() {
+      var selected = $("#navigation .ui-selected");
+      // remove selection class but check all the boxes:
+      selected.removeClass("ui-selected").parent().find("input").prop("checked", true);
+      handleChecked();
+    }
+    var handleChecked = function() {
+      var selected = $("#navigation input:checked"),
+          path = '/pub/' + getCurrentPath();
+      if (selected.length > 0) {
+        
+        var filenames = selected.map(function() {return $(this).attr("filename")}).get();
+        getManyData(path, filenames);
+      }
+    }
+    $("#navigation").on("change", "input", handleChecked);
+    window.onpopstate = function(e) {
+      var start_path = $.extend(true, [], data_path),
+          url_vars = getUrlVars();
+      if (url_vars.pathlist && url_vars.pathlist.length) {
+          start_path = url_vars.pathlist.split("+");
+      }
+      $.post(dirHelper, {'pathlist': start_path}, updateFileBrowserPane("navigation", start_path));
+    }
+    
+    window.onpopstate(); // call it on first load, too!
+    
+    $('#xcol, #ycol, #xscale, #yscale, #ynormalize, #show_errorbars').change(handleChecked);    
+   
+  });
+  window.onload = function() {
+      var layout = $('body').layout({
+          west__size:			350
+        ,	east__size:			0
+        ,   south__size:        "auto"
+          // RESIZE Accordion widget when panes resize
+        ,	west__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	east__onresize:		$.layout.callbacks.resizePaneAccordions
+        ,	south__onresize:		$.layout.callbacks.resizePaneAccordions
+		  });
+		  $("#filebrowser").tablesorter(); 
+		}
+  </script>
+</head>
+<style>
+.patheditor { 
+    color: blue;
+    cursor: pointer;
+}
+li.subdiritem { 
+    list-style-type: none; 
+    cursor: pointer;
+    color: blue;
+}
+li.fileitem {
+    cursor: pointer;
+    color: blue;
+    text-decoration: none;
+}
+div.plotwrapper {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+div#plotdiv { 
+    flex: 1;
+    margin-right: 75px;
+    margin-left: 25px;
+}
+div#plottitle {
+    text-align: center;
+}
+#filebrowser .ui-selecting { background: #FECA40; }
+#filebrowser .ui-selected { background: #F39814; color: white; }
+#filebrowser { list-style-type: none; margin: 0; padding: 0; }
+#filebrowser { white-space: nowrap; }
+#filebrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+#dirbrowser { list-style-type: none; margin: 0; padding: 0; }
+#dirbrowser li { margin: 3px; padding: 0em 0.4em; font-size: 1.4em; }
+</style>
+<style type="text/css">
+svg,
+canvas {
+  position: absolute;
+  image-rendering: optimizeSpeed;
+  image-rendering: crisp-edges;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: optimize-contrast;
+  -ms-interpolation-mode: nearest-neighbor;
+}
+
+.axis-label {
+  font-size: 18px;
+  fill: black;
+}
+
+.axis .tick text {
+  font-size: 14px;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+}
+.grid path {
+      stroke-width: 0;
+}
+.grid .tick {
+    stroke: lightgrey;
+    opacity: 0.7;
+    shape-rendering: crispEdges;
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+ 
+.grid path {
+    stroke-width: 0;
+    fill: none;
+}
+ 
+
+ 
+.axis .axis-label {
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+
+.legend, .tick {
+    user-select: none; 
+    -webkit-user-select: none; 
+    -moz-user-select: none;
+}
+     
+    .line {
+        fill: none;
+        stroke-width: 1.5px;
+    }
+    
+    .highlight {
+        stroke-width: 4.5px;
+    }
+     
+    .dot {
+        /* consider the stroke-with the mouse detect radius? */
+        stroke: transparent;
+        stroke-width: 10px;  
+        cursor: pointer;
+    }
+     
+    .dot:hover {
+        stroke: rgba(68, 127, 255, 0.3);
+    }
+    
+    rect {
+      fill: none;
+      user-select: none; 
+      -webkit-user-select: none; 
+      -moz-user-select: none;
+    }
+
+    rect.zoom {
+      stroke: steelblue;
+      fill-opacity: 0.5;
+    }
+    .ui-layout-north {
+      background-color: #FFA500;
+    }
+    .ui-layout-south {
+      text-align: center;
+    }
+</style>
+<body>
+
+<div id="navigation" class="ui-layout-wrapper ui-layout-west">
+</div>
+<div id="bottom_panel" class="ui-layout-south">
+  <div id="controls">
+    <span class="axis-select-label">x-axis:</span>
+    <select id="xscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+    <span class="axis-select-label">y-axis:</span>
+    <select id="yscale">
+      <option value="linear">linear</option>
+      <option value="log">log</option>
+    </select>
+    <span class="axis-select-label">
+        <label>Poisson errorbars:<input type="checkbox" id="show_errorbars" /> </label>
+    </span>
+    <button id="reset_zoom">Reset zoom</button>
+  </div>
+</div>
+<div id="top_panel" class="ui-layout-north">
+    <div id="status">
+        <span id="statusline">ICP data browser</span>
+        <span id="instrument_name" class="instrument-name"></span>
+    </div>
+</div>
+ 
+<div id="plotpane" class="ui-layout-center">
+  <div id="plotwrapper" class="plotwrapper">
+    <div id="plottitle"></div>
+    <div id="plotdiv"></div>
+  </div>
+</div>
+
+</body>
+</html>
+
