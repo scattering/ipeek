@@ -217,16 +217,16 @@
     
     link_renderers.nxz_view = function(p, clientPath) {
 	var plus_path = ['ncnrdata'].concat(p.split('/')).concat([clientPath.replace('/', ''), 'data']).join('+');
-	return '<a href="https://ncnr.nist.gov/ipeek/nexus-zip-viewer.html?pathlist=' + plus_path + '">inspect</a>';
+	return '<a href="https://ncnr.nist.gov/ncnrdata/view/nexus-zip-viewer.html?pathlist=' + plus_path + '">inspect</a>';
     }
     
     link_renderers.reductus = function(p, clientPath) {
-	return '<a target="_blank" href="http://reduct.us/?instrument=ncnr.refl&source=ncnr&pathlist=ncnrdata/' + p + clientPath + '/data">reduce</a>';
+	return '<a target="_blank" href="https://reductus.nist.gov/?instrument=ncnr.refl&source=ncnr&pathlist=ncnrdata/' + p + clientPath + '/data">reduce</a>';
     }
     
     link_renderers.bt7browser = function(p, clientPath) {
 	var plus_path = ['ncnrdata'].concat(p.split('/')).concat([clientPath.replace('/', ''), 'data']).join('+');
-	return '<a target="_blank" href="https://ncnr.nist.gov/ipeek/bt7browser.html?pathlist=' + plus_path + '">plot</a>';
+	return '<a target="_blank" href="https://ncnr.nist.gov/ncnrdata/bt7browser.html?pathlist=' + plus_path + '">plot</a>';
     }
         
     $.fn.dataTable.render.ellipsis = function ( cutoff, wordbreak, escapeHtml ) {
