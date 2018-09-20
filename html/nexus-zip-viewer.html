@@ -32,8 +32,8 @@
   $(function() {
     NEXUS_ZIP_REGEXP = /\.nxz\.[^\.\/]+$/
     ZIP_REGEXP = /\.zip$/
-    dirHelper = "/ipeek/listftpfiles.php";
-    data_repo = "";
+    dirHelper = "https://ncnr.nist.gov/ncnrdata/listftpfiles.php";
+    data_repo = "https://ncnr.nist.gov/pub/";
     zip.useWebWorkers = false;
     data_path = ["ncnrdata"];
     datasets = [];
@@ -389,7 +389,7 @@
                     mtime_td.setAttribute("mtime", timestamp);
                     var download_td = tr.insertCell();
                     var download_a = document.createElement("a")
-                    download_a.setAttribute("href", "/pub/" + pathlist.join("/") + "/" + filename);
+                    download_a.setAttribute("href", data_repo + pathlist.join("/") + "/" + filename);
                     download_a.setAttribute("download", filename);
                     var download_link = document.createElement("span");
                     download_link.innerHTML = "";
@@ -433,7 +433,7 @@
         }
         
         if (filename_in != null) {
-            var path = '/pub/' + pathlist.join("/") + "/";
+            var path = pathlist.join("/") + "/";
             getNexusZip(path, filename_in);
         }
             
@@ -446,7 +446,7 @@
       selected.removeClass("ui-selected").parent().find("input").prop("checked", true);
       if (selected.length > 0) {
         var selection = selected.first();
-        var path = '/pub/' + getCurrentPath();
+        var path = getCurrentPath();
         getNexusZip(path, selection.parent().find('input').attr("filename"));
       }
     }
