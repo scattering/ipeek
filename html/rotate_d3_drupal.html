@@ -27,6 +27,7 @@
         <script src="//d3js.org/d3.v4.min.js" charset="utf-8"></script>
         <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/jquery-extend.js" charset="utf-8"></script>
         <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/heat-chart.js"></script>
+        
         <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/colormap.js" charset="utf-8"></script>
         <script src="//www.ncnr.nist.gov/instruments/magik/d3-science-v4/lib/xy-chart.js"></script>
   
@@ -183,8 +184,7 @@
                     icons: {primary: "ui-icon-calculator"}
                 })
                 .click(function() { window.location.href="multiplotwindow.html"; });
-                
-                
+
                 $.each(INSTRUMENTS, function(index, instr) {
                     button = $('<button />', {'id': instr+'_button', text:instr, value:instr, class:'instrument-button'});
                     var button_opts = {};
@@ -350,11 +350,10 @@
                             d3.select(plot_divs[di])
                               .data([flattened.data])
                               .call(chart);
-                            chart 
+                            chart
                               //.zoomScroll(!isMobile)
-                              .aspect_ratio(aspect_ratio)
-                              .ztransform((transform == "log")? "log" : "linear")
-                            
+                              //.aspect_ratio(aspect_ratio)
+                              .ztransform((transform == "log")? "log" : "linear");
                         }
                     }
                 }
