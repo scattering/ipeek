@@ -161,6 +161,18 @@
       }
     }
 
+    function Is1D_Data (a) {
+      var fChart1D;
+
+      fChart1D = true;
+      if (a.shape && a.shape.length && a.shape.length > 1) {
+        if (Math.min.apply(null, a.shape) > 1) {
+          fChart1D = false;
+        }
+      }
+      return fChart1D;
+    }
+
     function zipHandler(filename, file) {
       var autoscroll = false; // trigger a scroll for autoselected items.
         zip.createReader(new zip.BlobReader(file), function(reader) {
@@ -197,7 +209,8 @@
                   $("#device_values").height('auto');
                   $("#device_values_alpha_num").height('auto');
                   if (!isdir) {
-                    if (a.shape && a.shape.length && a.shape.length > 1) {
+                    fChart1D =  (a);
+                    if (fChart1D == false) {
                       fChart1D = false;
                       item.getValue().then(function(v) {
                         $("#device_values").empty().height(300);
