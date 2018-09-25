@@ -138,9 +138,7 @@
         options.max_x = xMax;
         options.min_x = xMin;
         dataLength = xy.length;
-        if (xy.length > 1) {
-          xys[0] = xy;
-        }
+        xys[0] = xy;
       }
       return dataLength;
     }
@@ -151,7 +149,6 @@
       options.xtransform = 'linear';
       options.ytransform = 'linear';
       options.series[0] = {label: 'series' };
-      var dataLength = getChartData(s, options, xys);
       $("#device_values").empty().height(300);
       if (getChartData(s, options, xys) > 1) {
         var chart = xyChart.default(options);
