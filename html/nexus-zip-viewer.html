@@ -111,15 +111,29 @@
     var fileinput = document.getElementById('datafile');
     fileinput.onchange = loadData;
 
+    function getValuesArray (s) {
+      var a_cr, a_tab, a_value;
+      a_cr = s.split("\n");
+      a_tab = s.split("\t");
+      if (a_cr.length >= a_tab.length) {
+        a_value = a_cr;
+      }
+      else {
+        a_value = a_tab;
+      }
+      return (a_value);
+    }
+
     function convertStringVec(s, xMin, xMax, yMin, yMax) {
-      var n, m, y, val_arr = s.split("\n"), xy = [];
+      var n, m, y, a_value, xy = [];
       yMin = Infinity;
       yMax = -Infinity;
       xMin = 0;
       xMax = s.length + 1;
-      for (n=m=0 ; n < val_arr.length ; n++) {
-        if (val_arr[n].length) {
-          y = parseFloat(val_arr[n]);
+      a_value = getValuesArray (s);
+      for (n=m=0 ; n < a_value.length ; n++) {
+        if (a_value[n].length) {
+          y = parseFloat(a_value[n]);
           yMin = Math.min (yMin, y);
           yMax = Math.max (yMax, y);
           xy[m++] = [n+1, y];
