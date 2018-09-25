@@ -170,6 +170,9 @@
         d3.select("#device_values").call(chart);
         chart.zoomRect(true);
       }
+      else {
+        $("#device_values").empty().height(0);
+      }
     }
 
     function Is1D_Data (a) {
