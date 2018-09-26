@@ -64,7 +64,7 @@ sources = [
      ]},
      {"name": "VSANS",
      "host_name": "vsans.ncnr.nist.gov",
-     "live_datafiles": ["/usr/local/nice/server_data/experiments/live_data/live_data.nxz"]},
+     "live_datafiles": ["/usr/local/nice/server_data/experiments/vsans1.nxs.ngv"]},
      {"name": "MACS",
      "host_name": "macs.ncnr.nist.gov",
      "live_datafiles": ["/home/ncnr/live_data.json"]},
