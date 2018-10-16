@@ -110,7 +110,83 @@
     
     var fileinput = document.getElementById('datafile');
     fileinput.onchange = loadData;
-    
+
+    function getValuesArray (s) {
+      var a_cr, a_tab, a_value;
+      a_cr = s.split("\n");
+      a_tab = s.split("\t");
+      if (a_cr.length >= a_tab.length) {
+        a_value = a_cr;
+      }
+      else {
+        a_value = a_tab;
+      }
+      return (a_value);
+    }
+
+    function convertStringVec(s, xMin, xMax, yMin, yMax) {
+      var n, m, y, a_value, xy = [];
+      yMin = Infinity;
+      yMax = -Infinity;
+      xMin = 0;
+      xMax = s.length + 1;
+      a_value = getValuesArray (s);
+      for (n=m=0 ; n < a_value.length ; n++) {
+        if (a_value[n].length) {
+          y = parseFloat(a_value[n]);
+          yMin = Math.min (yMin, y);
+          yMax = Math.max (yMax, y);
+          xy[m++] = [n+1, y];
+        }
+      }
+      return xy;
+    }
+
+    function getChartData(s, options, xys) {
+      var xy = [], dataLength = 0;
+      var xMin, xMax, yMin, yMax;
+      if (s) {
+        xy = convertStringVec(s, xMin, xMax, yMin, yMax);
+        options.max_y = yMax;
+        options.min_y = yMin;
+        options.max_x = xMax;
+        options.min_x = xMin;
+        dataLength = xy.length;
+        xys[0] = xy;
+      }
+      return dataLength;
+    }
+
+    function displayItemChart1D(s) {
+      var series = new Array(), xys = [], xy = [], xMin, xMax, yMin, yMax;
+      var options = {series: series};
+      options.xtransform = 'linear';
+      options.ytransform = 'linear';
+      options.series[0] = {label: 'series' };
+      $("#device_values").empty().height(300);
+      if (getChartData(s, options, xys) > 1) {
+        var chart = xyChart.default(options);
+        d3.select("#device_values").data([xys]);
+        d3.select("#device_values").call(chart);
+        chart.zoomRect(true);
+      }
+      else {
+        $("#device_values").empty().height(0);
+      }
+    }
+
+    function Is1D_Data (a) {
+      var fChart1D;
+
+      fChart1D = true;
+      if (a.shape && a.shape.length && a.shape.length > 1) {
+        if (Math.min.apply(null, a.shape) > 1) {
+          fChart1D = false;
+        }
+      }
+      return fChart1D;
+    }
+
     function zipHandler(filename, file) {
       var autoscroll = false; // trigger a scroll for autoselected items.
         zip.createReader(new zip.BlobReader(file), function(reader) {
@@ -134,6 +210,7 @@
             $("#active_file").text(filename);
             $("#treediv").bind("select_node.jstree", function (e, data) {
               var id = $(data.node).attr("id");
+              var fChart1D;
               selected_node = id;
               var isdir = (id.slice(-1) == "/");
               f.get(id).then(function(item) { 
@@ -144,8 +221,11 @@
                   $("#device_attrs")
                     .html("<pre>" + JSON.stringify(a, null, 2).replace(">", "&gt;").replace("<", "&lt;") + "</pre>");
                   $("#device_values").height('auto');
+                  $("#device_values_alpha_num").height('auto');
                   if (!isdir) {
-                    if (a.shape && a.shape.length && a.shape.length > 1) {
+                    fChart1D =  Is1D_Data (a);
+                    if (fChart1D == false) {
+                      fChart1D = false;
                       item.getValue().then(function(v) {
                         $("#device_values").empty().height(300);
                         var xdim = a.shape.slice(-2)[0];
@@ -215,13 +295,15 @@
                       });
                       //$("#device_values").html('<pre class="value"> binary array </pre>');
                     }
-                    else {
-                      item.getValueString().then(function(s) {
-                        $("#device_values").html('<pre class="value">' + s + '</pre>');
-                      });
-                    }
+                    item.getValueString().then(function(s) {
+                      $("#device_values_alpha_num").html('<pre class="value">' + s + '</pre>');
+                      if (fChart1D) {
+                        displayItemChart1D(s);
+                      }
+                    });
                   } else {
                     $("#device_values").html("<pre>Group</pre>");
+                    $("#device_values_alpha_num").html('<pre class="value"></pre>');
                     data.instance.toggle_node(data.node);
                   }
                 });
@@ -651,6 +733,7 @@ canvas {
 <div id="right" class="ui-layout-east">
   <div id="device_values"></div>
   <div id="device_attrs"></div>
+  <div id="device_values_alpha_num"></div>
   <div id="link_target"></div>
 </div>
 
